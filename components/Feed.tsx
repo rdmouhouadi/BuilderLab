@@ -4,9 +4,10 @@
 // Pas besoin de refetch à chaque filtre — plus rapide
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Project } from '@/types'
 import ProjectCard from '@/components/ProjectCard'
+import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 
 // Props que ce composant reçoit depuis app/page.tsx
 type Props = {
@@ -27,6 +28,20 @@ export default function Feed({ projects }: Props) {
   // États des dropdowns ouverts/fermés
   const [skillOpen, setSkillOpen] = useState(false)
   const [levelOpen, setLevelOpen] = useState(false)
+
+  // Client Supabase pour récupérer l'utilisateur connecté
+  const supabase = createBrowserSupabaseClient()
+
+  // ID de l'utilisateur connecté — null si pas connecté
+  // Permet de savoir si l'utilisateur est le owner d'un projet
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    // On récupère l'utilisateur au chargement du composant
+    supabase.auth.getUser().then(({ data }) => {
+      setCurrentUserId(data.user?.id ?? null)
+    })
+  }, [])
 
   // useMemo recalcule les projets filtrés seulement quand
   // search, skill ou level changent — optimisation des performances
@@ -65,7 +80,7 @@ export default function Feed({ projects }: Props) {
         <div className="flex items-center gap-2 mb-3">
           <span style={{ color: '#0D9488' }}>↗</span>
           <span className="text-sm font-medium" style={{ color: '#0D9488' }}>
-            {projects.length} projets disponibles
+            {projects.length} available projects
           </span>
         </div>
 
@@ -236,9 +251,13 @@ export default function Feed({ projects }: Props) {
 
       {/* Grille de projets */}
       {filtered.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
           {filtered.map(project => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard
+              key={project.id}
+              project={project}
+              currentUserId={currentUserId}
+            />
           ))}
         </div>
       ) : (

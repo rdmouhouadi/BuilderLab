@@ -21,9 +21,11 @@ export type Project = {
   title: string
   problem: string | null
   // On liste les valeurs exactes autorisées — TypeScript refusera toute autre valeur
-  level: 'débutant' | 'intermédiaire' | 'avancé'
+  level: 'Biginner' | 'Intermediate' | 'Advanced' | string
   domain: string | null
   status: 'open' | 'in_progress' | 'completed'
+  duration: string | null // Ex: "2 weeks", "3 months"
+  spots: number | null // nombre de collaborateurs recherhés
   created_at: string
 
   // Ces champs optionnels apparaissent quand on fait des jointures SQL
@@ -49,3 +51,4 @@ export type Connection = {
   status: 'pending' | 'accepted' | 'rejected'
   created_at: string
 }
+

@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import type { User } from '@supabase/supabase-js'
+import { LayoutGrid, Users } from 'lucide-react'
 
 
 
@@ -85,11 +86,13 @@ export default function Navbar() {
       <div className="hidden md:flex items-center gap-6">
         <Link
           href="/"
-          className="text-sm transition-colors"
+          className="flex items-center gap-1.5 text-sm transition-colors"
           style={{ color: '#94A3B8' }}
           onMouseEnter={e => (e.currentTarget.style.color = '#F1F5F9')}
           onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')}
         >
+          {/* Icône grille pour Projects */}
+          <LayoutGrid className="w-4 h-4" />
           Projects
         </Link>
 
@@ -97,13 +100,17 @@ export default function Navbar() {
         {user && (
           <Link 
             href="/connections" 
-            className="text-sm transition-colors" 
+            className="flex items-center gap-1.5 text-sm transition-colors" 
             style={{ color: '#94A3B8' }} 
             onMouseEnter={e => (e.currentTarget.style.color = '#F1F5F9')} 
-            onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')} >
+            onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')} 
+          >
+            {/* Icône users pour Connections */}
+            <Users className="w-4 h-4" />
             Connections
           </Link>
         )}
+        
       </div>
 
       {/* Actions à droite */}
@@ -161,7 +168,7 @@ export default function Navbar() {
                 ;(e.currentTarget as HTMLElement).style.borderColor = '#1E2840'
               }}
             >
-              Déconnexion
+              Log out
             </button>
           </>
         ) : (
@@ -173,7 +180,7 @@ export default function Navbar() {
             onMouseEnter={e => ((e.currentTarget as HTMLElement).style.backgroundColor = '#0F766E')}
             onMouseLeave={e => ((e.currentTarget as HTMLElement).style.backgroundColor = '#0D9488')}
           >
-            Se connecter
+            Log in
           </Link>
         )}
       </div>

@@ -47,7 +47,7 @@ export default function LoginPage() {
                 </span>
             </div>
             <p className="text-sm" style={{ color: '#64748B' }}>
-                Connecte-toi pour collaborer sur des projets
+                Log in to collaborate on projects
             </p>
             </div>
 
@@ -84,20 +84,20 @@ export default function LoginPage() {
                 variables: {
                 sign_in: {
                     email_label: 'Email',
-                    password_label: 'Mot de passe',
-                    button_label: 'Se connecter',
-                    link_text: "Pas de compte ? S'inscrire",
+                    password_label: 'Password',
+                    button_label: 'Sign in',
+                    link_text: "Already have an account? Sign in",
                 },
                 sign_up: {
                     email_label: 'Email',
-                    password_label: 'Mot de passe',
-                    button_label: "S'inscrire",
-                    link_text: 'Déjà un compte ? Se connecter',
+                    password_label: 'Password',
+                    button_label: "Sign up",
+                    link_text: "Don't have an account ? Sign up",
                 },
                 forgotten_password: {
                     email_label: 'Email',
-                    button_label: 'Envoyer le lien de réinitialisation',
-                    link_text: 'Retour à la connexion',
+                    button_label: 'Send the reset link',
+                    link_text: 'Forgotten password',
                 },
                 }
             }}
