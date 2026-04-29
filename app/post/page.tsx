@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
+import PageTransition from '@/components/PageTransition'
 
 // Liste des compétences disponibles
 // Ce sont exactement les mêmes que dans FilterBar
@@ -131,206 +132,208 @@ export default function PostProjectPage() {
   }
 
   return (
-    <main className="max-w-2xl mx-auto px-4 py-10">
+    <PageTransition>
+        <main className="max-w-2xl mx-auto px-4 py-10">
 
-      {/* En-tête */}
-      <div className="mb-8">
-        <h1
-          className="text-2xl font-bold mb-2"
-          style={{ color: '#F1F5F9' }}
-        >
-          Poster un projet
-        </h1>
-        <p style={{ color: '#64748B' }} className="text-sm">
-          Décris ton projet et les compétences dont tu as besoin.
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-
-        {/* Titre du projet */}
-        <div className="flex flex-col gap-2">
-          <label
-            htmlFor="title"
-            className="text-sm font-medium"
-            style={{ color: '#94A3B8' }}
-          >
-            Titre du projet
-          </label>
-          <input
-            id="title"
-            name="title"
-            type="text"
-            placeholder="Ex: App de suivi nutritionnel pour zones rurales"
-            value={form.title}
-            onChange={handleChange}
-            className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-colors"
-            style={{
-              backgroundColor: '#161B28',
-              border: '1px solid #1E2840',
-              color: '#F1F5F9',
-            }}
-            // Change la bordure au focus
-            onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-            onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
-          />
+        {/* En-tête */}
+        <div className="mb-8">
+            <h1
+            className="text-2xl font-bold mb-2"
+            style={{ color: '#F1F5F9' }}
+            >
+            Poster un projet
+            </h1>
+            <p style={{ color: '#64748B' }} className="text-sm">
+            Décris ton projet et les compétences dont tu as besoin.
+            </p>
         </div>
 
-        {/* Description du problème */}
-        <div className="flex flex-col gap-2">
-          <label
-            htmlFor="problem"
-            className="text-sm font-medium"
-            style={{ color: '#94A3B8' }}
-          >
-            Problème à résoudre
-          </label>
-          <textarea
-            id="problem"
-            name="problem"
-            placeholder="Décris le problème que ton projet veut résoudre et ce que tu cherches à construire..."
-            value={form.problem}
-            onChange={handleChange}
-            rows={4}
-            className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-colors resize-none"
-            style={{
-              backgroundColor: '#161B28',
-              border: '1px solid #1E2840',
-              color: '#F1F5F9',
-            }}
-            onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-            onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
-          />
-        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
-        {/* Domaine */}
-        <div className="flex flex-col gap-2">
-          <label
-            htmlFor="domain"
-            className="text-sm font-medium"
-            style={{ color: '#94A3B8' }}
-          >
-            Domaine
-          </label>
-          <select
-            id="domain"
-            name="domain"
-            value={form.domain}
-            onChange={handleChange}
-            className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-colors"
-            style={{
-              backgroundColor: '#161B28',
-              border: '1px solid #1E2840',
-              color: form.domain ? '#F1F5F9' : '#475569',
-            }}
-            onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-            onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
-          >
-            <option value="" disabled>Sélectionne un domaine</option>
-            {DOMAINS.map(domain => (
-              <option key={domain} value={domain}
-                style={{ backgroundColor: '#161B28' }}
-              >
-                {domain}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Niveau */}
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium" style={{ color: '#94A3B8' }}>
-            Niveau attendu
-          </label>
-          <div className="flex gap-3">
-            {['débutant', 'intermédiaire', 'avancé'].map(level => (
-              <button
-                key={level}
-                type="button"
-                // type="button" est crucial — sans ça le bouton
-                // soumet le formulaire au lieu de juste sélectionner le niveau
-                onClick={() => setForm(prev => ({ ...prev, level }))}
-                className="flex-1 py-2.5 rounded-xl text-sm font-medium capitalize transition-all"
+            {/* Titre du projet */}
+            <div className="flex flex-col gap-2">
+            <label
+                htmlFor="title"
+                className="text-sm font-medium"
+                style={{ color: '#94A3B8' }}
+            >
+                Titre du projet
+            </label>
+            <input
+                id="title"
+                name="title"
+                type="text"
+                placeholder="Ex: App de suivi nutritionnel pour zones rurales"
+                value={form.title}
+                onChange={handleChange}
+                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-colors"
                 style={{
-                  backgroundColor: form.level === level
-                    ? 'rgba(13,148,136,0.2)'
-                    : '#161B28',
-                  border: form.level === level
-                    ? '1px solid #0D9488'
-                    : '1px solid #1E2840',
-                  color: form.level === level ? '#5EEAD4' : '#64748B',
+                backgroundColor: '#161B28',
+                border: '1px solid #1E2840',
+                color: '#F1F5F9',
                 }}
-              >
-                {level}
-              </button>
-            ))}
-          </div>
-        </div>
+                // Change la bordure au focus
+                onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
+                onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
+            />
+            </div>
 
-        {/* Compétences recherchées */}
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium" style={{ color: '#94A3B8' }}>
-            Compétences recherchées
-            <span className="ml-2 text-xs" style={{ color: '#475569' }}>
-              (plusieurs possibles)
-            </span>
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {SKILLS.map(skill => (
-              <button
-                key={skill}
-                type="button"
-                onClick={() => toggleSkill(skill)}
-                className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+            {/* Description du problème */}
+            <div className="flex flex-col gap-2">
+            <label
+                htmlFor="problem"
+                className="text-sm font-medium"
+                style={{ color: '#94A3B8' }}
+            >
+                Problème à résoudre
+            </label>
+            <textarea
+                id="problem"
+                name="problem"
+                placeholder="Décris le problème que ton projet veut résoudre et ce que tu cherches à construire..."
+                value={form.problem}
+                onChange={handleChange}
+                rows={4}
+                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-colors resize-none"
                 style={{
-                  backgroundColor: selectedSkills.includes(skill)
-                    ? 'rgba(13,148,136,0.2)'
-                    : '#161B28',
-                  border: selectedSkills.includes(skill)
-                    ? '1px solid #0D9488'
-                    : '1px solid #1E2840',
-                  color: selectedSkills.includes(skill)
-                    ? '#5EEAD4'
-                    : '#64748B',
+                backgroundColor: '#161B28',
+                border: '1px solid #1E2840',
+                color: '#F1F5F9',
                 }}
-              >
-                {skill}
-              </button>
-            ))}
-          </div>
-        </div>
+                onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
+                onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
+            />
+            </div>
 
-        {/* Message d'erreur */}
-        {error && (
-          <div
-            className="px-4 py-3 rounded-xl text-sm"
+            {/* Domaine */}
+            <div className="flex flex-col gap-2">
+            <label
+                htmlFor="domain"
+                className="text-sm font-medium"
+                style={{ color: '#94A3B8' }}
+            >
+                Domaine
+            </label>
+            <select
+                id="domain"
+                name="domain"
+                value={form.domain}
+                onChange={handleChange}
+                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-colors"
+                style={{
+                backgroundColor: '#161B28',
+                border: '1px solid #1E2840',
+                color: form.domain ? '#F1F5F9' : '#475569',
+                }}
+                onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
+                onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
+            >
+                <option value="" disabled>Sélectionne un domaine</option>
+                {DOMAINS.map(domain => (
+                <option key={domain} value={domain}
+                    style={{ backgroundColor: '#161B28' }}
+                >
+                    {domain}
+                </option>
+                ))}
+            </select>
+            </div>
+
+            {/* Niveau */}
+            <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium" style={{ color: '#94A3B8' }}>
+                Niveau attendu
+            </label>
+            <div className="flex gap-3">
+                {['débutant', 'intermédiaire', 'avancé'].map(level => (
+                <button
+                    key={level}
+                    type="button"
+                    // type="button" est crucial — sans ça le bouton
+                    // soumet le formulaire au lieu de juste sélectionner le niveau
+                    onClick={() => setForm(prev => ({ ...prev, level }))}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-medium capitalize transition-all"
+                    style={{
+                    backgroundColor: form.level === level
+                        ? 'rgba(13,148,136,0.2)'
+                        : '#161B28',
+                    border: form.level === level
+                        ? '1px solid #0D9488'
+                        : '1px solid #1E2840',
+                    color: form.level === level ? '#5EEAD4' : '#64748B',
+                    }}
+                >
+                    {level}
+                </button>
+                ))}
+            </div>
+            </div>
+
+            {/* Compétences recherchées */}
+            <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium" style={{ color: '#94A3B8' }}>
+                Compétences recherchées
+                <span className="ml-2 text-xs" style={{ color: '#475569' }}>
+                (plusieurs possibles)
+                </span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+                {SKILLS.map(skill => (
+                <button
+                    key={skill}
+                    type="button"
+                    onClick={() => toggleSkill(skill)}
+                    className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+                    style={{
+                    backgroundColor: selectedSkills.includes(skill)
+                        ? 'rgba(13,148,136,0.2)'
+                        : '#161B28',
+                    border: selectedSkills.includes(skill)
+                        ? '1px solid #0D9488'
+                        : '1px solid #1E2840',
+                    color: selectedSkills.includes(skill)
+                        ? '#5EEAD4'
+                        : '#64748B',
+                    }}
+                >
+                    {skill}
+                </button>
+                ))}
+            </div>
+            </div>
+
+            {/* Message d'erreur */}
+            {error && (
+            <div
+                className="px-4 py-3 rounded-xl text-sm"
+                style={{
+                backgroundColor: 'rgba(239,68,68,0.1)',
+                border: '1px solid rgba(239,68,68,0.3)',
+                color: '#FCA5A5',
+                }}
+            >
+                {error}
+            </div>
+            )}
+
+            {/* Bouton de soumission */}
+            <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-xl font-medium text-sm transition-all"
             style={{
-              backgroundColor: 'rgba(239,68,68,0.1)',
-              border: '1px solid rgba(239,68,68,0.3)',
-              color: '#FCA5A5',
+                backgroundColor: loading ? '#0F766E' : '#0D9488',
+                color: 'white',
+                // opacity réduite quand chargement en cours
+                opacity: loading ? 0.7 : 1,
+                cursor: loading ? 'not-allowed' : 'pointer',
             }}
-          >
-            {error}
-          </div>
-        )}
+            >
+            {loading ? 'Publication en cours...' : 'Publier le projet'}
+            </button>
 
-        {/* Bouton de soumission */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-3 rounded-xl font-medium text-sm transition-all"
-          style={{
-            backgroundColor: loading ? '#0F766E' : '#0D9488',
-            color: 'white',
-            // opacity réduite quand chargement en cours
-            opacity: loading ? 0.7 : 1,
-            cursor: loading ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {loading ? 'Publication en cours...' : 'Publier le projet'}
-        </button>
-
-      </form>
-    </main>
+        </form>
+        </main>
+    </PageTransition>
   )
 }

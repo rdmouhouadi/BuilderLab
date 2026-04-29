@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase'
 import { Project } from '@/types'
 import ProjectCard from '@/components/ProjectCard'
 import FilterBar from '@/components/FilterBar'
+import PageTransition from '@/components/PageTransition'
 
 export default async function HomePage() {
 
@@ -15,8 +16,8 @@ export default async function HomePage() {
 
   // Requête simple d'abord — on ajoutera les jointures après
 const { data: projects, error } = await supabase
-  .from('projects')
-  .select(`
+    .from('projects')
+    .select(`
     *,
     profiles!projects_owner_id_fkey(id, name, country, avg_rating),
     project_skills(skill_needed)
@@ -45,31 +46,34 @@ const { data: projects, error } = await supabase
     )
   }
 
+
   return (
-    <main className="max-w-6xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">
-          Trouve ton prochain projet
-        </h1>
-        <p className="text-slate-400">
-          Collabore avec des étudiants, construis des projets réels, enrichis ton portfolio.
-        </p>
-      </div>
-
-      <FilterBar />
-
-      {projects && projects.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-          {projects.map((project) => (
-            <ProjectCard key={project.id} project={project as Project} />
-          ))}
+    <PageTransition>
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Trouve ton prochain projet
+          </h1>
+          <p className="text-slate-400">
+            Collabore avec des étudiants, construis des projets réels, enrichis ton portfolio.
+          </p>
         </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-          <p className="text-lg mb-2">Aucun projet disponible pour l'instant.</p>
-          <p className="text-sm">Sois le premier à en poster un !</p>
-        </div>
-      )}
-    </main>
+
+        <FilterBar />
+
+        {projects && projects.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+            {projects.map((project) => (
+              <ProjectCard key={project.id} project={project as Project} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+            <p className="text-lg mb-2">Aucun projet disponible pour l'instant.</p>
+            <p className="text-sm">Sois le premier à en poster un !</p>
+          </div>
+        )}
+      </main>
+    </PageTransition>
   )
 }
