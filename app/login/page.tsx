@@ -1,24 +1,26 @@
 // app/login/page.tsx
-// Page de connexion ET d'inscription
-// On utilise le composant Auth de Supabase qui gère
-// tout automatiquement : formulaire, validation, erreurs
-
-// 'use client' est obligatoire ici car on utilise
-// des composants interactifs (formulaires, état)
-// Sans ça Next.js essaierait de les rendre côté serveur
-// ce qui causerait des erreurs
 'use client'
 
-import { Auth } from '@supabase/auth-ui-react'
-import { ThemeSupa } from '@supabase/auth-ui-shared'
+// dynamic avec ssr: false dit à Next.js :
+// "ne rends jamais ce composant côté serveur"
+// ça évite le conflit entre le HTML serveur et client
+import dynamic from 'next/dynamic'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
+import { ThemeSupa } from '@supabase/auth-ui-shared'
+
+// On charge le composant Auth uniquement côté navigateur
+const Auth = dynamic(
+  () => import('@supabase/auth-ui-react').then(mod => mod.Auth),
+  { ssr: false }
+)
 
 export default function LoginPage() {
-  // On crée le client navigateur pour l'auth
+  // Client Supabase côté navigateur — nécessaire pour l'auth
   const supabase = createBrowserSupabaseClient()
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4"
+    <div
+      className="min-h-screen flex items-center justify-center px-4"
       style={{ backgroundColor: '#0F1117' }}
     >
       <div
@@ -48,40 +50,35 @@ export default function LoginPage() {
         </div>
 
         {/* Composant Auth de Supabase
-            Il gère automatiquement :
-            - Formulaire de connexion
-            - Formulaire d'inscription
-            - Réinitialisation du mot de passe
-            - Validation des champs
-            - Messages d'erreur */}
+            Gère automatiquement : formulaire, validation,
+            erreurs, inscription, connexion, mot de passe oublié */}
         <Auth
           supabaseClient={supabase}
           appearance={{
-            // ThemeSupa est le thème officiel de Supabase
-            // On le personnalise avec nos couleurs
+            // ThemeSupa = thème officiel Supabase
+            // on le personnalise avec nos couleurs
             theme: ThemeSupa,
             variables: {
               default: {
                 colors: {
-                  brand: '#0D9488',           // Couleur principale — boutons
-                  brandAccent: '#0F766E',     // Couleur au hover
-                  inputBackground: '#0C1120', // Fond des inputs
-                  inputBorder: '#1E2840',     // Bordure des inputs
-                  inputText: '#F1F5F9',       // Texte dans les inputs
-                  inputLabelText: '#94A3B8',  // Labels des inputs
+                  brand: '#0D9488',
+                  brandAccent: '#0F766E',
+                  inputBackground: '#0C1120',
+                  inputBorder: '#1E2840',
+                  inputText: '#F1F5F9',
+                  inputLabelText: '#94A3B8',
                 }
               }
             }
           }}
-          // Afficher connexion ET inscription dans la même page
           view="sign_in"
-          // Après connexion, rediriger vers le feed
+          // Après connexion, Supabase redirige ici
+          // notre route /auth/callback échange le code contre une session
           redirectTo={`${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`}
-          // Afficher uniquement email + mot de passe
-          // pas de connexion sociale pour l'instant
+          // Pas de connexion sociale pour l'instant
           providers={[]}
           localization={{
-            // Traduire les textes en français
+            // Traduction française de tous les textes
             variables: {
               sign_in: {
                 email_label: 'Email',
@@ -94,6 +91,11 @@ export default function LoginPage() {
                 password_label: 'Mot de passe',
                 button_label: "S'inscrire",
                 link_text: 'Déjà un compte ? Se connecter',
+              },
+              forgotten_password: {
+                email_label: 'Email',
+                button_label: 'Envoyer le lien de réinitialisation',
+                link_text: 'Retour à la connexion',
               },
             }
           }}
