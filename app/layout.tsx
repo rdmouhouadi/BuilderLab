@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'BuilderLab',
-  description: 'Trouve des collaborateurs pour tes projets étudiants',
+  description: 'Find your next collab project',
 }
 
 export default function RootLayout({

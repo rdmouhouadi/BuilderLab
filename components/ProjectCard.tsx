@@ -23,9 +23,9 @@ export default function ProjectCard({ project }: Props) {
 
   // Couleurs pour le niveau de difficulté
   const levelColors: Record<string, { bg: string; text: string }> = {
-    'débutant':       { bg: 'rgba(16,185,129,0.14)',  text: '#6EE7B7' },
-    'intermédiaire':  { bg: 'rgba(245,158,11,0.14)',  text: '#FCD34D' },
-    'avancé':         { bg: 'rgba(239,68,68,0.14)',   text: '#FCA5A5' },
+    'Biginner':       { bg: 'rgba(16,185,129,0.14)',  text: '#6EE7B7' },
+    'Intermediate':  { bg: 'rgba(245,158,11,0.14)',  text: '#FCD34D' },
+    'Advanced':         { bg: 'rgba(239,68,68,0.14)',   text: '#FCA5A5' },
   }
 
   // On récupère les initiales du créateur pour l'avatar
@@ -125,7 +125,7 @@ export default function ProjectCard({ project }: Props) {
           <span>
             {project.profiles?.avg_rating
               ? project.profiles.avg_rating.toFixed(1)
-              : 'Nouveau'
+              : 'New'
             }
           </span>
         </div>
@@ -139,7 +139,7 @@ export default function ProjectCard({ project }: Props) {
             border: '1px solid rgba(13,148,136,0.28)',
           }}
         >
-          Je suis intéressé →
+          I'm interested
         </button>
       </div>
 

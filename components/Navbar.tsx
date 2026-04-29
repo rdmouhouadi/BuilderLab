@@ -5,15 +5,19 @@
 // - useRouter pour la redirection après déconnexion
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import type { User } from '@supabase/supabase-js'
 
+
+
 export default function Navbar() {
   const router = useRouter()
   const supabase = createBrowserSupabaseClient()
+
+  const capsuleRef = useRef<HTMLSpanElement>(null);
 
   // État de l'utilisateur connecté
   // null = pas connecté, User = connecté
@@ -83,22 +87,21 @@ export default function Navbar() {
           href="/"
           className="text-sm transition-colors"
           style={{ color: '#94A3B8' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#5EEAD4')}
+          onMouseEnter={e => (e.currentTarget.style.color = '#F1F5F9')}
           onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')}
         >
-          Projets
+          Projects
         </Link>
 
         {/* Ce lien n'apparaît que si l'utilisateur est connecté */}
         {user && (
-          <Link
-            href="/connections"
-            className="text-sm transition-colors"
-            style={{ color: '#94A3B8' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#5EEAD4')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')}
-          >
-            Connexions
+          <Link 
+            href="/connections" 
+            className="text-sm transition-colors" 
+            style={{ color: '#94A3B8' }} 
+            onMouseEnter={e => (e.currentTarget.style.color = '#F1F5F9')} 
+            onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')} >
+            Connections
           </Link>
         )}
       </div>
@@ -113,20 +116,21 @@ export default function Navbar() {
               href="/post"
               className="text-sm px-4 py-1.5 rounded-lg font-medium transition-all"
               style={{
-                backgroundColor: 'rgba(13,148,136,0.14)',
-                color: '#5EEAD4',
+                backgroundColor: '#0D9488',
+                color: 'white',
                 border: '1px solid rgba(13,148,136,0.28)',
+                transition: 'background-color 0.3s ease',
               }}
               onMouseEnter={e => {
-                (e.currentTarget as HTMLElement).style.backgroundColor = '#0D9488'
-                ;(e.currentTarget as HTMLElement).style.color = 'white'
+                (e.currentTarget as HTMLElement).style.backgroundColor = '#09746b';
+                //;(e.currentTarget as HTMLElement).style.color = 'white'
               }}
               onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(13,148,136,0.14)'
-                ;(e.currentTarget as HTMLElement).style.color = '#5EEAD4'
+                (e.currentTarget as HTMLElement).style.backgroundColor = '#0D9488';
+                //;(e.currentTarget as HTMLElement).style.color = 'white'
               }}
             >
-              + Poster un projet
+              + Post a project
             </Link>
 
             {/* Lien vers le profil — affiche les initiales de l'email */}

@@ -15,8 +15,8 @@ const SKILLS = ['Developer', 'Designer', 'Data Scientist', 'Business', 'Marketin
 
 // Liste des domaines disponibles
 const DOMAINS = [
-  'Education', 'Santé', 'AgriTech', 'Fintech',
-  'Logistique', 'Environnement', 'Social', 'Autre'
+  'Education', 'Health', 'AgriTech', 'Fintech',
+  'Logistic', 'Environment', 'Social', 'Other'
 ]
 
 export default function PostProjectPage() {
@@ -67,12 +67,12 @@ export default function PostProjectPage() {
 
     // Validation simple — tous les champs sont obligatoires
     if (!form.title || !form.problem || !form.level || !form.domain) {
-      setError('Tous les champs sont obligatoires.')
+      setError('All fields are mandatories.')
       return
     }
 
     if (selectedSkills.length === 0) {
-      setError('Sélectionne au moins une compétence recherchée.')
+      setError('Select at least one skill.')
       return
     }
 
@@ -124,7 +124,7 @@ export default function PostProjectPage() {
 
     } catch (err: any) {
       // On affiche l'erreur Supabase si quelque chose échoue
-      setError(err.message ?? 'Une erreur est survenue.')
+      setError(err.message ?? 'An error occured.')
     } finally {
       // Dans tous les cas, on réactive le bouton
       setLoading(false)
@@ -141,29 +141,29 @@ export default function PostProjectPage() {
             className="text-2xl font-bold mb-2"
             style={{ color: '#F1F5F9' }}
             >
-            Poster un projet
+            Post a project
             </h1>
             <p style={{ color: '#64748B' }} className="text-sm">
-            Décris ton projet et les compétences dont tu as besoin.
+            Describe your project and the skills needed.
             </p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
-            {/* Titre du projet */}
+            {/* Project title */}
             <div className="flex flex-col gap-2">
             <label
                 htmlFor="title"
                 className="text-sm font-medium"
                 style={{ color: '#94A3B8' }}
             >
-                Titre du projet
+                Project
             </label>
             <input
                 id="title"
                 name="title"
                 type="text"
-                placeholder="Ex: App de suivi nutritionnel pour zones rurales"
+                placeholder="Ex: Nutritional Tracking App for Rural Areas"
                 value={form.title}
                 onChange={handleChange}
                 className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-colors"
@@ -178,19 +178,19 @@ export default function PostProjectPage() {
             />
             </div>
 
-            {/* Description du problème */}
+            {/* Problem description */}
             <div className="flex flex-col gap-2">
             <label
                 htmlFor="problem"
                 className="text-sm font-medium"
                 style={{ color: '#94A3B8' }}
             >
-                Problème à résoudre
+                Problem being solved
             </label>
             <textarea
                 id="problem"
                 name="problem"
-                placeholder="Décris le problème que ton projet veut résoudre et ce que tu cherches à construire..."
+                placeholder="Describe the problem your project aims to solve and what you are trying to build..."
                 value={form.problem}
                 onChange={handleChange}
                 rows={4}
@@ -205,14 +205,14 @@ export default function PostProjectPage() {
             />
             </div>
 
-            {/* Domaine */}
+            {/* Domain */}
             <div className="flex flex-col gap-2">
             <label
                 htmlFor="domain"
                 className="text-sm font-medium"
                 style={{ color: '#94A3B8' }}
             >
-                Domaine
+                Domain
             </label>
             <select
                 id="domain"
@@ -228,7 +228,7 @@ export default function PostProjectPage() {
                 onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
                 onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
             >
-                <option value="" disabled>Sélectionne un domaine</option>
+                <option value="" disabled>Choose a domain</option>
                 {DOMAINS.map(domain => (
                 <option key={domain} value={domain}
                     style={{ backgroundColor: '#161B28' }}
@@ -242,10 +242,10 @@ export default function PostProjectPage() {
             {/* Niveau */}
             <div className="flex flex-col gap-2">
             <label className="text-sm font-medium" style={{ color: '#94A3B8' }}>
-                Niveau attendu
+                Expected level
             </label>
             <div className="flex gap-3">
-                {['débutant', 'intermédiaire', 'avancé'].map(level => (
+                {['Biginner', 'Intermediate', 'Advanced'].map(level => (
                 <button
                     key={level}
                     type="button"
@@ -269,12 +269,12 @@ export default function PostProjectPage() {
             </div>
             </div>
 
-            {/* Compétences recherchées */}
+            {/* Desired skills */}
             <div className="flex flex-col gap-2">
             <label className="text-sm font-medium" style={{ color: '#94A3B8' }}>
-                Compétences recherchées
+                Desired skills
                 <span className="ml-2 text-xs" style={{ color: '#475569' }}>
-                (plusieurs possibles)
+                (Multiple selections possible)
                 </span>
             </label>
             <div className="flex flex-wrap gap-2">
@@ -316,7 +316,7 @@ export default function PostProjectPage() {
             </div>
             )}
 
-            {/* Bouton de soumission */}
+            {/* Publish Button */}
             <button
             type="submit"
             disabled={loading}
@@ -329,7 +329,7 @@ export default function PostProjectPage() {
                 cursor: loading ? 'not-allowed' : 'pointer',
             }}
             >
-            {loading ? 'Publication en cours...' : 'Publier le projet'}
+            {loading ? 'Publishing...' : 'Publish the project'}
             </button>
 
         </form>
