@@ -1,0 +1,34 @@
+GNU AFFERO GENERAL PUBLIC LICENSE
+Version 3, 19 November 2007
+==================================================
+
+This is the Student-Facing Core of BuilderLab.
+
+Copyright (C) [2026] Richie Mouhouadi
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+==================================================
+IMPORTANT NOTES:
+
+1. Student Use:
+This platform is free for students for learning, collaboration, and project work.
+
+2. Community Contributions:
+Contributors agree that their submissions may be included in this open-source core.
+We encourage contributions to improve the student experience.
+
+3. Commercial Use:
+You may use this code for commercial purposes, but if you deploy a modified version
+over a network (e.g., SaaS), you must release your modifications under the AGPL license.
