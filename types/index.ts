@@ -11,6 +11,8 @@ export type Profile = {
   bio: string | null
   avg_rating: number   // Moyenne calculée automatiquement par le trigger SQL
   ratings_count: number // Nombre total de notes reçues
+  preferred_contact_type: string | null
+  preferred_contact_value: string | null
   created_at: string   // Date au format ISO 8601 ex: "2024-01-15T10:30:00Z"
 }
 
@@ -49,6 +51,16 @@ export type Connection = {
   message: string | null
   // Les 3 états possibles d'une demande
   status: 'pending' | 'accepted' | 'rejected'
+  created_at: string
+}
+
+// Milestone — étape d'un projet
+export type Milestone = {
+  id: string
+  project_id: string
+  title: string
+  completed: boolean
+  position: number
   created_at: string
 }
 

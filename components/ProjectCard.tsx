@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import { Project } from '@/types'
+import Link from 'next/link'
 
 type Props = {
   project: Project
@@ -84,158 +85,140 @@ export default function ProjectCard({ project, currentUserId }: Props) {
       case 'loading': return 'Sending...'
       case 'sent':    return '✓ Request sent'
       case 'error':   return 'Try again'
-      default:        return "I'm interested →"
+      default:        return "I'm interested"
     }
   }
 
+  // Rectangle unique, pas de double encapsulation
   return (
-    <div
-      // h-full + flex flex-col = toutes les cartes prennent
-      // la même hauteur dans la grille
-      // Le contenu s'étire, le footer reste toujours en bas
-      className="rounded-2xl p-5 flex flex-col h-full"
-      style={{
-        backgroundColor: '#161B28',
-        border: '1px solid #1E2840',
-        boxShadow: '0 2px 16px rgba(0,0,0,0.25)',
-      }}
-    >
-      {/* En-tête : auteur + pays */}
-      <div className="flex items-center gap-3 mb-4">
-        <div
-          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0"
-          style={{ background: 'linear-gradient(135deg, #0D9488, #0EA5E9)' }}
-        >
-          {initials}
-        </div>
-        <div>
-          <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>
-            {project.profiles?.name ?? 'Anonymous'}
-          </p>
-          {project.profiles?.country && (
-            <p className="text-xs" style={{ color: '#475569' }}>
-              {project.profiles.country}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Titre */}
-      <h3 className="font-semibold text-base mb-2 leading-snug"
-        style={{ color: '#F1F5F9' }}
-      >
-        {project.title}
-      </h3>
-
-      {/* Description — flex-1 pousse tout le reste vers le bas
-          line-clamp-3 garde une hauteur cohérente */}
-      <p
-        className="text-sm leading-relaxed line-clamp-3 flex-1 mb-4"
-        style={{ color: '#64748B' }}
-      >
-        {project.problem}
-      </p>
-
-      {/* Skills + niveau */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {project.project_skills?.map(skill => {
-          const colors = skillColors[skill.skill_needed] ?? { bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1' }
-          return (
-            <span
-              key={skill.skill_needed}
-              className="text-xs px-2.5 py-0.5 rounded-md font-medium"
-              style={{ backgroundColor: colors.bg, color: colors.text }}
-            >
-              {skill.skill_needed}
-            </span>
-          )
-        })}
-        {project.level && (() => {
-          const colors = levelColors[project.level] ?? { bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1' }
-          return (
-            <span
-              className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"
-              style={{ backgroundColor: colors.bg, color: colors.text }}
-            >
-              {project.level}
-            </span>
-          )
-        })()}
-      </div>
-
-      {/* Footer : duration + spots + rating + bouton — tout sur la même ligne */}
+    <Link href={`/projects/${project.id}`} className="block h-full">
       <div
-        className="flex items-center justify-between pt-3 mt-auto"
-        style={{ borderTop: '1px solid #1E2840' }}
+        className="rounded-2xl p-5 flex flex-col h-full cursor-pointer transition-all"
+        style={{
+          backgroundColor: '#161B28',
+          border: '1px solid #1E2840',
+          boxShadow: '0 2px 16px rgba(0,0,0,0.25)',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.borderColor = '#0D9488')}
+        onMouseLeave={e => (e.currentTarget.style.borderColor = '#1E2840')}
       >
-        {/* Groupe gauche : duration + spots + rating */}
-        <div className="flex items-center gap-3">
-
-          {/* Rating */}
-          <div className="flex items-center gap-1 text-xs"
-            style={{ color: '#475569' }}
+        {/* En-tête : auteur + pays */}
+        <div className="flex items-center gap-3 mb-4">
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0"
+            style={{ background: 'linear-gradient(135deg, #0D9488, #0EA5E9)' }}
           >
-            <span>⭐</span>
-            <span>
-              {project.profiles?.avg_rating
-                ? project.profiles.avg_rating.toFixed(1)
-                : 'New'
-              }
-            </span>
+            {initials}
+          </div>
+          <div>
+            <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>
+              {project.profiles?.name ?? 'Anonymous'}
+            </p>
+            {project.profiles?.country && (
+              <p className="text-xs" style={{ color: '#475569' }}>
+                {project.profiles.country}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Titre */}
+        <h3 className="font-semibold text-base mb-2 leading-snug" style={{ color: '#F1F5F9' }}>
+          {project.title}
+        </h3>
+
+        {/* Description */}
+        <p className="text-sm leading-relaxed line-clamp-3 flex-1 mb-4" style={{ color: '#64748B' }}>
+          {project.problem}
+        </p>
+
+        {/* Skills + niveau */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {project.project_skills?.map(skill => {
+            const colors = skillColors[skill.skill_needed] ?? { bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1' }
+            return (
+              <span
+                key={skill.skill_needed}
+                className="text-xs px-2.5 py-0.5 rounded-md font-medium"
+                style={{ backgroundColor: colors.bg, color: colors.text }}
+              >
+                {skill.skill_needed}
+              </span>
+            )
+          })}
+          {project.level && (() => {
+            const colors = levelColors[project.level] ?? { bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1' }
+            return (
+              <span
+                className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"
+                style={{ backgroundColor: colors.bg, color: colors.text }}
+              >
+                {project.level}
+              </span>
+            )
+          })()}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-3 mt-auto" style={{ borderTop: '1px solid #1E2840' }}>
+          {/* Groupe gauche : rating, duration, spots */}
+          <div className="flex items-center gap-3">
+            {/* Rating */}
+            <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
+              <span>⭐</span>
+              <span>{project.profiles?.avg_rating ? project.profiles.avg_rating.toFixed(1) : 'New'}</span>
+            </div>
+
+            {/* Durée */}
+            {project.duration && (
+              <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {project.duration}
+              </div>
+            )}
+
+            {/* Spots */}
+            {project.spots && (
+              <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {project.spots} spots
+              </div>
+            )}
           </div>
 
-          {/* Durée estimée */}
-          {project.duration && (
-            <div className="flex items-center gap-1 text-xs"
-              style={{ color: '#475569' }}
+          {/* Groupe droite : bouton */}
+          {!isOwner && (
+            <button
+              onClick={e => {
+                e.preventDefault()
+                handleInterest()
+              }}
+              style={getButtonStyle()}
+              className="px-3 py-1 text-xs font-medium rounded-md"
+              disabled={status === 'loading' || status === 'sent'}
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {project.duration}
-            </div>
+              {getButtonLabel()}
+            </button>
           )}
 
-          {/* Spots */}
-          {project.spots && (
-            <div className="flex items-center gap-1 text-xs"
-              style={{ color: '#475569' }}
+          {isOwner && (
+            <span
+              className="text-xs px-3 py-1.5 rounded-lg font-medium"
+              style={{
+                backgroundColor: 'rgba(99,102,241,0.14)',
+                color: '#A5B4FC',
+                border: '1px solid rgba(99,102,241,0.28)',
+              }}
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              {project.spots} spots
-            </div>
+              Your project
+            </span>
           )}
         </div>
-
-        {/* Groupe droite : bouton */}
-        {!isOwner && (
-          <button
-            onClick={handleInterest}
-            disabled={status === 'loading' || status === 'sent'}
-            className="text-xs px-3.5 py-1.5 rounded-lg font-medium transition-all"
-            style={getButtonStyle()}
-          >
-            {getButtonLabel()}
-          </button>
-        )}
-
-        {isOwner && (
-          <span
-            className="text-xs px-3 py-1.5 rounded-lg font-medium"
-            style={{
-              backgroundColor: 'rgba(99,102,241,0.14)',
-              color: '#A5B4FC',
-              border: '1px solid rgba(99,102,241,0.28)',
-            }}
-          >
-            Your project
-          </span>
-        )}
       </div>
-    </div>
+    </Link>
   )
 }
