@@ -8,6 +8,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { Project } from '@/types'
 import ProjectCard from '@/components/ProjectCard'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
+import { SKILLS, LEVELS, DURATIONS } from '@/lib/constants'
 
 // Props que ce composant reçoit depuis app/page.tsx
 type Props = {
@@ -15,8 +16,9 @@ type Props = {
 }
 
 // Options des dropdowns
-const SKILLS = ['All Skills', 'Developer', 'Designer', 'Data Scientist', 'Business', 'Marketing']
-const LEVELS = ['All Levels', 'débutant', 'intermédiaire', 'avancé']
+const SKILLS_OPTIONS = ['All Skills', ...SKILLS]
+const LEVEL_OPTIONS = ['All Levels', ...LEVELS]
+const DURATION_OPTIONS = ['Any Duration, ...DURATIONS']
 
 export default function Feed({ projects }: Props) {
 

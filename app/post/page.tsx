@@ -7,17 +7,15 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import PageTransition from '@/components/PageTransition'
+import { SKILLS, DOMAINS } from '@/lib/constants'
 
 // Liste des compétences disponibles
 // Ce sont exactement les mêmes que dans FilterBar
 // pour garder la cohérence
-const SKILLS = ['Developer', 'Designer', 'Data Scientist', 'Business', 'Marketing']
+const SKILL_OPTIONS = [...SKILLS]
 
 // Liste des domaines disponibles
-const DOMAINS = [
-  'Education', 'Health', 'AgriTech', 'Fintech',
-  'Logistic', 'Environment', 'Social', 'Other'
-]
+const DOMAIN_OPTIONS = [...DOMAINS]
 
 export default function PostProjectPage() {
   const router = useRouter()
