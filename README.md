@@ -277,7 +277,7 @@ See the [LICENSE](./LICENSE) file for the full license text.
 ---
 
 <div align="center">
-  <p>Built with ❤️ and Claude</p>
+  <p>Built by Richie Mouhouadi</p>
   <p>
     <a href="https://builderlab-tau.vercel.app">Live App</a> ·
     <a href="./docs/ARCHITECTURE.md">Architecture</a> ·
