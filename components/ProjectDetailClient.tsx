@@ -1,4 +1,7 @@
 // components/ProjectDetailClient.tsx
+// Affiche le détail complet d'un projet
+// Gère : milestones, team, contact, rating, "I'm interested"
+// 'use client' car on utilise useState pour les interactions
 'use client'
 
 import { useState } from 'react'
@@ -6,14 +9,23 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import { Project, Milestone } from '@/types'
+import RatingModal from '@/components/RatingModal'
 
+// On importe les couleurs et constantes depuis lib/constants.ts
+// pour garder la cohérence visuelle dans toute l'app
+import { SKILL_COLORS, LEVEL_COLORS, CONTACT_TYPES } from '@/lib/constants'
+
+// Type pour un membre du projet
 type Member = {
-  id: string
+  id: string           // project_member_id
   user_id: string
   role: string | null
+  rating_required: boolean
   profiles: {
     id: string
     name: string | null
+    first_name: string | null
+    last_name: string | null
     country: string | null
     avg_rating: number
     preferred_contact_type: string | null
@@ -21,6 +33,7 @@ type Member = {
   } | null
 }
 
+// Type pour une connexion existante
 type Connection = {
   id: string
   status: 'pending' | 'accepted' | 'rejected'
@@ -34,65 +47,78 @@ type Props = {
   existingConnection: Connection | null
 }
 
-// Icônes et labels pour chaque type de contact
-const CONTACT_TYPES: Record<string, { label: string; icon: string; color: string }> = {
-  discord:   { label: 'Discord',   icon: '🎮', color: '#5865F2' },
-  whatsapp:  { label: 'WhatsApp',  icon: '💬', color: '#25D366' },
-  slack:     { label: 'Slack',     icon: '⚡', color: '#E01E5A' },
-  telegram:  { label: 'Telegram',  icon: '✈️', color: '#0088CC' },
-  email:     { label: 'Email',     icon: '📧', color: '#0D9488' },
-}
-
-const skillColors: Record<string, { bg: string; text: string }> = {
-  'Developer':      { bg: 'rgba(13,148,136,0.14)',  text: '#5EEAD4' },
-  'Designer':       { bg: 'rgba(14,165,233,0.14)',  text: '#7DD3FC' },
-  'Data Scientist': { bg: 'rgba(99,102,241,0.14)',  text: '#A5B4FC' },
-  'Business':       { bg: 'rgba(245,158,11,0.14)',  text: '#FCD34D' },
-  'Marketing':      { bg: 'rgba(236,72,153,0.14)',  text: '#F9A8D4' },
-}
-
-const levelColors: Record<string, { bg: string; text: string }> = {
-  'débutant':      { bg: 'rgba(16,185,129,0.14)', text: '#6EE7B7' },
-  'intermédiaire': { bg: 'rgba(245,158,11,0.14)', text: '#FCD34D' },
-  'avancé':        { bg: 'rgba(239,68,68,0.14)',  text: '#FCA5A5' },
-}
-
 export default function ProjectDetailClient({
-  project, members, milestones: initialMilestones,
-  currentUserId, existingConnection
+  project,
+  members,
+  milestones: initialMilestones,
+  currentUserId,
+  existingConnection,
 }: Props) {
   const router = useRouter()
   const supabase = createBrowserSupabaseClient()
 
   // État du bouton "I'm interested"
+  // Si une connexion existe déjà, on part en état "sent"
   const [connStatus, setConnStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>(
     existingConnection ? 'sent' : 'idle'
   )
 
-  // État des milestones — on les stocke localement
-  // pour mettre à jour l'UI sans refetch
+  // État des milestones — stocké localement pour éviter un refetch
+  // à chaque modification
   const [milestones, setMilestones] = useState<Milestone[]>(initialMilestones)
 
-  // État du formulaire d'ajout de milestone
+  // Champ de saisie pour ajouter un nouveau milestone
   const [newMilestone, setNewMilestone] = useState('')
   const [addingMilestone, setAddingMilestone] = useState(false)
 
+  // Contrôle l'affichage du modal de rating
+  const [showRatingModal, setShowRatingModal] = useState(false)
+
+  // true si l'utilisateur courant doit encore noter ses collaborateurs
+  const [ratingRequired, setRatingRequired] = useState(
+    members.some(m => m.user_id === currentUserId && m.rating_required)
+  )
+
+  // L'utilisateur est-il le owner du projet ?
   const isOwner = currentUserId === project.owner_id
+
+  // L'utilisateur est-il déjà membre du projet ?
   const isMember = members.some(m => m.user_id === currentUserId)
 
+  // Progression des milestones en pourcentage
+  const progress = milestones.length > 0
+    ? Math.round(
+        (milestones.filter(m => m.completed).length / milestones.length) * 100
+      )
+    : 0
+
+  // Nom complet d'un profil — reconstruit depuis first + last name
+  function getFullName(profile: Member['profiles']) {
+    if (!profile) return 'Anonymous'
+    const full = [profile.first_name, profile.last_name].filter(Boolean).join(' ')
+    return full || profile.name || 'Anonymous'
+  }
+
   // Initiales pour l'avatar
-  function getInitials(name: string | null | undefined) {
-    if (!name) return '?'
-    return name.split(' ').map(w => w[0]).join('').toUpperCase()
+  function getInitials(profile: Member['profiles'] | Project['profiles']) {
+    if (!profile) return '?'
+    // On essaie first_name/last_name d'abord, puis name
+    const first = (profile as any).first_name?.[0]
+    const last = (profile as any).last_name?.[0]
+    if (first || last) return [first, last].filter(Boolean).join('').toUpperCase()
+    return (profile as any).name?.[0]?.toUpperCase() ?? '?'
   }
 
   // Envoyer une demande de connexion
   async function handleInterest() {
+    // Si pas connecté → rediriger vers login
     if (!currentUserId) {
       router.push('/login')
       return
     }
+
     setConnStatus('loading')
+
     try {
       const { error } = await supabase
         .from('connections')
@@ -102,7 +128,9 @@ export default function ProjectDetailClient({
           message: "I'm interested in collaborating on your project.",
           status: 'pending',
         })
+
       if (error?.code === '23505') {
+        // Code 23505 = doublon — demande déjà envoyée
         setConnStatus('sent')
       } else if (error) {
         throw error
@@ -114,16 +142,15 @@ export default function ProjectDetailClient({
     }
   }
 
-  // Cocher/décocher un milestone
+  // Cocher/décocher un milestone — optimistic update
+  // On met à jour l'UI immédiatement sans attendre Supabase
   async function toggleMilestone(milestone: Milestone) {
-    // On met à jour l'UI immédiatement — optimistic update
-    // Si Supabase échoue, on pourra rollback
     setMilestones(prev =>
-      prev.map(m => m.id === milestone.id
-        ? { ...m, completed: !m.completed }
-        : m
+      prev.map(m =>
+        m.id === milestone.id ? { ...m, completed: !m.completed } : m
       )
     )
+
     await supabase
       .from('milestones')
       .update({ completed: !milestone.completed })
@@ -147,50 +174,69 @@ export default function ProjectDetailClient({
       .single()
 
     if (!error && data) {
+      // On ajoute le nouveau milestone à la liste locale
       setMilestones(prev => [...prev, data])
       setNewMilestone('')
     }
+
     setAddingMilestone(false)
   }
 
-  // Supprimer un milestone
+  // Supprimer un milestone — optimistic update
   async function handleDeleteMilestone(id: string) {
     setMilestones(prev => prev.filter(m => m.id !== id))
     await supabase.from('milestones').delete().eq('id', id)
   }
 
-  // Progression des milestones en pourcentage
-  const progress = milestones.length > 0
-    ? Math.round((milestones.filter(m => m.completed).length / milestones.length) * 100)
-    : 0
+  // Marquer le projet comme completed
+  async function handleMarkCompleted() {
+    // On met à jour le status du projet
+    await supabase
+      .from('projects')
+      .update({ status: 'completed' })
+      .eq('id', project.id)
+
+    // On marque rating_required = true pour tous les membres
+    // pour déclencher le système de notation obligatoire
+    await supabase
+      .from('project_members')
+      .update({ rating_required: true })
+      .eq('project_id', project.id)
+
+    // On recharge la page pour refléter le nouveau status
+    router.refresh()
+  }
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-10">
 
-      {/* Bouton retour */}
+      {/* Bouton retour vers le feed */}
       <Link
         href="/"
         className="inline-flex items-center gap-2 text-sm mb-6 transition-colors px-3 py-1.5 rounded-md font-medium"
-        //className="text-sm px-3 py-1.5 rounded-lg transition-colors"
         style={{ 
             color: '#475569',
             border: '1px solid #1E2840',
          }}
+
         onMouseEnter={e => {
             (e.currentTarget as HTMLElement).style.color = '#F1F5F9'
             ;(e.currentTarget as HTMLElement).style.borderColor = '#94A3B8'
         }}
+
         onMouseLeave={e => {
             (e.currentTarget as HTMLElement).style.color = '#64748B'
             ;(e.currentTarget as HTMLElement).style.borderColor = '#1E2840'
         }}
+
       >
         ← Back to projects
       </Link>
 
+      {/* Layout en deux colonnes sur desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Colonne principale — 2/3 */}
+        {/* ── Colonne principale (2/3) ── */}
         <div className="lg:col-span-2 flex flex-col gap-6">
 
           {/* Header du projet */}
@@ -198,7 +244,7 @@ export default function ProjectDetailClient({
             className="rounded-2xl p-6"
             style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
           >
-            {/* Domain + status */}
+            {/* Domain + status badges */}
             <div className="flex items-center gap-2 mb-3">
               <span
                 className="text-xs px-2.5 py-1 rounded-md font-medium"
@@ -223,7 +269,7 @@ export default function ProjectDetailClient({
               </span>
             </div>
 
-            {/* Titre */}
+            {/* Titre du projet */}
             <h1
               className="text-2xl font-bold mb-4"
               style={{ color: '#F1F5F9' }}
@@ -231,7 +277,7 @@ export default function ProjectDetailClient({
               {project.title}
             </h1>
 
-            {/* Description complète */}
+            {/* Description complète du projet */}
             <p
               className="text-sm leading-relaxed mb-4"
               style={{ color: '#94A3B8' }}
@@ -239,10 +285,11 @@ export default function ProjectDetailClient({
               {project.problem}
             </p>
 
-            {/* Skills + niveau */}
+            {/* Skills recherchées + niveau
+                On utilise SKILL_COLORS et LEVEL_COLORS depuis constants.ts */}
             <div className="flex flex-wrap gap-2">
               {project.project_skills?.map(skill => {
-                const colors = skillColors[skill.skill_needed] ?? {
+                const colors = SKILL_COLORS[skill.skill_needed] ?? {
                   bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
                 }
                 return (
@@ -255,8 +302,9 @@ export default function ProjectDetailClient({
                   </span>
                 )
               })}
+
               {project.level && (() => {
-                const colors = levelColors[project.level] ?? {
+                const colors = LEVEL_COLORS[project.level] ?? {
                   bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
                 }
                 return (
@@ -271,7 +319,7 @@ export default function ProjectDetailClient({
             </div>
           </div>
 
-          {/* Milestones */}
+          {/* Section Milestones */}
           <div
             className="rounded-2xl p-6"
             style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
@@ -281,13 +329,12 @@ export default function ProjectDetailClient({
               <h2 className="font-semibold text-sm" style={{ color: '#F1F5F9' }}>
                 Milestones
               </h2>
-              {/* Progression */}
               <span className="text-xs" style={{ color: '#475569' }}>
                 {milestones.filter(m => m.completed).length}/{milestones.length} completed
               </span>
             </div>
 
-            {/* Barre de progression */}
+            {/* Barre de progression — visible seulement si au moins 1 milestone */}
             {milestones.length > 0 && (
               <div
                 className="w-full h-1.5 rounded-full mb-4"
@@ -295,10 +342,7 @@ export default function ProjectDetailClient({
               >
                 <div
                   className="h-1.5 rounded-full transition-all duration-500"
-                  style={{
-                    width: `${progress}%`,
-                    backgroundColor: '#0D9488',
-                  }}
+                  style={{ width: `${progress}%`, backgroundColor: '#0D9488' }}
                 />
               </div>
             )}
@@ -311,24 +355,24 @@ export default function ProjectDetailClient({
                   {isOwner && ' Add your first one below.'}
                 </p>
               )}
+
               {milestones.map(milestone => (
                 <div
                   key={milestone.id}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-xl group"
                   style={{ backgroundColor: '#0C1120' }}
                 >
-                  {/* Checkbox — seulement cliquable par le owner */}
+                  {/* Checkbox — cliquable seulement par le owner */}
                   <button
                     onClick={() => isOwner && toggleMilestone(milestone)}
                     className="flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-all"
                     style={{
-                      backgroundColor: milestone.completed
-                        ? '#0D9488'
-                        : 'transparent',
+                      backgroundColor: milestone.completed ? '#0D9488' : 'transparent',
                       borderColor: milestone.completed ? '#0D9488' : '#1E2840',
                       cursor: isOwner ? 'pointer' : 'default',
                     }}
                   >
+                    {/* Icône check quand complété */}
                     {milestone.completed && (
                       <svg className="w-2.5 h-2.5 text-white" fill="none"
                         viewBox="0 0 24 24" stroke="currentColor"
@@ -339,7 +383,7 @@ export default function ProjectDetailClient({
                     )}
                   </button>
 
-                  {/* Titre du milestone */}
+                  {/* Titre du milestone — barré si complété */}
                   <span
                     className="text-sm flex-1"
                     style={{
@@ -350,7 +394,7 @@ export default function ProjectDetailClient({
                     {milestone.title}
                   </span>
 
-                  {/* Bouton supprimer — seulement pour le owner */}
+                  {/* Bouton supprimer — visible au hover, seulement pour le owner */}
                   {isOwner && (
                     <button
                       onClick={() => handleDeleteMilestone(milestone.id)}
@@ -372,7 +416,7 @@ export default function ProjectDetailClient({
                   placeholder="Add a milestone..."
                   value={newMilestone}
                   onChange={e => setNewMilestone(e.target.value)}
-                  // Appuyer sur Enter pour ajouter
+                  // Enter pour ajouter rapidement sans cliquer le bouton
                   onKeyDown={e => e.key === 'Enter' && handleAddMilestone()}
                   className="flex-1 px-3 py-2 rounded-xl text-sm outline-none"
                   style={{
@@ -380,6 +424,8 @@ export default function ProjectDetailClient({
                     border: '1px solid #1E2840',
                     color: '#F1F5F9',
                   }}
+                  onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
+                  onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
                 />
                 <button
                   onClick={handleAddMilestone}
@@ -389,6 +435,7 @@ export default function ProjectDetailClient({
                     backgroundColor: 'rgba(13,148,136,0.14)',
                     color: '#5EEAD4',
                     border: '1px solid rgba(13,148,136,0.28)',
+                    // Opacité réduite si champ vide ou en cours d'ajout
                     opacity: !newMilestone.trim() ? 0.5 : 1,
                   }}
                 >
@@ -399,10 +446,10 @@ export default function ProjectDetailClient({
           </div>
         </div>
 
-        {/* Colonne latérale — 1/3 */}
+        {/* ── Colonne latérale (1/3) ── */}
         <div className="flex flex-col gap-6">
 
-          {/* Owner */}
+          {/* Card Owner */}
           <div
             className="rounded-2xl p-5"
             style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
@@ -410,16 +457,18 @@ export default function ProjectDetailClient({
             <h2 className="font-semibold text-sm mb-4" style={{ color: '#F1F5F9' }}>
               Posted by
             </h2>
+
             <div className="flex items-center gap-3 mb-3">
+              {/* Avatar du owner */}
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
                 style={{ background: 'linear-gradient(135deg, #0D9488, #0EA5E9)' }}
               >
-                {getInitials(project.profiles?.name)}
+                {getInitials(project.profiles)}
               </div>
               <div>
                 <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>
-                  {project.profiles?.name ?? 'Anonymous'}
+                  {getFullName(project.profiles as any)}
                 </p>
                 <p className="text-xs" style={{ color: '#475569' }}>
                   {project.profiles?.country ?? ''} · ⭐{' '}
@@ -431,8 +480,10 @@ export default function ProjectDetailClient({
               </div>
             </div>
 
-            {/* Contact préféré du owner */}
-            {project.profiles?.preferred_contact_type && (
+            {/* Lien de contact préféré du owner
+                On utilise CONTACT_TYPES depuis constants.ts */}
+            {project.profiles?.preferred_contact_type &&
+              CONTACT_TYPES[project.profiles.preferred_contact_type] && (
               <a
                 href={project.profiles.preferred_contact_value ?? '#'}
                 target="_blank"
@@ -441,20 +492,18 @@ export default function ProjectDetailClient({
                 style={{
                   backgroundColor: '#0C1120',
                   border: '1px solid #1E2840',
-                  color: CONTACT_TYPES[project.profiles.preferred_contact_type]?.color ?? '#94A3B8',
+                  color: CONTACT_TYPES[project.profiles.preferred_contact_type].color,
                 }}
               >
+                <span>{CONTACT_TYPES[project.profiles.preferred_contact_type].icon}</span>
                 <span>
-                  {CONTACT_TYPES[project.profiles.preferred_contact_type]?.icon}
-                </span>
-                <span>
-                  Contact via {CONTACT_TYPES[project.profiles.preferred_contact_type]?.label}
+                  Contact via {CONTACT_TYPES[project.profiles.preferred_contact_type].label}
                 </span>
               </a>
             )}
           </div>
 
-          {/* Team members */}
+          {/* Card Team */}
           <div
             className="rounded-2xl p-5"
             style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
@@ -471,29 +520,31 @@ export default function ProjectDetailClient({
               <div className="flex flex-col gap-3">
                 {members.map(member => (
                   <div key={member.id} className="flex items-center gap-3">
+                    {/* Avatar du membre */}
                     <div
                       className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
                       style={{ background: 'linear-gradient(135deg, #0D9488, #0EA5E9)' }}
                     >
-                      {getInitials(member.profiles?.name)}
+                      {getInitials(member.profiles)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate" style={{ color: '#F1F5F9' }}>
-                        {member.profiles?.name ?? 'Anonymous'}
+                        {getFullName(member.profiles)}
                       </p>
-                      {/* Contact préféré du membre */}
-                      {member.profiles?.preferred_contact_type && (
+                      {/* Lien de contact préféré du membre */}
+                      {member.profiles?.preferred_contact_type &&
+                        CONTACT_TYPES[member.profiles.preferred_contact_type] && (
                         <a
                           href={member.profiles.preferred_contact_value ?? '#'}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs hover:opacity-80 transition-opacity"
                           style={{
-                            color: CONTACT_TYPES[member.profiles.preferred_contact_type]?.color ?? '#475569',
+                            color: CONTACT_TYPES[member.profiles.preferred_contact_type].color,
                           }}
                         >
-                          {CONTACT_TYPES[member.profiles.preferred_contact_type]?.icon}{' '}
-                          {CONTACT_TYPES[member.profiles.preferred_contact_type]?.label}
+                          {CONTACT_TYPES[member.profiles.preferred_contact_type].icon}{' '}
+                          {CONTACT_TYPES[member.profiles.preferred_contact_type].label}
                         </a>
                       )}
                     </div>
@@ -503,7 +554,7 @@ export default function ProjectDetailClient({
             )}
           </div>
 
-          {/* Infos du projet */}
+          {/* Card Details du projet */}
           <div
             className="rounded-2xl p-5"
             style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
@@ -512,24 +563,32 @@ export default function ProjectDetailClient({
               Details
             </h2>
             <div className="flex flex-col gap-3">
+
+              {/* Durée estimée */}
               {project.duration && (
                 <div className="flex items-center gap-2 text-xs" style={{ color: '#64748B' }}>
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Duration: <span style={{ color: '#94A3B8' }}>{project.duration}</span>
+                  Duration:{' '}
+                  <span style={{ color: '#94A3B8' }}>{project.duration}</span>
                 </div>
               )}
+
+              {/* Nombre de spots */}
               {project.spots && (
                 <div className="flex items-center gap-2 text-xs" style={{ color: '#64748B' }}>
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  Spots: <span style={{ color: '#94A3B8' }}>{project.spots}</span>
+                  Spots:{' '}
+                  <span style={{ color: '#94A3B8' }}>{project.spots}</span>
                 </div>
               )}
+
+              {/* Date de création */}
               <div className="flex items-center gap-2 text-xs" style={{ color: '#64748B' }}>
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -545,7 +604,53 @@ export default function ProjectDetailClient({
             </div>
           </div>
 
-          {/* Bouton I'm interested — caché si owner ou déjà membre */}
+          {/* ── Actions ── */}
+
+          {/* Bouton Mark as completed — owner seulement, projet encore ouvert */}
+          {isOwner && project.status === 'open' && (
+            <button
+              onClick={handleMarkCompleted}
+              className="w-full py-3 rounded-xl font-medium text-sm transition-all"
+              style={{
+                backgroundColor: 'rgba(99,102,241,0.14)',
+                color: '#A5B4FC',
+                border: '1px solid rgba(99,102,241,0.28)',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(99,102,241,0.25)')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(99,102,241,0.14)')}
+            >
+              ✓ Mark as completed
+            </button>
+          )}
+
+          {/* Bannière de rating — visible pour les membres
+              qui doivent encore noter leurs collaborateurs */}
+          {ratingRequired && !showRatingModal && (
+            <div
+              className="w-full p-4 rounded-xl"
+              style={{
+                backgroundColor: 'rgba(245,158,11,0.1)',
+                border: '1px solid rgba(245,158,11,0.3)',
+              }}
+            >
+              <p className="text-xs mb-3" style={{ color: '#FCD34D' }}>
+                ⭐ This project is completed. Please rate your collaborators.
+              </p>
+              <button
+                onClick={() => setShowRatingModal(true)}
+                className="w-full py-2 rounded-lg text-xs font-medium transition-all"
+                style={{
+                  backgroundColor: 'rgba(245,158,11,0.2)',
+                  color: '#FCD34D',
+                  border: '1px solid rgba(245,158,11,0.3)',
+                }}
+              >
+                Rate collaborators →
+              </button>
+            </div>
+          )}
+
+          {/* Bouton "I'm interested" — caché si owner ou déjà membre */}
           {!isOwner && !isMember && (
             <button
               onClick={handleInterest}
@@ -561,28 +666,17 @@ export default function ProjectDetailClient({
                   : 'none',
                 opacity: connStatus === 'loading' ? 0.7 : 1,
                 cursor: connStatus === 'sent' ? 'default' : 'pointer',
-                transition: 'background-color 0.3s ease', // ajout transition
-              }}
-              onMouseEnter={e => {
-                if (connStatus !== 'sent' && connStatus !== 'loading') {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#09746b'
-                }
-              }}
-              onMouseLeave={e => {
-                if (connStatus !== 'sent' && connStatus !== 'loading') {
-                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#0D9488'
-                }
               }}
             >
               {connStatus === 'loading' && 'Sending...'}
               {connStatus === 'sent' && '✓ Request sent'}
               {connStatus === 'error' && 'Try again'}
-              {connStatus === 'idle' && "I'm interested"}
+              {connStatus === 'idle' && "I'm interested →"}
             </button>
           )}
 
-          {/* Badge si déjà membre */}
-          {isMember && (
+          {/* Badge si déjà membre de l'équipe */}
+          {isMember && !isOwner && (
             <div
               className="w-full py-3 rounded-xl text-center text-sm font-medium"
               style={{
@@ -596,6 +690,22 @@ export default function ProjectDetailClient({
           )}
         </div>
       </div>
+
+      {/* Modal de rating — affiché par dessus tout le contenu
+          On exclut l'utilisateur courant de la liste à noter
+          car on ne se note pas soi-même */}
+      {showRatingModal && currentUserId && (
+        <RatingModal
+          projectId={project.id}
+          members={members.filter(m => m.user_id !== currentUserId)}
+          currentUserId={currentUserId}
+          onComplete={() => {
+            // Cache le modal et la bannière après soumission
+            setShowRatingModal(false)
+            setRatingRequired(false)
+          }}
+        />
+      )}
     </main>
   )
 }
