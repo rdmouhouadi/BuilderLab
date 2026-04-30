@@ -10,7 +10,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import type { User } from '@supabase/supabase-js'
-import { LayoutGrid, Users } from 'lucide-react'
+import { Layers, Users } from 'lucide-react'
+
+//new
+import { motion, AnimatePresence } from 'framer-motion'
+import { usePathname } from 'next/navigation'
 
 
 
@@ -26,6 +30,14 @@ export default function Navbar() {
 
   // État du menu mobile (ouvert/fermé)
   const [menuOpen, setMenuOpen] = useState(false)
+
+  const pathname = usePathname()
+
+  // Les deux onglets de navigation
+  const navItems = [
+  { href: '/',            label: 'Projects',    icon: Layers },
+  { href: '/connections', label: 'Connections', icon: Users  },
+]
 
   useEffect(() => {
     // On récupère la session au chargement de la page
@@ -82,35 +94,73 @@ export default function Navbar() {
         </span>
       </Link>
 
-      {/* Liens de navigation — version desktop */}
-      <div className="hidden md:flex items-center gap-6">
-        <Link
-          href="/"
-          className="flex items-center gap-1.5 text-sm transition-colors"
-          style={{ color: '#94A3B8' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#F1F5F9')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')}
-        >
-          {/* Icône grille pour Projects */}
-          <LayoutGrid className="w-4 h-4" />
-          Projects
-        </Link>
+      {/* Navigation desktop — capsule animée avec Framer Motion */}
+      <div
+        className="hidden md:flex items-center gap-1 p-1 rounded-xl relative"
+        style={{ backgroundColor: '#0C1120', border: '1px solid #1E2840' }}
+      >
+        {navItems.map(item => {
+          // L'onglet est actif si le pathname correspond exactement
+          const isActive = pathname === item.href
 
-        {/* Ce lien n'apparaît que si l'utilisateur est connecté */}
-        {user && (
-          <Link 
-            href="/connections" 
-            className="flex items-center gap-1.5 text-sm transition-colors" 
-            style={{ color: '#94A3B8' }} 
-            onMouseEnter={e => (e.currentTarget.style.color = '#F1F5F9')} 
-            onMouseLeave={e => (e.currentTarget.style.color = '#94A3B8')} 
-          >
-            {/* Icône users pour Connections */}
-            <Users className="w-4 h-4" />
-            Connections
-          </Link>
-        )}
-        
+          // On ne montre Connections que si connecté
+          if (item.href === '/connections' && !user) return null
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="relative px-4 py-1.5 rounded-lg text-sm flex items-center gap-1.5 z-10 transition-colors"
+              style={{
+                // Le texte est blanc si actif, gris sinon
+                color: isActive ? '#F1F5F9' : '#64748B',
+              }}
+              // Groupe pour gérer le hover sur chaque onglet
+              onMouseEnter={e => {
+                if (!isActive) {
+                  const el = e.currentTarget
+                  // On affiche la capsule grise au hover
+                  el.querySelector('.hover-capsule')?.classList.remove('opacity-0')
+                }
+              }}
+              onMouseLeave={e => {
+                const el = e.currentTarget
+                el.querySelector('.hover-capsule')?.classList.add('opacity-0')
+              }}
+            >
+              {/* Capsule grise au hover sur l'onglet inactif */}
+              {!isActive && (
+                <span
+                  className="hover-capsule opacity-0 absolute inset-0 rounded-lg transition-opacity duration-150"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                />
+              )}
+
+              {/* Capsule verte animée sur l'onglet actif
+                  layoutId permet à Framer Motion de faire glisser
+                  la capsule d'un onglet à l'autre avec une animation fluide */}
+              {isActive && (
+                <motion.span
+                  layoutId="active-nav-capsule"
+                  className="absolute inset-0 rounded-lg"
+                  style={{ backgroundColor: '#0D9488' }}
+                  // La capsule apparaît avec un fondu à la première render
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{
+                    type: 'spring',
+                    stiffness: 400,
+                    damping: 30,
+                  }}
+                />
+              )}
+
+              {/* Icône + label — au dessus de la capsule grâce au z-10 */}
+              <item.icon className="w-4 h-4 relative z-10" />
+              <span className="relative z-10">{item.label}</span>
+            </Link>
+          )
+        })}
       </div>
 
       {/* Actions à droite */}
@@ -195,46 +245,77 @@ export default function Navbar() {
         {menuOpen ? '✕' : '☰'}
       </button>
 
-      {/* Menu mobile — visible uniquement si menuOpen = true */}
+      {/* Menu mobile — version simplifiée sans capsule animée */}
       {menuOpen && (
         <div
-          className="absolute top-full left-0 w-full px-4 py-4 flex flex-col gap-3 md:hidden"
+          className="absolute top-full left-0 w-full px-4 py-4 flex flex-col gap-1 md:hidden"
           style={{
             backgroundColor: '#161B28',
             borderBottom: '1px solid #1E2840',
           }}
         >
-          <Link href="/" style={{ color: '#94A3B8' }} className="text-sm">
-            Projets
-          </Link>
-          {user && (
-            <Link href="/connections" style={{ color: '#94A3B8' }} className="text-sm">
-              Connexions
-            </Link>
-          )}
+          {navItems.map(item => {
+            if (item.href === '/connections' && !user) return null
+            const isActive = pathname === item.href
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm transition-colors"
+                style={{
+                  backgroundColor: isActive ? 'rgba(13,148,136,0.14)' : 'transparent',
+                  color: isActive ? '#5EEAD4' : '#94A3B8',
+                }}
+              >
+                <item.icon className="w-4 h-4" />
+                {item.label}
+              </Link>
+            )
+          })}
+
+          {/* Séparateur */}
+          <div className="my-2" style={{ borderTop: '1px solid #1E2840' }} />
+
           {user ? (
             <>
-              <Link href="/post" style={{ color: '#5EEAD4' }} className="text-sm">
-                + Poster un projet
+              <Link
+                href="/post"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm"
+                style={{ color: '#5EEAD4' }}
+              >
+                + Post a project
               </Link>
-              <Link href="/profile" style={{ color: '#94A3B8' }} className="text-sm">
-                Mon profil
+              <Link
+                href="/profile"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm"
+                style={{ color: '#94A3B8' }}
+              >
+                My profile
               </Link>
               <button
-                onClick={handleSignOut}
-                className="text-left text-sm"
+                onClick={() => { handleSignOut(); setMenuOpen(false) }}
+                className="text-left flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm"
                 style={{ color: '#64748B' }}
               >
-                Déconnexion
+                Sign out
               </button>
             </>
           ) : (
-            <Link href="/login" style={{ color: '#5EEAD4' }} className="text-sm">
-              Se connecter
+            <Link
+              href="/login"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm"
+              style={{ color: '#5EEAD4' }}
+            >
+              Sign in
             </Link>
           )}
         </div>
       )}
     </nav>
-  )
-}
+    )
+  }
