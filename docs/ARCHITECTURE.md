@@ -473,7 +473,6 @@ Production URL updated: builderlab.vercel.app
 
 ### Important
 
-- **Never commit `.env.local`** — it is in `.gitignore`
 - The `NEXT_PUBLIC_` prefix makes variables accessible in the browser
 - The Supabase `anon` key is safe to expose because **RLS protects all data**
 - The Supabase `service_role` key must **never** be used on the frontend
