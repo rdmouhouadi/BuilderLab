@@ -7,8 +7,12 @@
 export type Profile = {
   id: string           // UUID généré par Supabase Auth
   name: string
+  first_name: string | null
+  last_name: string | null
   country: string | null   // null = l'utilisateur n'a pas encore rempli ce champ
   bio: string | null
+  school: string | null
+  major: string | null
   avg_rating: number   // Moyenne calculée automatiquement par le trigger SQL
   ratings_count: number // Nombre total de notes reçues
   preferred_contact_type: string | null
