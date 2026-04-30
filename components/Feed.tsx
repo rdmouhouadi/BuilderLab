@@ -18,7 +18,7 @@ type Props = {
 // Options des dropdowns
 const SKILLS_OPTIONS = ['All Skills', ...SKILLS]
 const LEVEL_OPTIONS = ['All Levels', ...LEVELS]
-const DURATION_OPTIONS = ['Any Duration, ...DURATIONS']
+const DURATION_OPTIONS = ['Any Duration', ...DURATIONS]
 
 export default function Feed({ projects }: Props) {
 
@@ -26,10 +26,12 @@ export default function Feed({ projects }: Props) {
   const [search, setSearch] = useState('')
   const [skill, setSkill] = useState('All Skills')
   const [level, setLevel] = useState('All Levels')
+  const [duration, setDuration] = useState('Any Duration')
 
   // États des dropdowns ouverts/fermés
   const [skillOpen, setSkillOpen] = useState(false)
   const [levelOpen, setLevelOpen] = useState(false)
+  const [durationOpen, setDurationOpen] = useState(false)
 
   // Client Supabase pour récupérer l'utilisateur connecté
   const supabase = createBrowserSupabaseClient()
@@ -61,6 +63,9 @@ export default function Feed({ projects }: Props) {
 
       // Filtre par niveau
       const matchLevel = level === 'All Levels' || project.level === level
+
+      // Filtre par Durée
+      const matchDuration = duration === 'Any Duration' || project.duration === duration
 
       // Un projet s'affiche seulement s'il passe tous les filtres
       return matchSearch && matchSkill && matchLevel
@@ -238,7 +243,60 @@ export default function Feed({ projects }: Props) {
             </div>
           )}
         </div>
+      
+
+        {/* Dropdown Any Duration */}
+        <div className="relative">
+          <button
+            onClick={() => { setDurationOpen(!durationOpen); setSkillOpen(false); setLevelOpen(false) }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors"
+            style={{
+              backgroundColor: duration !== 'Any Duration' ? 'rgba(13,148,136,0.14)' : 'transparent',
+              color: duration !== 'Any Duration' ? '#5EEAD4' : '#94A3B8',
+              border: duration !== 'Any Duration' ? '1px solid rgba(13,148,136,0.28)' : '2px solid #1E2840',
+            }}
+          >
+            {/* Icône horloge */}
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {duration}
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {durationOpen && (
+            <div
+              className="absolute top-full mt-1 right-0 rounded-xl overflow-hidden z-10 min-w-40"
+              style={{
+                backgroundColor: '#1A2235',
+                border: '1px solid #1E2840',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+              }}
+            >
+              {DURATION_OPTIONS.map(d => (
+                <button
+                  key={d}
+                  onClick={() => { setDuration(d); setDurationOpen(false) }}
+                  className="w-full text-left px-4 py-2.5 text-sm transition-colors"
+                  style={{
+                    color: duration === d ? '#5EEAD4' : '#94A3B8',
+                    backgroundColor: duration === d ? 'rgba(13,148,136,0.1)' : 'transparent',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.05)')}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = duration === d ? 'rgba(13,148,136,0.1)' : 'transparent')}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+
+
 
       {/* Compteur de résultats */}
       <div className="flex items-center justify-between mb-4">
