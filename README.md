@@ -23,7 +23,7 @@ Working alone, this can be challenging. But in teams of two, three, or more, it 
 - A UI/UX Designer joins in: *"Is there room for one more?"*
 - Together, they build something real — for their portfolios, and sometimes... for the world 🚀
 
-**The app is live at:** [builderlab.vercel.app](https://builderlab-tau.vercel.app)
+**The app is live at:** [builderlab-tau.vercel.app](https://builderlab-tau.vercel.app)
 
 ---
 
