@@ -207,6 +207,25 @@ export default function ProjectDetailClient({
     router.refresh()
   }
 
+  // Fonction de suppression du projet
+  async function handleDeleteProject() {
+    // Confirmation avant suppression — évite les suppressions accidentelles
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this project? This action cannot be undone.'
+    )
+    if (!confirmed) return
+
+    const { error } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', project.id)
+
+    if (!error) {
+      // On redirige vers le feed après suppression
+      router.push('/')
+    }
+  }
+
   return (
     <main className="max-w-4xl mx-auto px-4 py-10">
 
@@ -620,6 +639,23 @@ export default function ProjectDetailClient({
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(99,102,241,0.14)')}
             >
               ✓ Mark as completed
+            </button>
+          )}
+
+          {/* Bouton Delete project — owner seulement */}
+          {isOwner && (
+            <button
+              onClick={handleDeleteProject}
+              className="w-full py-3 rounded-xl font-medium text-sm transition-all"
+              style={{
+                backgroundColor: 'rgba(239,68,68,0.1)',
+                color: '#FCA5A5',
+                border: '1px solid rgba(239,68,68,0.28)',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.2)')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.1)')}
+            >
+              🗑 Delete project
             </button>
           )}
 
