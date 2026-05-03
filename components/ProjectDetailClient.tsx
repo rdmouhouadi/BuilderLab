@@ -13,7 +13,7 @@ import RatingModal from '@/components/RatingModal'
 
 // On importe les couleurs et constantes depuis lib/constants.ts
 // pour garder la cohérence visuelle dans toute l'app
-import { SKILL_COLORS, LEVEL_COLORS, CONTACT_TYPES } from '@/lib/constants'
+import { SKILL_COLORS, LEVEL_COLORS, CONTACT_TYPES ,SKILLS, DURATIONS, LEVELS } from '@/lib/constants'
 
 // Type pour un membre du projet
 type Member = {
@@ -91,6 +91,23 @@ export default function ProjectDetailClient({
         (milestones.filter(m => m.completed).length / milestones.length) * 100
       )
     : 0
+
+  // Mode édition du projet
+  const [editing, setEditing] = useState(false)
+  const [editForm, setEditForm] = useState({
+    title: project.title,
+    problem: project.problem ?? '',
+    level: project.level ?? '',
+    domain: project.domain ?? '',
+    duration: project.duration ?? '',
+    spots: project.spots?.toString() ?? '',
+  })
+  const [editSkills, setEditSkills] = useState<string[]>(
+    // On initialise avec les skills actuelles du projet
+    project.project_skills?.map(s => s.skill_needed) ?? []
+  )
+  const [saving, setSaving] = useState(false)
+
 
   // Nom complet d'un profil — reconstruit depuis first + last name
   function getFullName(profile: Member['profiles']) {
@@ -226,6 +243,51 @@ export default function ProjectDetailClient({
     }
   }
 
+  // Sauvegarde les modifications du projet
+  async function handleSaveEdit() {
+    setSaving(true)
+
+    // Étape 1 — Mettre à jour les champs du projet
+    const { error: projectError } = await supabase
+      .from('projects')
+      .update({
+        title: editForm.title,
+        problem: editForm.problem,
+        level: editForm.level,
+        domain: editForm.domain,
+        duration: editForm.duration || null,
+        spots: editForm.spots ? parseInt(editForm.spots) : null,
+      })
+      .eq('id', project.id)
+
+    if (projectError) {
+      setSaving(false)
+      return
+    }
+
+    // Étape 2 — Mettre à jour les skills
+    // On supprime toutes les skills existantes puis on réinsère
+    await supabase
+      .from('project_skills')
+      .delete()
+      .eq('project_id', project.id)
+
+    if (editSkills.length > 0) {
+      await supabase
+        .from('project_skills')
+        .insert(editSkills.map(skill => ({
+          project_id: project.id,
+          skill_needed: skill,
+        })))
+    }
+
+    setSaving(false)
+    setEditing(false)
+    // On recharge la page pour afficher les nouvelles données
+    router.refresh()
+  }  
+
+
   return (
     <main className="max-w-4xl mx-auto px-4 py-10">
 
@@ -264,78 +326,245 @@ export default function ProjectDetailClient({
             style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
           >
             {/* Domain + status badges */}
-            <div className="flex items-center gap-2 mb-3">
-              <span
-                className="text-xs px-2.5 py-1 rounded-md font-medium"
-                style={{
-                  backgroundColor: 'rgba(13,148,136,0.14)',
-                  color: '#5EEAD4',
-                  border: '1px solid rgba(13,148,136,0.28)',
-                }}
-              >
-                {project.domain}
-              </span>
-              <span
-                className="text-xs px-2.5 py-1 rounded-md font-medium capitalize"
-                style={{
-                  backgroundColor: project.status === 'open'
-                    ? 'rgba(16,185,129,0.14)'
-                    : 'rgba(245,158,11,0.14)',
-                  color: project.status === 'open' ? '#6EE7B7' : '#FCD34D',
-                }}
-              >
-                {project.status}
-              </span>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-xs px-2.5 py-1 rounded-md font-medium"
+                  style={{
+                    backgroundColor: 'rgba(13,148,136,0.14)',
+                    color: '#5EEAD4',
+                    border: '1px solid rgba(13,148,136,0.28)',
+                  }}
+                >
+                  {project.domain}
+                </span>
+                <span
+                  className="text-xs px-2.5 py-1 rounded-md font-medium capitalize"
+                  style={{
+                    backgroundColor: project.status === 'open'
+                      ? 'rgba(16,185,129,0.14)'
+                      : 'rgba(245,158,11,0.14)',
+                    color: project.status === 'open' ? '#6EE7B7' : '#FCD34D',
+                  }}
+                >
+                  {project.status}
+                </span>
+              </div>
+
+              {/* Boutons Edit / Save / Cancel — owner seulement */}
+              {isOwner && (
+                <div className="flex items-center gap-2">
+                  {editing ? (
+                    <>
+                      <button
+                        onClick={() => setEditing(false)}
+                        className="text-xs px-3 py-1.5 rounded-lg transition-colors"
+                        style={{ color: '#64748B', border: '1px solid #1E2840' }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSaveEdit}
+                        disabled={saving}
+                        className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
+                        style={{
+                          backgroundColor: '#0D9488',
+                          color: 'white',
+                          opacity: saving ? 0.7 : 1,
+                        }}
+                      >
+                        {saving ? 'Saving...' : 'Save'}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setEditing(true)}
+                      className="text-xs px-3 py-1.5 rounded-lg transition-colors"
+                      style={{
+                        backgroundColor: 'rgba(13,148,136,0.14)',
+                        color: '#5EEAD4',
+                        border: '1px solid rgba(13,148,136,0.28)',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(13,148,136,0.25)')}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(13,148,136,0.14)')}
+                    >
+                      ✏ Edit
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Titre du projet */}
-            <h1
-              className="text-2xl font-bold mb-4"
-              style={{ color: '#F1F5F9' }}
-            >
-              {project.title}
-            </h1>
+            {editing ? (
+              // Mode édition — formulaire inline
+              <div className="flex flex-col gap-4">
 
-            {/* Description complète du projet */}
-            <p
-              className="text-sm leading-relaxed mb-4"
-              style={{ color: '#94A3B8' }}
-            >
-              {project.problem}
-            </p>
+                {/* Titre */}
+                <input
+                  type="text"
+                  value={editForm.title}
+                  onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))}
+                  className="w-full px-4 py-3 rounded-xl text-sm outline-none font-bold"
+                  style={{
+                    backgroundColor: '#0C1120',
+                    border: '1px solid #0D9488',
+                    color: '#F1F5F9',
+                    fontSize: '1.1rem',
+                  }}
+                  onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
+                  onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
+                />
 
-            {/* Skills recherchées + niveau
-                On utilise SKILL_COLORS et LEVEL_COLORS depuis constants.ts */}
-            <div className="flex flex-wrap gap-2">
-              {project.project_skills?.map(skill => {
-                const colors = SKILL_COLORS[skill.skill_needed] ?? {
-                  bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
-                }
-                return (
-                  <span
-                    key={skill.skill_needed}
-                    className="text-xs px-2.5 py-1 rounded-md font-medium"
-                    style={{ backgroundColor: colors.bg, color: colors.text }}
-                  >
-                    {skill.skill_needed}
-                  </span>
-                )
-              })}
+                {/* Description */}
+                <textarea
+                  value={editForm.problem}
+                  onChange={e => setEditForm(p => ({ ...p, problem: e.target.value }))}
+                  rows={4}
+                  className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none"
+                  style={{
+                    backgroundColor: '#0C1120',
+                    border: '1px solid #1E2840',
+                    color: '#F1F5F9',
+                  }}
+                  onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
+                  onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
+                />
 
-              {project.level && (() => {
-                const colors = LEVEL_COLORS[project.level] ?? {
-                  bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
-                }
-                return (
-                  <span
-                    className="text-xs px-2.5 py-1 rounded-md font-medium capitalize"
-                    style={{ backgroundColor: colors.bg, color: colors.text }}
-                  >
-                    {project.level}
-                  </span>
-                )
-              })()}
-            </div>
+                {/* Level */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-medium" style={{ color: '#64748B' }}>Level</label>
+                  <div className="flex gap-2">
+                    {LEVELS.map(l => (
+                      <button
+                        key={l}
+                        type="button"
+                        onClick={() => setEditForm(p => ({ ...p, level: l }))}
+                        className="flex-1 py-2 rounded-xl text-xs font-medium capitalize transition-all"
+                        style={{
+                          backgroundColor: editForm.level === l
+                            ? 'rgba(13,148,136,0.2)' : '#0C1120',
+                          border: editForm.level === l
+                            ? '1px solid #0D9488' : '1px solid #1E2840',
+                          color: editForm.level === l ? '#5EEAD4' : '#64748B',
+                        }}
+                      >
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Duration + Spots */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium" style={{ color: '#64748B' }}>Duration</label>
+                    <select
+                      value={editForm.duration}
+                      onChange={e => setEditForm(p => ({ ...p, duration: e.target.value }))}
+                      className="px-3 py-2 rounded-lg text-xs outline-none"
+                      style={{
+                        backgroundColor: '#0C1120',
+                        border: '1px solid #1E2840',
+                        color: '#F1F5F9',
+                      }}
+                    >
+                      <option value="">No duration</option>
+                      {DURATIONS.map(d => (
+                        <option key={d} value={d} style={{ backgroundColor: '#161B28' }}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-medium" style={{ color: '#64748B' }}>Spots</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={editForm.spots}
+                      onChange={e => setEditForm(p => ({ ...p, spots: e.target.value }))}
+                      className="px-3 py-2 rounded-lg text-xs outline-none"
+                      style={{
+                        backgroundColor: '#0C1120',
+                        border: '1px solid #1E2840',
+                        color: '#F1F5F9',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Skills recherchées */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-medium" style={{ color: '#64748B' }}>
+                    Skills needed
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {SKILLS.map(skill => (
+                      <button
+                        key={skill}
+                        type="button"
+                        onClick={() => setEditSkills(prev =>
+                          prev.includes(skill)
+                            ? prev.filter(s => s !== skill)
+                            : [...prev, skill]
+                        )}
+                        className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+                        style={{
+                          backgroundColor: editSkills.includes(skill)
+                            ? 'rgba(13,148,136,0.2)' : '#0C1120',
+                          border: editSkills.includes(skill)
+                            ? '1px solid #0D9488' : '1px solid #1E2840',
+                          color: editSkills.includes(skill) ? '#5EEAD4' : '#64748B',
+                        }}
+                      >
+                        {skill}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+            ) : (
+              // Mode affichage normal
+              <>
+                <h1 className="text-2xl font-bold mb-4" style={{ color: '#F1F5F9' }}>
+                  {project.title}
+                </h1>
+                <p className="text-sm leading-relaxed mb-4" style={{ color: '#94A3B8' }}>
+                  {project.problem}
+                </p>
+
+                {/* Skills + niveau */}
+                <div className="flex flex-wrap gap-2">
+                  {project.project_skills?.map(skill => {
+                    const colors = SKILL_COLORS[skill.skill_needed] ?? {
+                      bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
+                    }
+                    return (
+                      <span
+                        key={skill.skill_needed}
+                        className="text-xs px-2.5 py-1 rounded-md font-medium"
+                        style={{ backgroundColor: colors.bg, color: colors.text }}
+                      >
+                        {skill.skill_needed}
+                      </span>
+                    )
+                  })}
+                  {project.level && (() => {
+                    const colors = LEVEL_COLORS[project.level] ?? {
+                      bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
+                    }
+                    return (
+                      <span
+                        className="text-xs px-2.5 py-1 rounded-md font-medium capitalize"
+                        style={{ backgroundColor: colors.bg, color: colors.text }}
+                      >
+                        {project.level}
+                      </span>
+                    )
+                  })()}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Section Milestones */}
