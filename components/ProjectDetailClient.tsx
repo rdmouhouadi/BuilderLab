@@ -423,7 +423,7 @@ export default function ProjectDetailClient({
                       onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(13,148,136,0.25)')}
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(13,148,136,0.14)')}
                     >
-                      ✏ Edit
+                      Edit
                     </button>
                   )}
                 </div>

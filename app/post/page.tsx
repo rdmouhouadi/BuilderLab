@@ -118,11 +118,19 @@ export default function PostProjectPage() {
       router.push('/')
 
     } catch (err: any) {
-      // On affiche l'erreur Supabase si quelque chose échoue
-      setError(err.message ?? 'An error occurred.')
-    } finally {
-      // Dans tous les cas, on réactive le bouton
-      setLoading(false)
+      // On intercepte les erreurs connues et on affiche
+      // un message clair et humain à la place du message SQL brut
+
+      if (err.message?.includes('projects_level_check')) {
+        setError('Please select a valid level (Beginner, Intermediate, or Advanced).')
+      } else if (err.message?.includes('project_skills')) {
+        setError('Something went wrong with the skills. Please try again.')
+      } else if (err.message?.includes('duplicate')) {
+        setError('A project with this title already exists.')
+      } else {
+        // Message générique pour toutes les autres erreurs
+        setError('Something went wrong. Please check your inputs and try again.')
+      }
     }
   }
 
