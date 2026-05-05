@@ -57,6 +57,28 @@ export default function ProjectDetailClient({
   const router = useRouter()
   const supabase = createBrowserSupabaseClient()
 
+  // On stocke les données du projet en state local
+  // On utilise un type partiel pour project_skills
+  // car après édition on n'a pas encore les id générés par Supabase
+  const [projectData, setProjectData] = useState<{
+    title: string
+    problem: string
+    level: string
+    domain: string
+    duration: string
+    spots: number | null
+    // On accepte soit un ProjectSkill complet soit juste skill_needed
+    project_skills: { id?: string; project_id?: string; skill_needed: string }[]
+  }>({
+    title: project.title,
+    problem: project.problem ?? '',
+    level: project.level ?? '',
+    domain: project.domain ?? '',
+    duration: project.duration ?? '',
+    spots: project.spots ?? null,
+    project_skills: project.project_skills ?? [],
+  })
+
   // État du bouton "I'm interested"
   // Si une connexion existe déjà, on part en état "sent"
   const [connStatus, setConnStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>(
@@ -245,47 +267,60 @@ export default function ProjectDetailClient({
 
   // Sauvegarde les modifications du projet
   async function handleSaveEdit() {
-    setSaving(true)
+  setSaving(true)
 
-    // Étape 1 — Mettre à jour les champs du projet
-    const { error: projectError } = await supabase
-      .from('projects')
-      .update({
-        title: editForm.title,
-        problem: editForm.problem,
-        level: editForm.level,
-        domain: editForm.domain,
-        duration: editForm.duration || null,
-        spots: editForm.spots ? parseInt(editForm.spots) : null,
-      })
-      .eq('id', project.id)
+  // Étape 1 — Mettre à jour les champs du projet
+  const { error: projectError } = await supabase
+    .from('projects')
+    .update({
+      title: editForm.title,
+      problem: editForm.problem,
+      // On s'assure que le level est en minuscules
+      // pour respecter la contrainte SQL
+      level: editForm.level.toLowerCase(),
+      domain: editForm.domain,
+      duration: editForm.duration || null,
+      spots: editForm.spots ? parseInt(editForm.spots) : null,
+    })
+    .eq('id', project.id)
 
-    if (projectError) {
-      setSaving(false)
-      return
-    }
+  if (projectError) {
+    setSaving(false)
+    return
+  }
 
-    // Étape 2 — Mettre à jour les skills
-    // On supprime toutes les skills existantes puis on réinsère
+  // Étape 2 — Mettre à jour les skills
+  await supabase
+    .from('project_skills')
+    .delete()
+    .eq('project_id', project.id)
+
+  if (editSkills.length > 0) {
     await supabase
       .from('project_skills')
-      .delete()
-      .eq('project_id', project.id)
+      .insert(editSkills.map(skill => ({
+        project_id: project.id,
+        skill_needed: skill,
+      })))
+  }
 
-    if (editSkills.length > 0) {
-      await supabase
-        .from('project_skills')
-        .insert(editSkills.map(skill => ({
-          project_id: project.id,
-          skill_needed: skill,
-        })))
-    }
+  // Étape 3 — Mettre à jour le state local
+  // pour afficher les nouvelles données sans recharger
+  setProjectData({
+    title: editForm.title,
+    problem: editForm.problem,
+    level: editForm.level.toLowerCase(),
+    domain: editForm.domain,
+    duration: editForm.duration || '',
+    spots: editForm.spots ? parseInt(editForm.spots) : null,
+    project_skills: editSkills.map(skill => ({ skill_needed: skill })),
+  })
 
-    setSaving(false)
-    setEditing(false)
-    // On recharge la page pour afficher les nouvelles données
-    router.refresh()
-  }  
+  setSaving(false)
+  // On quitte le mode édition — les nouvelles données
+  // sont déjà dans le state local, pas besoin de recharger
+  setEditing(false)
+}
 
 
   return (
@@ -527,15 +562,15 @@ export default function ProjectDetailClient({
               // Mode affichage normal
               <>
                 <h1 className="text-2xl font-bold mb-4" style={{ color: '#F1F5F9' }}>
-                  {project.title}
+                  {projectData.title}
                 </h1>
                 <p className="text-sm leading-relaxed mb-4" style={{ color: '#94A3B8' }}>
-                  {project.problem}
+                  {projectData.problem}
                 </p>
 
                 {/* Skills + niveau */}
                 <div className="flex flex-wrap gap-2">
-                  {project.project_skills?.map(skill => {
+                  {projectData.project_skills?.map(skill => {
                     const colors = SKILL_COLORS[skill.skill_needed] ?? {
                       bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
                     }
@@ -549,7 +584,7 @@ export default function ProjectDetailClient({
                       </span>
                     )
                   })}
-                  {project.level && (() => {
+                  {projectData.level && (() => {
                     const colors = LEVEL_COLORS[project.level] ?? {
                       bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
                     }
@@ -558,7 +593,7 @@ export default function ProjectDetailClient({
                         className="text-xs px-2.5 py-1 rounded-md font-medium capitalize"
                         style={{ backgroundColor: colors.bg, color: colors.text }}
                       >
-                        {project.level}
+                        {projectData.level}
                       </span>
                     )
                   })()}
