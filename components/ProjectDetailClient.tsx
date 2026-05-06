@@ -564,7 +564,7 @@ export default function ProjectDetailClient({
                 <h1 className="text-2xl font-bold mb-4" style={{ color: '#F1F5F9' }}>
                   {projectData.title}
                 </h1>
-                <p className="text-sm leading-relaxed mb-4" style={{ color: '#94A3B8' }}>
+                <p className="text-sm leading-relaxed mb-4 break-words overflow-hidden" style={{ color: '#94A3B8' }}>
                   {projectData.problem}
                 </p>
 

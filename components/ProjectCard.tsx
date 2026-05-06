@@ -132,10 +132,14 @@ export default function ProjectCard({ project, currentUserId }: Props) {
           {project.problem}
         </p>
 
-        {/* Skills + niveau */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {project.project_skills?.map(skill => {
-            const colors = skillColors[skill.skill_needed] ?? { bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1' }
+        {/* Skills + niveau
+        On affiche seulement les 2 premières skills
+        et un badge "+N more" si il y en a plus */}
+        <div className="flex flex-wrap gap-2">
+          {project.project_skills?.slice(0, 2).map(skill => {
+            const colors = skillColors[skill.skill_needed] ?? {
+              bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
+            }
             return (
               <span
                 key={skill.skill_needed}
@@ -146,8 +150,26 @@ export default function ProjectCard({ project, currentUserId }: Props) {
               </span>
             )
           })}
+
+          {/* Badge "+N more" si plus de 2 skills */}
+          {project.project_skills && project.project_skills.length > 2 && (
+            <span
+              className="text-xs px-2.5 py-0.5 rounded-md font-medium"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.07)',
+                color: '#64748B',
+                border: '1px solid #1E2840',
+              }}
+            >
+              +{project.project_skills.length - 2} more
+            </span>
+          )}
+
+          {/* Badge niveau — toujours affiché */}
           {project.level && (() => {
-            const colors = levelColors[project.level] ?? { bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1' }
+            const colors = levelColors[project.level] ?? {
+              bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
+            }
             return (
               <span
                 className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"

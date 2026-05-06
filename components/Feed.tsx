@@ -89,7 +89,7 @@ export default function Feed({ projects }: Props) {
         <div className="flex items-center gap-2 mb-3">
           <span style={{ color: '#0D9488' }}>↗</span>
           <span className="text-sm font-medium" style={{ color: '#0D9488' }}>
-            {projects.length} available projects
+            {projects.length} available {projects.length !== 1 ? 'project' : 'project'}
           </span>
         </div>
 
@@ -304,7 +304,8 @@ export default function Feed({ projects }: Props) {
           <span className="font-bold" style={{ color: 'rgb(255, 255, 255)' }}>
             {filtered.length}
           </span>{' '}
-          projects
+          
+          {filtered.length !== 1 ? 'projects' : 'project'}
         </p>
         <p className="text-sm font-medium" style={{ color: '#0D9488', fontWeight: 'bold' }}>
           Most Recent
