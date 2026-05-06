@@ -8,6 +8,8 @@ import dynamic from 'next/dynamic'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
 import PageTransition from '@/components/PageTransition'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation' // Important : next/navigation pour Next.js 13+
 
 // On charge le composant Auth uniquement côté navigateur
 const Auth = dynamic(
@@ -16,62 +18,97 @@ const Auth = dynamic(
 )
 
 export default function LoginPage() {
+  // State pour savoir si le composant est monté côté client
+  // Cela permet d'éviter l'erreur "NextRouter was not mounted"
+  const [mounted, setMounted] = useState(false)
+
   // Client Supabase côté navigateur — nécessaire pour l'auth
   const supabase = createBrowserSupabaseClient()
 
+  // Next.js Router côté client
+  const router = useRouter()
+
+  // useEffect pour signaler que le composant est monté côté client
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // useEffect pour écouter les changements de session Supabase
+  useEffect(() => {
+    if (!mounted) return // Ne rien faire tant que le Router n'est pas monté
+
+    // On écoute les changements de session
+    // Dès que l'utilisateur se connecte → on redirige vers le feed
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          // router.push ne suffit pas ici car le Server Component
+          // doit aussi être notifié — on force un rechargement complet
+          window.location.href = '/'
+        }
+      }
+    )
+
+    // Nettoyage - on arrête d'écouter quand le composant est démonté
+    return () => subscription.unsubscribe()
+  }, [mounted, supabase])
+
+  // Si le composant n'est pas encore monté côté client, on peut retourner null ou un loader
+  if (!mounted) return null
+
   return (
     <PageTransition>
-        <div
+      <div
         className="min-h-screen flex items-center justify-center px-4"
         style={{ backgroundColor: '#0F1117' }}
-        >
+      >
         <div
-            className="w-full max-w-md p-8 rounded-2xl"
-            style={{
+          className="w-full max-w-md p-8 rounded-2xl"
+          style={{
             backgroundColor: '#161B28',
             border: '1px solid #1E2840'
-            }}
+          }}
         >
-            {/* Logo et titre */}
-            <div className="text-center mb-8">
+          {/* Logo et titre */}
+          <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-3">
-                <div
+              <div
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: '#0D9488' }}
-                />
-                <span
+              />
+              <span
                 className="text-xl font-semibold"
                 style={{ color: '#F1F5F9' }}
-                >
+              >
                 BuilderLab
-                </span>
+              </span>
             </div>
             <p className="text-sm" style={{ color: '#64748B' }}>
-                Log in to collaborate on projects
+              Log in to collaborate on projects
             </p>
-            </div>
+          </div>
 
-            {/* Composant Auth de Supabase
-                Gère automatiquement : formulaire, validation,
-                erreurs, inscription, connexion, mot de passe oublié */}
-            <Auth
+          {/* Composant Auth de Supabase
+              Gère automatiquement : formulaire, validation,
+              erreurs, inscription, connexion, mot de passe oublié */}
+          <Auth
             supabaseClient={supabase}
             appearance={{
-                // ThemeSupa = thème officiel Supabase
-                // on le personnalise avec nos couleurs
-                theme: ThemeSupa,
-                variables: {
+              // ThemeSupa = thème officiel Supabase
+              // on le personnalise avec nos couleurs
+              theme: ThemeSupa,
+              variables: {
                 default: {
-                    colors: {
+                  colors: {
                     brand: '#0D9488',
                     brandAccent: '#0F766E',
                     inputBackground: '#0C1120',
                     inputBorder: '#1E2840',
                     inputText: '#F1F5F9',
                     inputLabelText: '#94A3B8',
-                    }
+                  }
                 }
-                }
+              }
             }}
             view="sign_in"
             // Après connexion, Supabase redirige ici
@@ -80,30 +117,30 @@ export default function LoginPage() {
             // Pas de connexion sociale pour l'instant
             providers={[]}
             localization={{
-                // Traduction française de tous les textes
-                variables: {
+              // Traduction française de tous les textes
+              variables: {
                 sign_in: {
-                    email_label: 'Email',
-                    password_label: 'Password',
-                    button_label: 'Sign in',
-                    link_text: "Already have an account? Sign in",
+                  email_label: 'Email',
+                  password_label: 'Password',
+                  button_label: 'Sign in',
+                  link_text: "Already have an account? Sign in",
                 },
                 sign_up: {
-                    email_label: 'Email',
-                    password_label: 'Password',
-                    button_label: "Sign up",
-                    link_text: "Don't have an account ? Sign up",
+                  email_label: 'Email',
+                  password_label: 'Password',
+                  button_label: "Sign up",
+                  link_text: "Don't have an account ? Sign up",
                 },
                 forgotten_password: {
-                    email_label: 'Email',
-                    button_label: 'Send the reset link',
-                    link_text: 'Forgotten password',
+                  email_label: 'Email',
+                  button_label: 'Send the reset link',
+                  link_text: 'Forgotten password',
                 },
-                }
+              }
             }}
-            />
+          />
         </div>
-        </div>
+      </div>
     </PageTransition>
   )
 }
