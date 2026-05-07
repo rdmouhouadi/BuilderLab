@@ -1,0 +1,399 @@
+# Supabase → AWS Migration Procedure
+
+## Goal
+
+Migrate from Supabase-managed PostgreSQL to AWS-hosted PostgreSQL while preserving:
+
+- schema
+- data
+- indexes
+- extensions
+- functions
+- RLS policies (optional)
+- application compatibility
+
+Typical AWS targets:
+- Amazon RDS PostgreSQL
+- Aurora PostgreSQL
+- self-managed PostgreSQL on EC2
+
+RECOMMENDED:
+Use Amazon RDS PostgreSQL.
+
+---
+
+# Recommended Architecture
+
+| Environment | Infrastructure |
+|---|---|
+| Frontend | Vercel / AWS Amplify |
+| Database | AWS RDS PostgreSQL |
+| Auth | Supabase Auth OR Auth.js/Clerk/Cognito |
+| Storage | AWS S3 |
+| Realtime | Supabase Realtime OR custom |
+| Functions | AWS Lambda |
+
+---
+
+# Important Reality Check
+
+Supabase is NOT only PostgreSQL.
+
+Supabase also provides:
+- Auth
+- Storage
+- Realtime
+- Edge Functions
+- API generation
+- RLS helpers
+
+Migrating ONLY the DB is easy.
+
+Migrating the FULL Supabase stack requires replacing those services.
+
+---
+
+# Migration Options
+
+## Option A — Keep Supabase Services + Move DB to AWS
+
+You:
+- migrate PostgreSQL to AWS
+- keep frontend auth/storage in Supabase
+
+NOT recommended long-term.
+
+---
+
+## Option B — Full AWS Migration (Recommended)
+
+Replace:
+- Supabase DB → RDS PostgreSQL
+- Supabase Storage → S3
+- Supabase Auth → Cognito/Auth.js/Clerk
+- Edge Functions → Lambda
+
+This is the scalable architecture.
+
+---
+
+# 1. Create AWS PostgreSQL Database
+
+## Recommended
+
+Create:
+
+- Amazon RDS PostgreSQL
+
+Go to:
+
+AWS Console → RDS → Create Database
+
+Choose:
+- PostgreSQL
+- latest stable version
+- public access OFF (preferred)
+- backup enabled
+
+Save:
+- endpoint
+- port
+- username
+- password
+
+Example:
+
+```text
+builderlab-db.xxxxxx.eu-west-3.rds.amazonaws.com
+```
+
+---
+
+# 2. Export Supabase Schema
+
+Inside project:
+
+```bash
+npx supabase db pull
+```
+
+OR directly:
+
+```bash
+pg_dump \
+  --schema-only \
+  "SUPABASE_DB_URL" \
+  > schema.sql
+```
+
+---
+
+# 3. Export Data
+
+## Full DB
+
+```bash
+pg_dump \
+  --data-only \
+  "SUPABASE_DB_URL" \
+  > data.sql
+```
+
+---
+
+## Recommended: selective export
+
+Example:
+
+```bash
+pg_dump \
+  --data-only \
+  --table=users \
+  --table=projects \
+  --table=subscriptions \
+  "SUPABASE_DB_URL" \
+  > data.sql
+```
+
+Avoid exporting:
+- auth tables
+- internal Supabase schemas
+- realtime schemas
+
+---
+
+# 4. Create AWS Extensions
+
+Supabase enables extensions automatically.
+
+On AWS RDS you must create them manually.
+
+Common ones:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+Check your Supabase DB:
+
+```sql
+SELECT * FROM pg_extension;
+```
+
+---
+
+# 5. Import Schema into AWS
+
+```bash
+psql \
+  -h YOUR_RDS_HOST \
+  -U postgres \
+  -d postgres \
+  < schema.sql
+```
+
+---
+
+# 6. Import Data into AWS
+
+```bash
+psql \
+  -h YOUR_RDS_HOST \
+  -U postgres \
+  -d postgres \
+  < data.sql
+```
+
+---
+
+# 7. Remove Supabase-Specific Objects
+
+Supabase creates internal schemas like:
+
+- auth
+- storage
+- realtime
+- supabase_functions
+
+You may:
+- keep them temporarily
+- or remove them
+
+Usually you should NOT migrate:
+- auth schema
+- storage schema
+- realtime schema
+
+Focus on:
+- public schema
+- business tables
+
+---
+
+# 8. Update Application Environment Variables
+
+Replace:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+```
+
+with standard PostgreSQL connection variables:
+
+```env
+DATABASE_URL=postgresql://user:password@host:5432/dbname
+```
+
+---
+
+# 9. Replace Supabase Client
+
+If currently using:
+
+```ts
+import { createClient } from '@supabase/supabase-js'
+```
+
+you now need:
+- Prisma
+- Drizzle
+- Kysely
+- pg
+
+RECOMMENDED:
+Prisma or Drizzle.
+
+---
+
+# Example Prisma Setup
+
+Install:
+
+```bash
+npm install prisma @prisma/client
+```
+
+Initialize:
+
+```bash
+npx prisma init
+```
+
+Set:
+
+```env
+DATABASE_URL=postgresql://...
+```
+
+Pull schema:
+
+```bash
+npx prisma db pull
+```
+
+---
+
+# 10. Storage Migration (Supabase → S3)
+
+If using Supabase Storage:
+
+Create:
+- AWS S3 bucket
+
+Then migrate files.
+
+Example sync:
+
+```bash
+aws s3 sync ./uploads s3://builderlab-storage
+```
+
+Update app upload logic accordingly.
+
+---
+
+# 11. Auth Migration
+
+## If currently using Supabase Auth
+
+You have options:
+
+### Recommended:
+- Auth.js
+- Clerk
+- AWS Cognito
+
+---
+
+# 12. Realtime Migration
+
+Supabase realtime relies on:
+- WAL replication
+- websockets
+
+AWS alternatives:
+- Pusher
+- Ably
+- Socket.IO
+- custom Postgres LISTEN/NOTIFY
+
+---
+
+# 13. Deployment Update
+
+Update:
+- Vercel env vars
+- Docker secrets
+- CI/CD
+
+to use AWS DB credentials.
+
+---
+
+# 14. Verify Migration
+
+Test:
+- inserts
+- updates
+- auth
+- uploads
+- subscriptions
+- cron jobs
+- API routes
+
+---
+
+# Recommended Final AWS Stack
+
+| Concern | Recommended |
+|---|---|
+| DB | AWS RDS PostgreSQL |
+| ORM | Prisma |
+| Auth | Clerk/Auth.js |
+| Storage | S3 |
+| CDN | CloudFront |
+| Compute | Lambda/ECS |
+| Frontend | Vercel or Amplify |
+
+---
+
+# Zero-Downtime Migration Strategy (Recommended)
+
+## Phase 1
+- AWS DB created
+- data replicated
+
+## Phase 2
+- app reads from old DB
+- writes dual-write
+
+## Phase 3
+- switch primary DB
+
+## Phase 4
+- shutdown Supabase DB
+
+---
