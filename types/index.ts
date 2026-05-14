@@ -38,6 +38,10 @@ export type Project = {
   // Exemple : quand on fetch un projet avec ses skills ET son auteur en même temps
   profiles?: Profile          // Le profil du créateur du projet
   project_skills?: ProjectSkill[] // Les compétences recherchées par ce projet
+
+  //Champs pour les activity signals
+  project_members?: {user_id: string}[] // Liste des membres connectés à ce projet
+  project_updates?: { created_at: string }[] // Date du dernier update posté dans ce projet
 }
 
 // ─── Compétence recherchée par un projet ─────────────────────────

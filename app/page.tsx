@@ -15,7 +15,13 @@ export default async function HomePage() {
   // On fetch tous les projets ouverts avec leurs jointures
   const { data: projects, error } = await supabase
     .from('projects')
-    .select('*, profiles!projects_owner_id_fkey(id, name, country, avg_rating), project_skills(skill_needed)')
+    .select(`
+        *,
+        profiles!projects_owner_id_fkey(id, name, country, avg_rating),
+        project_skills(skill_needed),
+        project_members(user_id),
+        project_updates(created_at)
+      `)
     .eq('status', 'open')
     .order('created_at', { ascending: false })
 

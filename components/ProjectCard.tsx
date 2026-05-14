@@ -91,6 +91,34 @@ export default function ProjectCard({ project, currentUserId }: Props) {
     }
   }
 
+  // Calcule le signal d'activité du projet
+  // Basé sur le dernier update posté par un membre
+  function getActivitySignal(): string | null {
+    const updates = project.project_updates
+    if (!updates || updates.length === 0) return null
+
+    // On prend le plus récent — le premier dans la liste
+    // car on fetch avec order created_at desc
+    const latest = updates.reduce((a, b) =>
+      new Date(a.created_at) > new Date(b.created_at) ? a : b
+    )
+
+    const diffHours = Math.floor(
+      (Date.now() - new Date(latest.created_at).getTime()) / (1000 * 60 * 60)
+    )
+
+    if (diffHours < 24) return 'Active today'
+    if (diffHours < 48) return 'Active yesterday'
+
+    const diffDays = Math.floor(diffHours / 24)
+    if (diffDays < 7) return `Active ${diffDays}d ago`
+    if (diffDays < 30) return `Active ${Math.floor(diffDays / 7)}w ago`
+    return null // Trop inactif — on n'affiche rien
+  }
+
+  const activitySignal = getActivitySignal()
+  const memberCount = project.project_members?.length ?? 0
+
   // Rectangle unique, pas de double encapsulation
   return (
     <Link href={`/projects/${project.id}`} className="block h-full">
@@ -183,76 +211,109 @@ export default function ProjectCard({ project, currentUserId }: Props) {
           })()}
         </div>
 
-
         {/* Footer */}
         <div
-          className="flex items-center justify-between pt-3 mt-auto"
+          className="flex flex-col gap-2 pt-3 mt-auto"
           style={{ borderTop: '1px solid #1E2840' }}
         >
-          {/* Groupe gauche : rating, duration, spots */}
-          <div className="flex items-center gap-3">
+          {/* Ligne 1 : rating + duration + spots + bouton */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
 
-            {/* Rating */}
-            <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
-              <span>⭐</span>
-              <span>
-                {project.profiles?.avg_rating
-                  ? project.profiles.avg_rating.toFixed(1)
-                  : getTimeLabel(project.created_at)
-                  // Si pas de rating → on affiche l'ancienneté du projet
-                  // "New" les premières 24h, puis "2d ago", "1w ago"...
-                }
-              </span>
+              {/* Rating ou timestamp */}
+              <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
+                <span>⭐</span>
+                <span>
+                  {project.profiles?.avg_rating
+                    ? project.profiles.avg_rating.toFixed(1)
+                    : getTimeLabel(project.created_at)
+                  }
+                </span>
+              </div>
+
+              {/* Duration */}
+              {project.duration && (
+                <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {project.duration}
+                </div>
+              )}
+
+              {/* Spots */}
+              {project.spots && (
+                <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  {project.spots} spots
+                </div>
+              )}
             </div>
 
-            {/* Duration */}
-            {project.duration && (
-              <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {project.duration}
-              </div>
+            {/* Bouton I'm interested / Your project */}
+            {!isOwner && (
+              <button
+                onClick={handleInterest}
+                disabled={status === 'loading' || status === 'sent'}
+                className="text-xs px-3.5 py-1.5 rounded-lg font-medium transition-all"
+                style={getButtonStyle()}
+              >
+                {getButtonLabel()}
+              </button>
             )}
 
-            {/* Spots */}
-            {project.spots && (
-              <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                {project.spots} spots
-              </div>
+            {isOwner && (
+              <span
+                className="text-xs px-3 py-1.5 rounded-lg font-medium"
+                style={{
+                  backgroundColor: 'rgba(99,102,241,0.14)',
+                  color: '#A5B4FC',
+                  border: '1px solid rgba(99,102,241,0.28)',
+                }}
+              >
+                Your project
+              </span>
             )}
           </div>
 
-          {/* Bouton I'm interested / Your project */}
-          {!isOwner && (
-            <button
-              onClick={handleInterest}
-              disabled={status === 'loading' || status === 'sent'}
-              className="text-xs px-3.5 py-1.5 rounded-lg font-medium transition-all"
-              style={getButtonStyle()}
-            >
-              {getButtonLabel()}
-            </button>
-          )}
+          {/* Ligne 2 : activity signals — seulement si données disponibles */}
+          {(memberCount > 0 || activitySignal) && (
+            <div className="flex items-center gap-3">
 
-          {isOwner && (
-            <span
-              className="text-xs px-3 py-1.5 rounded-lg font-medium"
-              style={{
-                backgroundColor: 'rgba(99,102,241,0.14)',
-                color: '#A5B4FC',
-                border: '1px solid rgba(99,102,241,0.28)',
-              }}
-            >
-              Your project
-            </span>
+              {/* Nombre de membres */}
+              {memberCount > 0 && (
+                <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  {memberCount} {memberCount === 1 ? 'member' : 'members'}
+                </div>
+              )}
+
+              {/* Signal d'activité */}
+              {activitySignal && (
+                <div className="flex items-center gap-1 text-xs">
+                  <span
+                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                    style={{
+                      backgroundColor: '#10B981',
+                      animation: 'pulse 2s infinite',
+                    }}
+                  />
+                  <span style={{ color: '#10B981' }}>{activitySignal}</span>
+                </div>
+              )}
+            </div>
           )}
         </div>
+
+
+
       </div>
     </Link>
   )
