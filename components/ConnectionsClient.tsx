@@ -36,8 +36,13 @@ export default function ConnectionsClient({ received, sent, currentUserId }: Pro
 
   // État local des connexions reçues
   // On les stocke en state pour mettre à jour l'UI
-  // sans refetch après accept/reject
+  // On garde toutes les connexions pour référence
   const [connections, setConnections] = useState(received)
+
+  //On filtre - seule les pending s'affichent dans la Liste
+  //Les "accepted/rejected" disparaissent après action
+  const pendingConnections = connections.filter(c => c.status === 'pending')
+  const resolvedConnections = connections.filter(c => c.status !== 'pending')
 
   // Met à jour le status d'une connexion
   async function handleAction(id: string, action: 'accepted' | 'rejected') {
@@ -98,7 +103,7 @@ export default function ConnectionsClient({ received, sent, currentUserId }: Pro
             }}
           >
             {tab}
-            {/* Badge compteur */}
+            {/* Badge - on affiche seulement les pending pour Request Received */}
             <span
               className="ml-2 text-xs px-1.5 py-0.5 rounded-md"
               style={{
@@ -108,26 +113,26 @@ export default function ConnectionsClient({ received, sent, currentUserId }: Pro
                 color: activeTab === tab ? 'white' : '#475569',
               }}
             >
-              {tab === 'received' ? connections.length : sent.length}
+              {tab === 'received' ? pendingConnections.length : sent.length}
             </span>
           </button>
         ))}
       </div>
 
-      {/* Liste des demandes reçues */}
+      {/* Liste des demandes reçues - seulement les pending */}
       {activeTab === 'received' && (
         <div className="flex flex-col gap-3">
-          {connections.length === 0 ? (
+          {pendingConnections.length === 0 ? (
             <div
               className="rounded-2xl p-8 text-center"
               style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
             >
               <p className="text-sm" style={{ color: '#475569' }}>
-                No requests received yet.
+                No pending requests.
               </p>
             </div>
           ) : (
-            connections.map(conn => (
+            pendingConnections.map(conn => (
               <div
                 key={conn.id}
                 className="rounded-2xl p-5"
@@ -159,16 +164,19 @@ export default function ConnectionsClient({ received, sent, currentUserId }: Pro
                     </div>
                   </div>
 
-                  {/* Badge status */}
+                  {/* Badge pending */}
                   <span
                     className="text-xs px-2.5 py-1 rounded-lg font-medium capitalize flex-shrink-0"
                     style={{
-                      backgroundColor: getStatusStyle(conn.status).bg,
-                      color: getStatusStyle(conn.status).text,
-                      border: getStatusStyle(conn.status).border,
+                      //backgroundColor: getStatusStyle(conn.status).bg, --old
+                      backgroundColor: 'rgba(245,158,11,0.14)',
+                      //color: getStatusStyle(conn.status).text, --old
+                      color: '#FCD34D',
+                      //border: getStatusStyle(conn.status).border,--old
+                      border: '1px solid rgba(245,158,11,0.28)',
                     }}
                   >
-                    {conn.status}
+                    pending
                   </span>
                 </div>
 

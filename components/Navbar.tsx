@@ -39,10 +39,44 @@ export default function Navbar() {
   { href: '/connections', label: 'Connections', icon: Users  },
 ]
 
+  // Nombre de demandes en attente - pour le badge sur Connections
+  const [pendingCount, setPendingCount] = useState(0)
+
+  // Fetch le nombre de demandes pending sur les projets du user
+  // Définie AVANT le useEffect qui l'appelle
+  async function fetchPendingCount(userId: string) {
+    // On récupère d'abord les projets appartenant à cet utilisateur
+    const { data: userProjects } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('owner_id', userId)
+
+    // Si aucun projet, le count est 0
+    if (!userProjects || userProjects.length === 0) {
+      setPendingCount(0)
+      return
+    }
+
+    // On compte les connexions pending sur ces projets
+    const { count } = await supabase
+      .from('connections')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending')
+      .in('project_id', userProjects.map(p => p.id))
+
+    setPendingCount(count ?? 0)
+  }
+
   useEffect(() => {
     // On récupère la session au chargement de la page
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user)
+
+      // si connecté, on fetch le nombre de pending requests
+      // sur les projets de l'utilisateur
+      if (data.user) {
+        fetchPendingCount(data.user.id)
+      }
     })
 
     // onAuthStateChange écoute les changements de session en temps réel
@@ -51,6 +85,11 @@ export default function Navbar() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null)
+        if (session?.user) {
+          fetchPendingCount(session.user.id)
+        } else {
+          setPendingCount(0)
+        }
       }
     )
 
@@ -158,6 +197,20 @@ export default function Navbar() {
               {/* Icône + label — au dessus de la capsule grâce au z-10 */}
               <item.icon className="w-4 h-4 relative z-10" />
               <span className="relative z-10">{item.label}</span>
+
+              {/* Badge pending — visible seulement sur Connections et si pending > 0 */}
+              {item.href === '/connections' && pendingCount > 0 && (
+                <span
+                  className="relative z-10 w-4 h-4 rounded-full flex items-center justify-center text-white font-bold ml-0.5"
+                  style={{
+                    backgroundColor: '#EF4444',
+                    fontSize: '9px',
+                    animation: 'pulse 2s infinite',
+                  }}
+                >
+                  {pendingCount > 9 ? '9+' : pendingCount}
+                </span>
+              )}
             </Link>
           )
         })}
