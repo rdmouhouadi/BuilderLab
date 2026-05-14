@@ -68,3 +68,20 @@ export type Milestone = {
   created_at: string
 }
 
+// Update posté par un membre dans l'espace projet
+export type ProjectUpdate = {
+  id: string
+  project_id: string
+  author_id: string
+  type: 'update' | 'milestone' | 'blocker' | 'decision' | 'demo'
+  content: string
+  created_at: string
+  // Jointure avec profiles
+  profiles?: {
+    id: string
+    name: string | null
+    first_name: string | null
+    last_name: string | null
+    avg_rating: number
+  }
+}

@@ -8,8 +8,9 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
-import { Project, Milestone } from '@/types'
+import { Project, Milestone, ProjectUpdate } from '@/types'
 import RatingModal from '@/components/RatingModal'
+import ProjectUpdates from '@/components/ProjectUpdates'
 
 // On importe les couleurs et constantes depuis lib/constants.ts
 // pour garder la cohérence visuelle dans toute l'app
@@ -43,14 +44,17 @@ type Props = {
   project: Project
   members: Member[]
   milestones: Milestone[]
+  updates: ProjectUpdate[]
   currentUserId: string | null
   existingConnection: Connection | null
 }
+
 
 export default function ProjectDetailClient({
   project,
   members,
   milestones: initialMilestones,
+  updates,
   currentUserId,
   existingConnection,
 }: Props) {
@@ -726,6 +730,19 @@ export default function ProjectDetailClient({
                 </button>
               </div>
             )}
+
+            {/* Espace entre Milestones et Build Log */}
+            <div className="mt-2" />
+
+            {/* Section Build Log — updates du projet */}
+            <ProjectUpdates
+              projectId={project.id}
+              updates={updates}
+              currentUserId={currentUserId}
+              // Peut poster si owner ou membre actif
+              canPost={isOwner || isMember}
+            />
+
           </div>
         </div>
 

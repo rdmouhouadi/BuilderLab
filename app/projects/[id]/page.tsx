@@ -56,6 +56,13 @@ export default async function ProjectDetailPage({ params }: Props) {
     .eq('project_id', id)
     .order('position', { ascending: true })
 
+  // On fetch les updates du projet — les plus récentes en premier
+  const { data: updates } = await supabase
+    .from('project_updates')
+    .select('*, profiles(id, name, first_name, last_name, avg_rating)')
+    .eq('project_id', id)
+    .order('created_at', { ascending: false })
+
   // On vérifie si l'utilisateur a déjà envoyé une demande
   let existingConnection = null
   if (user) {
@@ -74,6 +81,7 @@ export default async function ProjectDetailPage({ params }: Props) {
         project={project}
         members={members ?? []}
         milestones={milestones ?? []}
+        updates={updates ?? []}
         currentUserId={user?.id ?? null}
         existingConnection={existingConnection}
       />
