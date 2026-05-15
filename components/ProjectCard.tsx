@@ -254,6 +254,9 @@ export default function ProjectCard({ project, currentUserId }: Props) {
               )}
             </div>
 
+            {/* Espace entre Spots et Button */}
+            <div className="mt-2" />
+
             {/* Bouton I'm interested / Your project */}
             {!isOwner && (
               <button
