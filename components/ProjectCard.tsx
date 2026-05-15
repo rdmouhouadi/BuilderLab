@@ -221,7 +221,7 @@ export default function ProjectCard({ project, currentUserId }: Props) {
             <div className="flex items-center gap-3">
 
               {/* Rating ou timestamp */}
-              <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
+              <div className="flex items-center gap-1 text-xs flex-shrink-0 whitespace-nowrap" style={{ color: '#475569' }}>
                 <span>⭐</span>
                 <span>
                   {project.profiles?.avg_rating
@@ -233,7 +233,7 @@ export default function ProjectCard({ project, currentUserId }: Props) {
 
               {/* Duration */}
               {project.duration && (
-                <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
+                <div className="flex items-center gap-1 text-xs flex-shrink-0 whitespace-nowrap" style={{ color: '#475569' }}>
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -244,7 +244,7 @@ export default function ProjectCard({ project, currentUserId }: Props) {
 
               {/* Spots */}
               {project.spots && (
-                <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
+                <div className="flex items-center gap-1 text-xs flex-shrink-0 whitespace-nowrap" style={{ color: '#475569' }}>
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
