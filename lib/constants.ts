@@ -82,3 +82,93 @@ export const LEVEL_COLORS: Record<string, { bg: string; text: string }> = {
   'Intermediate': { bg: 'rgba(245,158,11,0.14)', text: '#FCD34D' },
   'Advanced':     { bg: 'rgba(239,68,68,0.14)',  text: '#FCA5A5' },
 }
+
+// ─── Couleurs des domaines / visual identity ─────────────────────
+// Chaque domaine possède sa propre ambiance visuelle.
+// Utilisé pour les mini banners des cartes projet.
+//
+// Objectif :
+// - différenciation instantanée
+// - feed moins répétitif
+// - rendu plus premium
+// - architecture scalable
+
+export const DOMAIN_THEMES: Record<string, string> = {
+
+  // Education
+  Education: `
+    from-sky-500/20
+    via-blue-500/10
+    to-indigo-500/20
+  `,
+
+  // Health
+  Health: `
+    from-cyan-500/20
+    via-teal-500/10
+    to-blue-500/20
+  `,
+
+  // Agriculture / green tech
+  AgriTech: `
+    from-lime-500/20
+    via-green-500/10
+    to-emerald-500/20
+  `,
+
+  // Finance / startup vibe
+  Fintech: `
+    from-emerald-500/20
+    via-teal-500/10
+    to-cyan-500/20
+  `,
+
+  // Logistics / industrial vibe
+  Logistics: `
+    from-orange-500/20
+    via-amber-500/10
+    to-yellow-500/20
+  `,
+
+  // Ecology / sustainability
+  Environment: `
+    from-green-500/20
+    via-emerald-500/10
+    to-teal-500/20
+  `,
+
+  // Human / social vibe
+  'Social Impact': `
+    from-pink-500/20
+    via-rose-500/10
+    to-red-500/20
+  `,
+
+  // Startup / commerce vibe
+  'E-commerce': `
+    from-violet-500/20
+    via-purple-500/10
+    to-fuchsia-500/20
+  `,
+
+  // Cybersecurity vibe
+  Security: `
+    from-rose-500/20
+    via-red-500/10
+    to-orange-500/20
+  `,
+
+  // Netflix / media vibe
+  Entertainment: `
+    from-fuchsia-500/20
+    via-pink-500/10
+    to-purple-500/20
+  `,
+
+  // Fallback
+  Other: `
+    from-slate-500/20
+    via-gray-500/10
+    to-zinc-500/20
+  `,
+}

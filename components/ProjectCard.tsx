@@ -123,7 +123,20 @@ export default function ProjectCard({ project, currentUserId }: Props) {
   return (
     <Link href={`/projects/${project.id}`} className="block h-full">
       <div
-        className="rounded-2xl p-5 flex flex-col h-full cursor-pointer transition-all"
+        className="  relative
+                    rounded-2xl
+                    p-5
+                    flex flex-col
+                    h-full
+                    cursor-pointer
+                    transition-all
+                    duration-300
+                    overflow-hidden
+
+                    group
+                    hover:border-teal-500/40
+                    hover:shadow-[0_10px_40px_rgba(13,148,136,0.15)]
+                    hover:-translate-y-1"
         style={{
           backgroundColor: '#161B28',
           border: '1px solid #1E2840',
@@ -132,6 +145,84 @@ export default function ProjectCard({ project, currentUserId }: Props) {
         onMouseEnter={e => (e.currentTarget.style.borderColor = '#0D9488')}
         onMouseLeave={e => (e.currentTarget.style.borderColor = '#1E2840')}
       >
+        {/* ========================================================= */}
+        {/* HOVER GLOW BLOBS (PURE VISUAL DEPTH LAYER) */}
+        {/* ========================================================= */}
+
+        <div className="
+          absolute inset-0
+          opacity-0
+          group-hover:opacity-100
+          transition-opacity
+          duration-500
+          pointer-events-none
+        ">
+
+          {/* top-right glow */}
+          <div className="
+            absolute
+            -top-20
+            -right-20
+            w-64 h-64
+            bg-teal-500/10
+            blur-3xl
+            rounded-full
+          " />
+
+          {/* bottom-left glow */}
+          <div className="
+            absolute
+            -bottom-20
+            -left-20
+            w-64 h-64
+            bg-cyan-500/10
+            blur-3xl
+            rounded-full
+          " />
+
+        </div>
+
+        {/* ========================================================= */}
+        {/* ACTIVITY SIGNAL (TOP RIGHT - SINGLE SOURCE OF TRUTH) */}
+        {/* ========================================================= */}
+
+        {activitySignal && (
+          <div className="
+            absolute top-4 right-4 z-20
+            flex items-center gap-2
+          ">
+
+            {/* pulsing dot */}
+            <span className="relative flex h-2 w-2">
+
+              {/* pulse ring */}
+              <span className="
+                animate-ping absolute inline-flex h-full w-full
+                rounded-full bg-emerald-400 opacity-60
+              " />
+
+              {/* core dot */}
+              <span className="
+                relative inline-flex rounded-full h-2 w-2 bg-emerald-400
+              " />
+
+            </span>
+
+            {/* label */}
+            <span className="
+              text-[10px]
+              font-medium
+              text-emerald-300/90
+              tracking-wide
+            ">
+              {activitySignal}
+            </span>
+
+          </div>
+        )}
+
+
+
         {/* En-tête : auteur + pays */}
         <div className="flex items-center gap-3 mb-4">
           <div
@@ -165,7 +256,7 @@ export default function ProjectCard({ project, currentUserId }: Props) {
         {/* Skills + niveau
         On affiche seulement les 2 premières skills
         et un badge "+N more" si il y en a plus */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 mb-5">
           {project.project_skills?.slice(0, 2).map(skill => {
             const colors = skillColors[skill.skill_needed] ?? {
               bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
@@ -213,7 +304,7 @@ export default function ProjectCard({ project, currentUserId }: Props) {
 
         {/* Footer */}
         <div
-          className="flex flex-col gap-2 pt-3 mt-auto"
+          className="flex flex-col gap-2 pt-3 mt-auto border-t border-white/10"
           style={{ borderTop: '1px solid #1E2840' }}
         >
           {/* Ligne 1 : rating + duration + spots + bouton */}
@@ -255,14 +346,14 @@ export default function ProjectCard({ project, currentUserId }: Props) {
             </div>
 
             {/* Espace entre Spots et Button */}
-            <div className="mt-2" />
+            {/* <div className="mt-2" /> */}
 
             {/* Bouton I'm interested / Your project */}
             {!isOwner && (
               <button
                 onClick={handleInterest}
                 disabled={status === 'loading' || status === 'sent'}
-                className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all flex-shrink-0 whitespace-nowrap"
+                className="text-xs px-3.5 py-1.5 rounded-lg font-medium flex-shrink-0 whitespace-nowrap"
                 style={getButtonStyle()}
               >
                 {getButtonLabel()}
@@ -298,19 +389,6 @@ export default function ProjectCard({ project, currentUserId }: Props) {
                 </div>
               )}
 
-              {/* Signal d'activité */}
-              {activitySignal && (
-                <div className="flex items-center gap-1 text-xs">
-                  <span
-                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                    style={{
-                      backgroundColor: '#10B981',
-                      animation: 'pulse 2s infinite',
-                    }}
-                  />
-                  <span style={{ color: '#10B981' }}>{activitySignal}</span>
-                </div>
-              )}
             </div>
           )}
         </div>
