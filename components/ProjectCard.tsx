@@ -262,7 +262,7 @@ export default function ProjectCard({ project, currentUserId }: Props) {
               <button
                 onClick={handleInterest}
                 disabled={status === 'loading' || status === 'sent'}
-                className="text-xs px-3.5 py-1.5 rounded-lg font-medium transition-all flex-shrink-0 whitespace-nowrap"
+                className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all flex-shrink-0 whitespace-nowrap"
                 style={getButtonStyle()}
               >
                 {getButtonLabel()}
