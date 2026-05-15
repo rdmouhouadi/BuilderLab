@@ -259,7 +259,7 @@ export default function ProjectCard({ project, currentUserId }: Props) {
               <button
                 onClick={handleInterest}
                 disabled={status === 'loading' || status === 'sent'}
-                className="text-xs px-3.5 py-1.5 rounded-lg font-medium transition-all"
+                className="text-xs px-3.5 py-1.5 rounded-lg font-medium transition-all flex-shrink-0 whitespace-nowrap"
                 style={getButtonStyle()}
               >
                 {getButtonLabel()}
@@ -268,7 +268,7 @@ export default function ProjectCard({ project, currentUserId }: Props) {
 
             {isOwner && (
               <span
-                className="text-xs px-3 py-1.5 rounded-lg font-medium"
+                className="text-xs px-3 py-1.5 rounded-lg font-medium flex-shrink-0 whitespace-nowrap"
                 style={{
                   backgroundColor: 'rgba(99,102,241,0.14)',
                   color: '#A5B4FC',
