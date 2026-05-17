@@ -337,12 +337,12 @@ export default function ProjectCard({ project, currentUserId }: Props) {
 
               {/* Spots — caché sur mobile, visible sur sm+ */}
               {project.spots && (
-                <div className="hidden sm:flex items-center gap-1 text-xs flex-shrink-0" style={{ color: '#475569' }}>
+                <div className="hidden lg:flex items-center gap-1 text-xs flex-shrink-0" style={{ color: '#475569' }}>
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  {project.spots} spots
+                  {project.spots} {project.spots === 1 ? 'spot' : 'spots'}
                 </div>
               )}
             </div>
@@ -374,23 +374,20 @@ export default function ProjectCard({ project, currentUserId }: Props) {
             )}
           </div>
 
-          {/* Ligne 2 : activity signals — seulement si données disponibles */}
-          {(memberCount > 0 || activitySignal) && (
-            <div className="flex items-center gap-3">
+          {/* Ligne 2 : members + activity signal
+              Toujours affichée pour garder toutes les cartes alignées */}
+          <div className="flex items-center gap-3">
 
-              {/* Nombre de membres */}
-              {memberCount > 0 && (
-                <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  {memberCount} {memberCount === 1 ? 'member' : 'members'}
-                </div>
-              )}
-
+            {/* Nombre de membres — toujours affiché même si 0 */}
+            <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              {memberCount} {memberCount === 0 || memberCount === 1 ? 'member' : 'members'}
             </div>
-          )}
+
+          </div>
         </div>
 
 

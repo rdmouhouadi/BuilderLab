@@ -42,6 +42,7 @@ export default function Navbar() {
   // Nombre de demandes en attente - pour le badge sur Connections
   const [pendingCount, setPendingCount] = useState(0)
 
+
   // Fetch le nombre de demandes pending sur les projets du user
   // Définie AVANT le useEffect qui l'appelle
   async function fetchPendingCount(userId: string) {
@@ -67,36 +68,59 @@ export default function Navbar() {
     setPendingCount(count ?? 0)
   }
 
+    // Profil de l'utilisateur connecté — pour les vraies initiales
+  const [userProfile, setUserProfile] = useState<{
+    first_name: string | null
+    last_name: string | null
+  } | null>(null)
+
+  // Calcule les initiales depuis le profil
+  // Fallback sur la première lettre de l'email si pas de profil
+  const navInitials = userProfile
+    ? ([userProfile.first_name?.[0], userProfile.last_name?.[0]]
+        .filter(Boolean)
+        .join('')
+        .toUpperCase()) || (user?.email?.[0].toUpperCase() ?? '?')
+    : (user?.email?.[0].toUpperCase() ?? '?')
+
   useEffect(() => {
-    // On récupère la session au chargement de la page
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user)
-
-      // si connecté, on fetch le nombre de pending requests
-      // sur les projets de l'utilisateur
       if (data.user) {
         fetchPendingCount(data.user.id)
+
+        // Fetch le profil pour afficher les vraies initiales
+        // et non la première lettre de l'email
+        supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', data.user.id)
+          .single()
+          .then(({ data: profile }) => setUserProfile(profile))
       }
     })
 
-    // onAuthStateChange écoute les changements de session en temps réel
-    // Si l'utilisateur se connecte ou se déconnecte,
-    // la navbar se met à jour automatiquement
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          fetchPendingCount(session.user.id)
-        } else {
-          setPendingCount(0)
-        }
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    (_event, session) => {
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        fetchPendingCount(session.user.id)
+        // Même chose quand la session change
+        supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: profile }) => setUserProfile(profile))
+      } else {
+        setPendingCount(0)
+        setUserProfile(null)
       }
-    )
+    }
+  )
 
-    // Nettoyage — on arrête d'écouter quand le composant est démonté
-    // sans ça on aurait des fuites mémoire
-    return () => subscription.unsubscribe()
-  }, [])
+  return () => subscription.unsubscribe()
+}, [])
 
   // Fonction de déconnexion
   async function handleSignOut() {
@@ -248,10 +272,10 @@ export default function Navbar() {
               href="/profile"
               className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white transition-opacity"
               style={{ background: 'linear-gradient(135deg, #0D9488, #0EA5E9)' }}
-              title={user.email ?? 'Mon profil'}
+              title={user.email ?? 'My profil'}
             >
-              {/* On prend la première lettre de l'email comme avatar */}
-              {user.email?.[0].toUpperCase() ?? '?'}
+              {/* On prend les initials prenom + nom, ou la première lettre de l'email comme avatar */}
+              {navInitials}
             </Link>
 
             {/* Bouton déconnexion */}
