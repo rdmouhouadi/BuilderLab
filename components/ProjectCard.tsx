@@ -3,12 +3,13 @@
 // Une prop c'est comme un argument de fonction — des données passées de parent à enfant
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import { Project } from '@/types'
 import Link from 'next/link'
 import { getTimeLabel } from '@/lib/timeLabel'
+import InterestModal from '@/components/InterestModal'
 
 
 type Props = {
@@ -20,6 +21,11 @@ export default function ProjectCard({ project, currentUserId }: Props) {
   const router = useRouter()
   const supabase = createBrowserSupabaseClient()
   const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle')
+  const [showModal, setShowModal] = useState(false)
+  const [userContact, setUserContact] = useState<{
+    type: string | null
+    value: string | null
+  }>({ type: null, value: null })
 
   const skillColors: Record<string, { bg: string; text: string }> = {
     'Developer':      { bg: 'rgba(13,148,136,0.14)',  text: '#5EEAD4' },
@@ -46,11 +52,37 @@ export default function ProjectCard({ project, currentUserId }: Props) {
 
   const isOwner = currentUserId === project.owner_id
 
-  async function handleInterest() {
+  // Fetch le contact préféré de l'utilisateur connecté
+  // pour pré-remplir le message du modal
+  useEffect(() => {
+    if (!currentUserId) return
+
+    supabase
+      .from('profiles')
+      .select('preferred_contact_type, preferred_contact_value')
+      .eq('id', currentUserId)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setUserContact({
+            type: data.preferred_contact_type,
+            value: data.preferred_contact_value,
+          })
+        }
+      })
+  }, [currentUserId])
+
+  // Ouvre le modal au lieu d'envoyer directement
+  function handleInterest() {
     if (!currentUserId) {
       router.push('/login')
       return
     }
+    setShowModal(true)
+  }
+
+  // Envoie la demande avec le message personnalisé
+  async function handleConfirmInterest(message: string) {
     setStatus('loading')
     try {
       const { error } = await supabase
@@ -58,7 +90,7 @@ export default function ProjectCard({ project, currentUserId }: Props) {
         .insert({
           sender_id: currentUserId,
           project_id: project.id,
-          message: "I'm interested in collaborating on your project.",
+          message: message,
           status: 'pending',
         })
       if (error?.code === '23505') {
@@ -70,6 +102,8 @@ export default function ProjectCard({ project, currentUserId }: Props) {
       }
     } catch {
       setStatus('error')
+    } finally {
+      setShowModal(false)
     }
   }
 
@@ -121,278 +155,295 @@ export default function ProjectCard({ project, currentUserId }: Props) {
 
   // Rectangle unique, pas de double encapsulation
   return (
-    <Link href={`/projects/${project.id}`} className="block h-full">
-      <div
-        className="  relative
-                    rounded-2xl
-                    p-5
-                    flex flex-col
-                    h-full
-                    cursor-pointer
-                    transition-all
-                    duration-300
-                    overflow-hidden
+    <>
+     <Link href={`/projects/${project.id}`} className="block h-full">
+        <div
+          className="  relative
+                      rounded-2xl
+                      p-5
+                      flex flex-col
+                      h-full
+                      cursor-pointer
+                      transition-all
+                      duration-300
+                      overflow-hidden
 
-                    group
-                    hover:border-teal-500/40
-                    hover:shadow-[0_10px_40px_rgba(13,148,136,0.15)]
-                    hover:-translate-y-1"
-        style={{
-          backgroundColor: '#161B28',
-          border: '1px solid #1E2840',
-          boxShadow: '0 2px 16px rgba(0,0,0,0.25)',
-        }}
-        onMouseEnter={e => (e.currentTarget.style.borderColor = '#0D9488')}
-        onMouseLeave={e => (e.currentTarget.style.borderColor = '#1E2840')}
-      >
-        {/* ========================================================= */}
-        {/* HOVER GLOW BLOBS (PURE VISUAL DEPTH LAYER) */}
-        {/* ========================================================= */}
+                      group
+                      hover:border-teal-500/40
+                      hover:shadow-[0_10px_40px_rgba(13,148,136,0.15)]
+                      hover:-translate-y-1"
+          style={{
+            backgroundColor: '#161B28',
+            border: '1px solid #1E2840',
+            boxShadow: '0 2px 16px rgba(0,0,0,0.25)',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.borderColor = '#0D9488')}
+          onMouseLeave={e => (e.currentTarget.style.borderColor = '#1E2840')}
+        >
+          {/* ========================================================= */}
+          {/* HOVER GLOW BLOBS (PURE VISUAL DEPTH LAYER) */}
+          {/* ========================================================= */}
 
-        <div className="
-          absolute inset-0
-          opacity-0
-          group-hover:opacity-100
-          transition-opacity
-          duration-500
-          pointer-events-none
-        ">
-
-          {/* top-right glow */}
           <div className="
-            absolute
-            -top-20
-            -right-20
-            w-64 h-64
-            bg-teal-500/10
-            blur-3xl
-            rounded-full
-          " />
-
-          {/* bottom-left glow */}
-          <div className="
-            absolute
-            -bottom-20
-            -left-20
-            w-64 h-64
-            bg-cyan-500/10
-            blur-3xl
-            rounded-full
-          " />
-
-        </div>
-
-        {/* ========================================================= */}
-        {/* ACTIVITY SIGNAL (TOP RIGHT - SINGLE SOURCE OF TRUTH) */}
-        {/* ========================================================= */}
-
-        {activitySignal && (
-          <div className="
-            absolute top-4 right-4 z-20
-            flex items-center gap-2
+            absolute inset-0
+            opacity-0
+            group-hover:opacity-100
+            transition-opacity
+            duration-500
+            pointer-events-none
           ">
 
-            {/* pulsing dot */}
-            <span className="relative flex h-2 w-2">
+            {/* top-right glow */}
+            <div className="
+              absolute
+              -top-20
+              -right-20
+              w-64 h-64
+              bg-teal-500/10
+              blur-3xl
+              rounded-full
+            " />
 
-              {/* pulse ring */}
-              <span className="
-                animate-ping absolute inline-flex h-full w-full
-                rounded-full bg-emerald-400 opacity-60
-              " />
+            {/* bottom-left glow */}
+            <div className="
+              absolute
+              -bottom-20
+              -left-20
+              w-64 h-64
+              bg-cyan-500/10
+              blur-3xl
+              rounded-full
+            " />
 
-              {/* core dot */}
-              <span className="
-                relative inline-flex rounded-full h-2 w-2 bg-emerald-400
-              " />
+          </div>
 
-            </span>
+          {/* ========================================================= */}
+          {/* ACTIVITY SIGNAL (TOP RIGHT - SINGLE SOURCE OF TRUTH) */}
+          {/* ========================================================= */}
 
-            {/* label */}
-            <span className="
-              text-[10px]
-              font-medium
-              text-emerald-300/90
-              tracking-wide
+          {activitySignal && (
+            <div className="
+              absolute top-4 right-4 z-20
+              flex items-center gap-2
             ">
-              {activitySignal}
-            </span>
 
-          </div>
-        )}
+              {/* pulsing dot */}
+              <span className="relative flex h-2 w-2">
 
+                {/* pulse ring */}
+                <span className="
+                  animate-ping absolute inline-flex h-full w-full
+                  rounded-full bg-emerald-400 opacity-60
+                " />
 
+                {/* core dot */}
+                <span className="
+                  relative inline-flex rounded-full h-2 w-2 bg-emerald-400
+                " />
 
-        {/* En-tête : auteur + pays */}
-        <div className="flex items-center gap-3 mb-4">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg, #0D9488, #0EA5E9)' }}
-          >
-            {initials}
-          </div>
-          <div>
-            <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>
-              {project.profiles?.name ?? 'Anonymous'}
-            </p>
-            {project.profiles?.country && (
-              <p className="text-xs" style={{ color: '#475569' }}>
-                {project.profiles.country}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Titre */}
-        <h3 className="font-semibold text-base mb-2 leading-snug" style={{ color: '#F1F5F9' }}>
-          {project.title}
-        </h3>
-
-        {/* Description */}
-        <p className="text-sm leading-relaxed line-clamp-3 flex-1 mb-4" style={{ color: '#64748B' }}>
-          {project.problem}
-        </p>
-
-        {/* Skills + niveau
-        On affiche seulement les 2 premières skills
-        et un badge "+N more" si il y en a plus */}
-        <div className="flex flex-wrap gap-2 mb-5">
-          {project.project_skills?.slice(0, 2).map(skill => {
-            const colors = skillColors[skill.skill_needed] ?? {
-              bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
-            }
-            return (
-              <span
-                key={skill.skill_needed}
-                className="text-xs px-2.5 py-0.5 rounded-md font-medium"
-                style={{ backgroundColor: colors.bg, color: colors.text }}
-              >
-                {skill.skill_needed}
               </span>
-            )
-          })}
 
-          {/* Badge "+N more" si plus de 2 skills */}
-          {project.project_skills && project.project_skills.length > 2 && (
-            <span
-              className="text-xs px-2.5 py-0.5 rounded-md font-medium"
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.07)',
-                color: '#64748B',
-                border: '1px solid #1E2840',
-              }}
-            >
-              +{project.project_skills.length - 2} more
-            </span>
+              {/* label */}
+              <span className="
+                text-[10px]
+                font-medium
+                text-emerald-300/90
+                tracking-wide
+              ">
+                {activitySignal}
+              </span>
+
+            </div>
           )}
 
-          {/* Badge niveau — toujours affiché */}
-          {project.level && (() => {
-            const colors = levelColors[project.level] ?? {
-              bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
-            }
-            return (
-              <span
-                className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"
-                style={{ backgroundColor: colors.bg, color: colors.text }}
-              >
-                {project.level}
-              </span>
-            )
-          })()}
-        </div>
 
-        {/* Footer */}
-        <div
-          className="flex flex-col gap-2 pt-3 mt-auto border-t border-white/10"
-          style={{ borderTop: '1px solid #1E2840' }}
-        >
-          {/* Ligne 1 : rating + duration + spots + bouton */}
-          <div className="flex items-center justify-between gap-2">
 
-            {/* Groupe gauche — infos condensées */}
-            <div className="flex items-center gap-2 min-w-0">
-
-              {/* Rating ou timestamp */}
-              <div className="flex items-center gap-1 text-xs flex-shrink-0" style={{ color: '#475569' }}>
-                <span>⭐</span>
-                <span>
-                  {project.profiles?.avg_rating
-                    ? project.profiles.avg_rating.toFixed(1)
-                    : getTimeLabel(project.created_at)
-                  }
-                </span>
-              </div>
-
-              {/* Duration */}
-              {project.duration && (
-                <div className="flex items-center gap-1 text-xs flex-shrink-0" style={{ color: '#475569' }}>
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {project.duration}
-                </div>
-              )}
-
-              {/* Spots — caché sur mobile, visible sur sm+ */}
-              {project.spots && (
-                <div className="hidden lg:flex items-center gap-1 text-xs flex-shrink-0" style={{ color: '#475569' }}>
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  {project.spots} {project.spots === 1 ? 'spot' : 'spots'}
-                </div>
+          {/* En-tête : auteur + pays */}
+          <div className="flex items-center gap-3 mb-4">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg, #0D9488, #0EA5E9)' }}
+            >
+              {initials}
+            </div>
+            <div>
+              <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>
+                {project.profiles?.name ?? 'Anonymous'}
+              </p>
+              {project.profiles?.country && (
+                <p className="text-xs" style={{ color: '#475569' }}>
+                  {project.profiles.country}
+                </p>
               )}
             </div>
+          </div>
 
-            {/* Bouton — flex-shrink-0 + whitespace-nowrap garantissent
-                qu'il ne wrap jamais et ne rétrécit jamais */}
-            {!isOwner && (
-              <button
-                onClick={handleInterest}
-                disabled={status === 'loading' || status === 'sent'}
-                className="text-xs px-3.5 py-1.5 rounded-lg font-medium flex-shrink-0 whitespace-nowrap"
-                style={getButtonStyle()}
-              >
-                {getButtonLabel()}
-              </button>
-            )}
+          {/* Titre */}
+          <h3 className="font-semibold text-base mb-2 leading-snug" style={{ color: '#F1F5F9' }}>
+            {project.title}
+          </h3>
 
-            {isOwner && (
+          {/* Description */}
+          <p className="text-sm leading-relaxed line-clamp-3 flex-1 mb-4" style={{ color: '#64748B' }}>
+            {project.problem}
+          </p>
+
+          {/* Skills + niveau
+          On affiche seulement les 2 premières skills
+          et un badge "+N more" si il y en a plus */}
+          <div className="flex flex-wrap gap-2 mb-5">
+            {project.project_skills?.slice(0, 2).map(skill => {
+              const colors = skillColors[skill.skill_needed] ?? {
+                bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
+              }
+              return (
+                <span
+                  key={skill.skill_needed}
+                  className="text-xs px-2.5 py-0.5 rounded-md font-medium"
+                  style={{ backgroundColor: colors.bg, color: colors.text }}
+                >
+                  {skill.skill_needed}
+                </span>
+              )
+            })}
+
+            {/* Badge "+N more" si plus de 2 skills */}
+            {project.project_skills && project.project_skills.length > 2 && (
               <span
-                className="text-xs px-3 py-1.5 rounded-lg font-medium flex-shrink-0 whitespace-nowrap"
+                className="text-xs px-2.5 py-0.5 rounded-md font-medium"
                 style={{
-                  backgroundColor: 'rgba(99,102,241,0.14)',
-                  color: '#A5B4FC',
-                  border: '1px solid rgba(99,102,241,0.28)',
+                  backgroundColor: 'rgba(255,255,255,0.07)',
+                  color: '#64748B',
+                  border: '1px solid #1E2840',
                 }}
               >
-                Your project
+                +{project.project_skills.length - 2} more
               </span>
             )}
+
+            {/* Badge niveau — toujours affiché */}
+            {project.level && (() => {
+              const colors = levelColors[project.level] ?? {
+                bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
+              }
+              return (
+                <span
+                  className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"
+                  style={{ backgroundColor: colors.bg, color: colors.text }}
+                >
+                  {project.level}
+                </span>
+              )
+            })()}
           </div>
 
-          {/* Ligne 2 : members + activity signal
-              Toujours affichée pour garder toutes les cartes alignées */}
-          <div className="flex items-center gap-3">
+          {/* Footer */}
+          <div
+            className="flex flex-col gap-2 pt-3 mt-auto border-t border-white/10"
+            style={{ borderTop: '1px solid #1E2840' }}
+          >
+            {/* Ligne 1 : rating + duration + spots + bouton */}
+            <div className="flex items-center justify-between gap-2">
 
-            {/* Nombre de membres — toujours affiché même si 0 */}
-            <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              {memberCount} {memberCount === 0 || memberCount === 1 ? 'member' : 'members'}
+              {/* Groupe gauche — infos condensées */}
+              <div className="flex items-center gap-2 min-w-0">
+
+                {/* Rating ou timestamp */}
+                <div className="flex items-center gap-1 text-xs flex-shrink-0" style={{ color: '#475569' }}>
+                  <span>⭐</span>
+                  <span>
+                    {project.profiles?.avg_rating
+                      ? project.profiles.avg_rating.toFixed(1)
+                      : getTimeLabel(project.created_at)
+                    }
+                  </span>
+                </div>
+
+                {/* Duration */}
+                {project.duration && (
+                  <div className="flex items-center gap-1 text-xs flex-shrink-0" style={{ color: '#475569' }}>
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {project.duration}
+                  </div>
+                )}
+
+                {/* Spots — caché sur mobile, visible sur sm+ */}
+                {project.spots && (
+                  <div className="hidden lg:flex items-center gap-1 text-xs flex-shrink-0" style={{ color: '#475569' }}>
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    {project.spots} {project.spots === 1 ? 'spot' : 'spots'}
+                  </div>
+                )}
+              </div>
+
+              {/* Bouton — flex-shrink-0 + whitespace-nowrap garantissent
+                  qu'il ne wrap jamais et ne rétrécit jamais */}
+              {!isOwner && (
+                <button
+                    onClick={e => {
+                      // Empêche la navigation vers la page détail
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleInterest()
+                    }}
+                    disabled={status === 'loading' || status === 'sent'}
+                    className="text-xs px-3.5 py-1.5 rounded-lg font-medium flex-shrink-0 whitespace-nowrap"
+                    style={getButtonStyle()}
+                  >
+                    {getButtonLabel()}
+                </button>
+              )}
+
+              {isOwner && (
+                <span
+                  className="text-xs px-3 py-1.5 rounded-lg font-medium flex-shrink-0 whitespace-nowrap"
+                  style={{
+                    backgroundColor: 'rgba(99,102,241,0.14)',
+                    color: '#A5B4FC',
+                    border: '1px solid rgba(99,102,241,0.28)',
+                  }}
+                >
+                  Your project
+                </span>
+              )}
             </div>
 
+            {/* Ligne 2 : members + activity signal
+                Toujours affichée pour garder toutes les cartes alignées */}
+            <div className="flex items-center gap-3">
+
+              {/* Nombre de membres — toujours affiché même si 0 */}
+              <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {memberCount} {memberCount === 0 || memberCount === 1 ? 'member' : 'members'}
+              </div>
+
+            </div>
           </div>
+
         </div>
+      </Link>
 
-
-
-      </div>
-    </Link>
+      {/* Modal d'intérêt — rendu en dehors du Link pour éviter les conflits de clics */ }
+      {showModal && (
+        <InterestModal
+          projectTitle={project.title}
+          preferredContactType={userContact.type}
+          preferredContactValue={userContact.value}
+          onConfirm={handleConfirmInterest}
+          onCancel={() => setShowModal(false)}
+          loading={status === 'loading'}
+        />
+      )}
+    </>
   )
 }
