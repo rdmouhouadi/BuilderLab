@@ -27,11 +27,12 @@ type Profile = {
 
 type Props = {
   profile: Profile
-  projects: Project[]
+  ownedProjects: Project[]
+  joinedProjects: Project[]
   email: string
 }
 
-export default function ProfileClient({ profile, projects, email }: Props) {
+export default function ProfileClient({ profile, ownedProjects, joinedProjects, email }: Props) {
   const supabase = createBrowserSupabaseClient()
 
   // Mode édition — true = formulaire visible, false = affichage
@@ -101,6 +102,84 @@ export default function ProfileClient({ profile, projects, email }: Props) {
     backgroundColor: '#0C1120',
     border: '1px solid #1E2840',
     color: '#F1F5F9',
+  }
+
+  // Composant interne — affiche un projet sous forme de ligne
+  // Réutilisé dans les deux sections (owned + joined)
+  function ProjectRow({ project, showOwner = false }: {
+    project: Project
+    showOwner?: boolean  // Affiche le owner si c'est un projet rejoint
+  }) {
+    return (
+      <Link
+        href={`/projects/${project.id}`}
+        className="block rounded-2xl p-5 transition-all"
+        style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
+        onMouseEnter={e => (e.currentTarget.style.borderColor = '#0D9488')}
+        onMouseLeave={e => (e.currentTarget.style.borderColor = '#1E2840')}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold text-sm" style={{ color: '#F1F5F9' }}>
+            {project.title}
+          </h3>
+          <span
+            className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"
+            style={{
+              backgroundColor: project.status === 'open'
+                ? 'rgba(16,185,129,0.14)'
+                : 'rgba(245,158,11,0.14)',
+              color: project.status === 'open' ? '#6EE7B7' : '#FCD34D',
+            }}
+          >
+            {project.status}
+          </span>
+        </div>
+
+        {/* Affiche le owner si c'est un projet rejoint */}
+        {showOwner && project.profiles && (
+          <p className="text-xs mb-2" style={{ color: '#475569' }}>
+            by {(project.profiles as any).name ?? 'Anonymous'}
+          </p>
+        )}
+
+        <p
+          className="text-xs leading-relaxed line-clamp-2 mb-3"
+          style={{ color: '#64748B' }}
+        >
+          {project.problem}
+        </p>
+
+        <div className="flex flex-wrap gap-2">
+          {project.project_skills?.map(skill => {
+            const colors = SKILL_COLORS[skill.skill_needed] ?? {
+              bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
+            }
+            return (
+              <span
+                key={skill.skill_needed}
+                className="text-xs px-2.5 py-0.5 rounded-md font-medium"
+                style={{ backgroundColor: colors.bg, color: colors.text }}
+              >
+                {skill.skill_needed}
+              </span>
+            )
+          })}
+          {project.level && (() => {
+            const colors = LEVEL_COLORS[project.level] ?? {
+              bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
+            }
+            return (
+              <span
+                className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"
+                style={{ backgroundColor: colors.bg, color: colors.text }}
+              >
+                {project.level}
+              </span>
+            )
+          })()}
+        </div>
+      </Link>
+    )
   }
 
   return (
@@ -391,7 +470,7 @@ export default function ProfileClient({ profile, projects, email }: Props) {
           </div>
           <div>
             <p className="text-xl font-bold" style={{ color: '#F1F5F9' }}>
-              {projects.length}
+              {ownedProjects.length}
             </p>
             <p className="text-xs" style={{ color: '#475569' }}>
               Projects posted
@@ -402,27 +481,32 @@ export default function ProfileClient({ profile, projects, email }: Props) {
 
       {/* Projets postés par l'utilisateur */}
       <div>
+        {/* Section 1 — Projets créés */}
         <h2 className="text-base font-semibold mb-4" style={{ color: '#94A3B8' }}>
-          My projects
+          Posted projects
+          <span
+            className="ml-2 text-xs px-2 py-0.5 rounded-md"
+            style={{ backgroundColor: '#0C1120', color: '#475569' }}
+          >
+            {ownedProjects.length}
+          </span>
         </h2>
 
-        {projects.length === 0 ? (
+        {ownedProjects.length === 0 ? (
           <div
-            className="rounded-2xl p-8 text-center"
+            className="rounded-2xl p-8 text-center mb-6"
             style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
           >
             <p className="text-sm mb-3" style={{ color: '#475569' }}>
               You haven't posted any projects yet.
             </p>
-            {/* Link Next.js pour la navigation interne — pas <a> */}
             <Link href="/post" className="text-sm font-medium" style={{ color: '#0D9488' }}>
               Post your first project →
             </Link>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
-            {projects.map(project => (
-              // Chaque projet est cliquable et mène à sa page détaillée
+          <div className="flex flex-col gap-3 mb-8">
+            {ownedProjects.map(project => (
               <Link
                 key={project.id}
                 href={`/projects/${project.id}`}
@@ -431,7 +515,90 @@ export default function ProfileClient({ profile, projects, email }: Props) {
                 onMouseEnter={e => (e.currentTarget.style.borderColor = '#0D9488')}
                 onMouseLeave={e => (e.currentTarget.style.borderColor = '#1E2840')}
               >
-                {/* Titre + badge status */}
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-sm" style={{ color: '#F1F5F9' }}>
+                    {project.title}
+                  </h3>
+                  <span
+                    className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"
+                    style={{
+                      backgroundColor: project.status === 'open'
+                        ? 'rgba(16,185,129,0.14)'
+                        : 'rgba(245,158,11,0.14)',
+                      color: project.status === 'open' ? '#6EE7B7' : '#FCD34D',
+                    }}
+                  >
+                    {project.status}
+                  </span>
+                </div>
+                <p className="text-xs leading-relaxed line-clamp-2 mb-3" style={{ color: '#64748B' }}>
+                  {project.problem}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {project.project_skills?.map(skill => {
+                    const colors = SKILL_COLORS[skill.skill_needed] ?? {
+                      bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
+                    }
+                    return (
+                      <span
+                        key={skill.skill_needed}
+                        className="text-xs px-2.5 py-0.5 rounded-md font-medium"
+                        style={{ backgroundColor: colors.bg, color: colors.text }}
+                      >
+                        {skill.skill_needed}
+                      </span>
+                    )
+                  })}
+                  {project.level && (() => {
+                    const colors = LEVEL_COLORS[project.level] ?? {
+                      bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
+                    }
+                    return (
+                      <span
+                        className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"
+                        style={{ backgroundColor: colors.bg, color: colors.text }}
+                      >
+                        {project.level}
+                      </span>
+                    )
+                  })()}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {/* Section 2 — Projets rejoints */}
+        <h2 className="text-base font-semibold mb-4" style={{ color: '#94A3B8' }}>
+          Projects joined
+          <span
+            className="ml-2 text-xs px-2 py-0.5 rounded-md"
+            style={{ backgroundColor: '#0C1120', color: '#475569' }}
+          >
+            {joinedProjects.length}
+          </span>
+        </h2>
+
+        {joinedProjects.length === 0 ? (
+          <div
+            className="rounded-2xl p-8 text-center"
+            style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
+          >
+            <p className="text-sm" style={{ color: '#475569' }}>
+              You haven't joined any projects yet.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {joinedProjects.map(project => (
+              <Link
+                key={project.id}
+                href={`/projects/${project.id}`}
+                className="block rounded-2xl p-5 transition-all"
+                style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = '#0D9488')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = '#1E2840')}
+              >
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-semibold text-sm" style={{ color: '#F1F5F9' }}>
                     {project.title}
@@ -449,16 +616,16 @@ export default function ProfileClient({ profile, projects, email }: Props) {
                   </span>
                 </div>
 
-                {/* Description courte */}
-                <p
-                  className="text-xs leading-relaxed line-clamp-2 mb-3"
-                  style={{ color: '#64748B' }}
-                >
+                {/* Affiche le owner — utile pour les projets rejoints */}
+                {(project.profiles as any)?.name && (
+                  <p className="text-xs mb-2" style={{ color: '#475569' }}>
+                    by {(project.profiles as any).name}
+                  </p>
+                )}
+
+                <p className="text-xs leading-relaxed line-clamp-2 mb-3" style={{ color: '#64748B' }}>
                   {project.problem}
                 </p>
-
-                {/* Skills + niveau — on utilise SKILL_COLORS et LEVEL_COLORS
-                    depuis constants.ts pour la cohérence */}
                 <div className="flex flex-wrap gap-2">
                   {project.project_skills?.map(skill => {
                     const colors = SKILL_COLORS[skill.skill_needed] ?? {

@@ -24,17 +24,38 @@ export default async function ProfilePage() {
     .single()
 
   // On récupère les projets postés par cet utilisateur
-  const { data: projects } = await supabase
+  const { data: ownedProjects } = await supabase
     .from('projects')
     .select('*, project_skills(skill_needed)')
     .eq('owner_id', user.id)
     .order('created_at', { ascending: false })
 
+  
+  // Projets où l'utilisateur est membre (pas owner)
+  const { data: memberProjects } = await supabase
+    .from('project_members')
+    .select(`
+      project_id,
+      projects(
+        *,
+        project_skills(skill_needed),
+        profiles!projects_owner_id_fkey(name, country)
+      )
+    `)
+    .eq('user_id', user.id)
+    .eq('status', 'active') 
+
+  // On extrait les projets depuis la jointure
+  const joinedProjects = memberProjects
+    ?.map(m => m.projects)
+    .filter(Boolean) ?? [] as Project[]
+
   return (
     <PageTransition>
       <ProfileClient
         profile={profile}
-        projects={(projects as Project[]) ?? []}
+        ownedProjects={(ownedProjects as Project[]) ?? []}
+        joinedProjects={joinedProjects as any}
         email={user.email ?? ''}
       />
     </PageTransition>

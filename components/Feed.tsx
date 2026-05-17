@@ -13,6 +13,7 @@ import { SKILLS, LEVELS, DURATIONS } from '@/lib/constants'
 // Props que ce composant reçoit depuis app/page.tsx
 type Props = {
   projects: Project[]
+  currentUserId: string | null // ID de l'utilisateur connecté, ou null si pas connecté
 }
 
 // Options des dropdowns — on ajoute l'option "All" en tête de liste
@@ -52,6 +53,13 @@ export default function Feed({ projects }: Props) {
   const filtered = useMemo(() => {
     return projects.filter(project => {
 
+      // Exclure les projets dont on est déjà membre
+      // project_members contient les user_id des membres
+      const isMember = project.project_members?.some(
+        m => m.user_id === currentUserId
+      )
+      if (isMember) return false
+
       // Filtre par recherche — on cherche dans le titre et le problème
       const matchSearch = search === '' ||
         project.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -70,7 +78,7 @@ export default function Feed({ projects }: Props) {
       // Un projet s'affiche seulement s'il passe TOUS les filtres
       return matchSearch && matchSkill && matchLevel && matchDuration
     })
-  }, [projects, search, skill, level, duration])
+  }, [projects, search, skill, level, duration, currentUserId])
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">

@@ -20,7 +20,7 @@ export function getTimeLabel(createdAt: string): string {
   if (diffHours < 24) return 'New'
 
   // Moins de 48h → "Yesterday"
-  if (diffHours < 48) return 'Yesterday'
+  if (diffHours < 48) return '1d ago'
 
   // Moins de 7 jours → "X days ago"
   if (diffDays < 7) return `${diffDays}d ago`
