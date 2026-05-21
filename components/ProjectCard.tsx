@@ -85,7 +85,7 @@ export default function ProjectCard({ project, currentUserId }: Props) {
   async function handleConfirmInterest(message: string) {
     setStatus('loading')
     try {
-      const { error } = await supabase
+      const { data,error } = await supabase
         .from('connections')
         .insert({
           sender_id: currentUserId,
@@ -93,12 +93,22 @@ export default function ProjectCard({ project, currentUserId }: Props) {
           message: message,
           status: 'pending',
         })
+        .select()
+        .single()
+
       if (error?.code === '23505') {
         setStatus('sent')
       } else if (error) {
         throw error
       } else {
         setStatus('sent')
+        // On envoie la notification email au owner
+        // On ne bloque pas l'UI si l'email échoue
+        fetch('/api/notify/interest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ connectionId: data.id }),
+        }).catch(console.error)
       }
     } catch {
       setStatus('error')

@@ -5,6 +5,7 @@
 
 import { useState } from 'react'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
+import Link from 'next/link'
 
 type Connection = {
   id: string
@@ -44,7 +45,9 @@ export default function ConnectionsClient({ received, sent, currentUserId }: Pro
   const pendingConnections = connections.filter(c => c.status === 'pending')
   const resolvedConnections = connections.filter(c => c.status !== 'pending')
 
+  
   // Met à jour le status d'une connexion
+  // Si accepté → envoie aussi une notification email au sender
   async function handleAction(id: string, action: 'accepted' | 'rejected') {
     const { error } = await supabase
       .from('connections')
@@ -56,6 +59,16 @@ export default function ConnectionsClient({ received, sent, currentUserId }: Pro
       setConnections(prev =>
         prev.map(c => c.id === id ? { ...c, status: action } : c)
       )
+
+      // Si accepté → envoie la notification email au sender
+      // On ne bloque pas l'UI si l'email échoue — catch silencieux
+      if (action === 'accepted') {
+        fetch('/api/notify/accepted', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ connectionId: id }),
+        }).catch(console.error)
+      }
     }
   }
 
@@ -151,9 +164,14 @@ export default function ConnectionsClient({ received, sent, currentUserId }: Pro
                     </div>
 
                     <div>
-                      <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>
+                      <Link
+                        href={`/profile/${conn.profiles?.id}`}
+                        className="text-sm font-medium hover:underline"
+                        style={{ color: '#F1F5F9' }}
+                        onClick={e => e.stopPropagation()}
+                      >
                         {conn.profiles?.name ?? 'Anonymous'}
-                      </p>
+                      </Link>
                       <p className="text-xs" style={{ color: '#475569' }}>
                         {conn.profiles?.country ?? ''} ·{' '}
                         ⭐ {conn.profiles?.avg_rating

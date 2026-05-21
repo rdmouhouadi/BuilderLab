@@ -767,9 +767,13 @@ export default function ProjectDetailClient({
                 {getInitials(project.profiles)}
               </div>
               <div>
-                <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>
+                <Link
+                  href={`/profile/${project.profiles?.id}`}
+                  className="text-sm font-medium hover:underline"
+                  style={{ color: '#F1F5F9' }}
+                >
                   {getFullName(project.profiles as any)}
-                </p>
+                </Link>
                 <p className="text-xs" style={{ color: '#475569' }}>
                   {project.profiles?.country ?? ''} · ⭐{' '}
                   {project.profiles?.avg_rating
@@ -828,9 +832,13 @@ export default function ProjectDetailClient({
                       {getInitials(member.profiles)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate" style={{ color: '#F1F5F9' }}>
+                      <Link
+                        href={`/profile/${member.profiles?.id}`}
+                        className="text-sm font-medium truncate hover:underline"
+                        style={{ color: '#F1F5F9' }}
+                      >
                         {getFullName(member.profiles)}
-                      </p>
+                      </Link>
                       {/* Lien de contact préféré du membre */}
                       {member.profiles?.preferred_contact_type &&
                         CONTACT_TYPES[member.profiles.preferred_contact_type] && (
