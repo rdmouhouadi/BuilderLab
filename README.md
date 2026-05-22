@@ -11,7 +11,7 @@
 
 ## What is BuilderLab?
 
-As students, we are expected to showcase personal projects in our portfolios to stand out during job searches. However, it is often difficult to come up with solid project ideas that address real technical or business problems — projects that are truly portfolio-worthy.
+Student are expected to showcase personal projects in portfolios to stand out during job searches. However, it is often difficult to come up with solid project ideas that address real technical or business problems — projects that are truly portfolio-worthy.
 
 Working alone, this can be challenging. But in teams of two, three, or more, it becomes much more achievable, and a project can even evolve into a product.
 
@@ -33,7 +33,7 @@ BuilderLab is more than a project matching platform. It is being built as an end
 
 ```
 Find your team        →     Validate your project     →     Build together
-(BuilderLab Core)           (HiveCheck)                      (HiveOS)
+(BuilderLab Core)                (HiveCheck)                   (HiveOS)
 ```
 
 Each layer builds on the previous one, serving the same community of student builders at every stage of their journey.
@@ -63,12 +63,12 @@ Seeing how another builder received tough feedback and improved their project is
                       │
 ┌─────────────────────▼───────────────────────────────┐
 │                    Backend                          │
-│                   Supabase                          │
+│                    Supabase                         │
 │                                                     │
-│  ┌─────────────┐  ┌──────────┐  ┌───────────────┐  │
-│  │  PostgreSQL  │  │   Auth   │  │  Row Level    │  │
-│  │  9 tables   │  │  (JWT)   │  │  Security     │  │
-│  └─────────────┘  └──────────┘  └───────────────┘  │
+│  ┌─────────────┐  ┌──────────┐  ┌───────────────┐   │
+│  │  PostgreSQL │  │   Auth   │  │  Row Level    │   │
+│  │  9 tables   │  │  (JWT)   │  │  Security     │   │
+│  └─────────────┘  └──────────┘  └───────────────┘   │
 └─────────────────────────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────┐
@@ -237,8 +237,7 @@ Beta testers know BuilderLab. Rebranding mid-beta creates confusion. The rename 
 - [ ] University email verification
 - [ ] Mobile app (React Native)
 - [ ] Recruiter portal — access to top-rated projects and builder profiles (B2B monetization)
-- [ ] MLOps project templates for Data Science students
-- [ ] AWS infrastructure integration guides
+
 
 ---
 
