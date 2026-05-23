@@ -2,10 +2,20 @@
 
 > *"Better to have one strong, solid project than several small tutorials."*
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![License: Source Available](https://img.shields.io/badge/License-Source%20Available-orange.svg)]()
 [![Version](https://img.shields.io/badge/version-0.2.0-teal.svg)]()
 [![Built with Next.js](https://img.shields.io/badge/Built%20with-Next.js-black.svg)](https://nextjs.org)
 [![Powered by Supabase](https://img.shields.io/badge/Powered%20by-Supabase-green.svg)](https://supabase.com)
+
+---
+
+> ⚖️ **Licensing Notice**
+>
+> BuilderLab is source-available.
+>
+> The source code is publicly visible for learning, transparency, and collaboration, but commercial use, hosted competition, and production redistribution are restricted.
+>
+> See the [LICENSE](./LICENSE) file for details.
 
 ---
 
@@ -210,11 +220,12 @@ Teams that choose to build in public can optionally share their meeting notes, w
 The rebrand is a deliberate launch moment — not just a name change, but a public statement that the platform has matured.
 
 **What changes:**
-- Name: BuilderLab → **BNest**
-- Tagline: → **"Where builders swarm."**
-- Domain: → **bnest.io** (or equivalent)
-- Visual identity: hexagonal motifs, amber + teal palette
-- Logo: hexagonal bee-inspired mark
+- **Name**: BuilderLab → **BNest**
+- **Tagline**: → **"Where builders swarm."**
+- **Domain**: → **bnest.io** (or equivalent)
+- **Visual identity**: hexagonal motifs, amber + teal palette
+- **Logo**: hexagonal bee-inspired mark
+- **In-app vocabulary** fully adopted across all UI copy:
 
 **Vocabulary update:**
 
@@ -230,13 +241,18 @@ The rebrand is a deliberate launch moment — not just a name change, but a publ
 | Weekly digest | Hive Report |
 | Going public | Flying from the hive |
 
+- Updated onboarding flow with BNest identity
+- Social & SEO metadata updated (Open Graph, Twitter card, etc.)
+- Announcement post — build in public, share the story behind the rename
+
 **Why wait for V1.0.0?**
 Beta testers know BuilderLab. Rebranding mid-beta creates confusion. The rename becomes a public launch moment worth celebrating — a signal to the community that something real has been built.
 
 ### Future
-- [ ] University email verification
+- [ ] University email verification (optional — for builders who want to signal their affiliation)
 - [ ] Mobile app (React Native)
 - [ ] Recruiter portal — access to top-rated projects and builder profiles (B2B monetization)
+- [ ] Learning path integration — connect with online platforms (Coursera, freeCodeCamp, etc.)
 
 
 ---
@@ -358,7 +374,11 @@ builderlab/
 
 ## Contributing
 
-BuilderLab is open source under the AGPL v3 license. Contributions are very welcome — this project is itself a learning experience, and collaborating on it is exactly the spirit of BuilderLab.
+BuilderLab is developed in public under a source-available license.
+
+The goal is to make the platform transparent, educational, and collaborative while protecting the long-term sustainability of the ecosystem.
+
+Feedback, discussions, bug reports, and carefully scoped contributions are welcome.
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feat/your-feature`
@@ -381,9 +401,20 @@ All feedback, suggestions, and PRs are welcome.
 
 ## LICENSE
 
-Licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+BuilderLab is licensed under a custom **Source Available License**.
+
+You may view, fork, and modify the code for personal, educational, and non-commercial purposes.
+
+Commercial usage, hosted competition, and production redistribution are prohibited without explicit written permission.
 
 See the [LICENSE](./LICENSE) file for details.
+
+---
+
+> Historical note:
+>
+> Versions prior to v0.3.0 were released under AGPLv3.
+> Starting with v0.3.0, BuilderLab transitioned to a custom source-available license.
 
 ---
 

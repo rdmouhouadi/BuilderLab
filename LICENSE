@@ -1,34 +1,80 @@
-GNU AFFERO GENERAL PUBLIC LICENSE
-Version 3, 19 November 2007
-==================================================
+BuilderLab Source Available License (BSAL) v1.0
 
-This is the Student-Facing Core of BuilderLab.
+Copyright (c) 2026 Richie Mouhouadi
 
-Copyright (C) [2026] Richie Mouhouadi
+-------------------------------------------------------------------------------
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published
-by the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+1. Purpose
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU Affero General Public License for more details.
+BuilderLab is developed in public to encourage learning, transparency,
+and collaboration.
 
-You should have received a copy of the GNU Affero General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
+This license allows individuals to view, study, fork, and modify the
+source code for personal, educational, research, and non-commercial use,
+while protecting BuilderLab from unauthorized commercial replication.
 
-==================================================
-IMPORTANT NOTES:
+This is NOT an open-source license.
 
-1. Student Use:
-This platform is free for students for learning, collaboration, and project work.
+-------------------------------------------------------------------------------
 
-2. Community Contributions:
-Contributors agree that their submissions may be included in this open-source core.
-We encourage contributions to improve the student experience.
+2. Allowed Uses
 
-3. Commercial Use:
-You may use this code for commercial purposes, but if you deploy a modified version
-over a network (e.g., SaaS), you must release your modifications under the AGPL license.
+You MAY:
+
+- View and study the source code
+- Fork the repository for personal or educational purposes
+- Modify the code for non-commercial experimentation
+- Run the software locally for development or testing
+- Use portions of the code for learning and inspiration
+- Submit pull requests or suggested improvements
+
+-------------------------------------------------------------------------------
+
+3. Restricted Uses
+
+You MAY NOT, without explicit prior written permission from the licensor:
+
+- Use BuilderLab in production as part of a commercial product or service
+- Host or operate a competing platform or SaaS offering
+- Sell, sublicense, or commercially distribute BuilderLab
+- Rebrand and redistribute BuilderLab as a competing product
+- Offer paid hosting or enterprise services based on BuilderLab
+- Remove or alter this license
+
+-------------------------------------------------------------------------------
+
+4. Commercial Licensing
+
+Commercial licenses may be granted separately by the licensor.
+
+For commercial inquiries, contact:
+<your-email-here>
+
+-------------------------------------------------------------------------------
+
+5. Ownership
+
+All rights, title, and interest in BuilderLab remain the property of
+the licensor unless explicitly stated otherwise.
+
+Contributors retain ownership of their contributions but grant the
+licensor the right to use, modify, and redistribute those contributions
+as part of BuilderLab.
+
+-------------------------------------------------------------------------------
+
+6. Disclaimer
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM THE SOFTWARE OR ITS USE.
+
+-------------------------------------------------------------------------------
+
+7. Acceptance
+
+By using, copying, modifying, or distributing this software,
+you agree to the terms of this license.
