@@ -21,16 +21,16 @@
 
 ## What is BuilderLab?
 
-Student are expected to showcase personal projects in portfolios to stand out during job searches. However, it is often difficult to come up with solid project ideas that address real technical or business problems — projects that are truly portfolio-worthy.
+Nowadays, breaking into tech requires real projects — not tutorials, not toy apps, but portfolio-worthy projects that solve actual technical or business problems. That is hard to do alone, and even harder when you are not sure where to start.
 
-Working alone, this can be challenging. But in teams of two, three, or more, it becomes much more achievable, and a project can even evolve into a product.
+BuilderLab is for **anyone who learns by building**: university students, bootcamp graduates, self-taught developers, career switchers, and online learners. If you are building skills and want to ship something real alongside people who are doing the same — this is your hive.
 
-**BuilderLab is the space where student builders swarm around meaningful projects, collaborate, and ship things for real.**
+**A builder is not defined by where they studied. They are defined by what they ship.**
 
 **A typical use case:**
-- A Data Science student posts: *"I'd like to work on a concrete project in healthcare"*
-- A Software Engineer replies: *"Sounds interesting, want to collaborate?"*
-- A UI/UX Designer joins in: *"Is there room for one more?"*
+- A self-taught Data Science builder posts: *"I'd like to work on a concrete project in healthcare"*
+- A bootcamp Software Engineer replies: *"Sounds interesting, want to collaborate?"*
+- A UI/UX Designer learning online joins in: *"Is there room for one more?"*
 - Together, they build something real — for their portfolios, and sometimes... for the world 🚀
 
 **The app is live at:** [builderlab-tau.vercel.app](https://builderlab-tau.vercel.app)
