@@ -55,6 +55,17 @@ export async function POST(request: Request) {
       projectUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/projects/${connection.projects.id}`,
     })
 
+    // Crée une notification in-app pour le sender
+    await supabaseAdmin
+      .from('notifications')
+      .insert({
+        user_id: connection.sender_id,
+        type: 'connection_accepted',
+        title: `Your request to join "${connection.projects.title}" was accepted!`,
+        body: `${ownerName} added you to the team.`,
+        link: `/projects/${connection.projects.id}`,
+      })
+
     return NextResponse.json({ success: true })
 
   } catch (error) {

@@ -69,6 +69,15 @@ export default function ConnectionsClient({ received, sent, currentUserId }: Pro
           body: JSON.stringify({ connectionId: id }),
         }).catch(console.error)
       }
+
+      // Notification "new_member" pour le owner quand quelqu'un est accepté
+      if (action === 'accepted') {
+        fetch('/api/notify/accepted', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ connectionId: id }),
+        }).catch(console.error)
+      }
     }
   }
 

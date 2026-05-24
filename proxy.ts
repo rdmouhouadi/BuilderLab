@@ -43,7 +43,7 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   // Pages qui nécessitent d'être connecté
-  const protectedPaths = ['/post', '/profile', '/connections']
+  const protectedPaths = ['/post', '/profile', '/connections', '/notifications']
   const isProtectedPath = protectedPaths.some(path =>
     request.nextUrl.pathname.startsWith(path)
   )

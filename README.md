@@ -213,23 +213,23 @@ Teams that choose to build in public can optionally share their meeting notes, w
 | Full build-in-public archive (beautifully formatted journey) | ❌ | ✅ |
 | Priority listing in the feed | ❌ | ✅ |
 
-### V1.0.0 — 🐝 Rebranding to BNest
+### V1.0.0 — 🐝 Rebranding to ***B.hive***
 
-*When the product is complete and the community is established, BuilderLab becomes BNest.*
+*When the product is complete and the community is established, BuilderLab becomes ***B.hive***.*
 
 The rebrand is a deliberate launch moment — not just a name change, but a public statement that the platform has matured.
 
 **What changes:**
-- **Name**: BuilderLab → **BNest**
+- **Name**: BuilderLab → ***B.hive***
 - **Tagline**: → **"Where builders swarm."**
-- **Domain**: → **bnest.io** (or equivalent)
+- **Domain**: → **b.hive** (or bhive.io)
 - **Visual identity**: hexagonal motifs, amber + teal palette
 - **Logo**: hexagonal bee-inspired mark
 - **In-app vocabulary** fully adopted across all UI copy:
 
 **Vocabulary update:**
 
-| Current | BNest |
+| Current | *B.hive* |
 |---|---|
 | Project | Build |
 | Project feed | The Hive |

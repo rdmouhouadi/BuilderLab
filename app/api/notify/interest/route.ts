@@ -59,6 +59,17 @@ export async function POST(request: Request) {
       projectUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/projects/${connection.projects.id}`,
     })
 
+    // Crée une notification in-app pour le owner
+    await supabaseAdmin
+      .from('notifications')
+      .insert({
+        user_id: connection.projects.owner_id,
+        type: 'connection_request',
+        title: `${senderName} is interested in "${connection.projects.title}"`,
+        body: connection.message ?? null,
+        link: `/projects/${connection.projects.id}`,
+      })
+
     return NextResponse.json({ success: true })
 
   } catch (error) {

@@ -11,6 +11,7 @@ import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import { Project, Milestone, ProjectUpdate } from '@/types'
 import RatingModal from '@/components/RatingModal'
 import ProjectUpdates from '@/components/ProjectUpdates'
+import InterestModal from './InterestModal'
 
 // On importe les couleurs et constantes depuis lib/constants.ts
 // pour garder la cohérence visuelle dans toute l'app
@@ -101,6 +102,9 @@ export default function ProjectDetailClient({
     existingConnection ? 'sent' : 'idle'
   )
 
+  // État du modal "I'm interested"
+  const [showModal, setShowModal] = useState(false)
+
   // État des milestones — stocké localement pour éviter un refetch
   // à chaque modification
   const [milestones, setMilestones] = useState<Milestone[]>(initialMilestones)
@@ -164,38 +168,49 @@ export default function ProjectDetailClient({
     return (profile as any).name?.[0]?.toUpperCase() ?? '?'
   }
 
+  // Ouvrir le modal "I'm interested"
   // Envoyer une demande de connexion
-  async function handleInterest() {
+  function handleInterest() {
     // Si pas connecté → rediriger vers login
     if (!currentUserId) {
       router.push('/login')
       return
     }
 
-    setConnStatus('loading')
-
-    try {
-      const { error } = await supabase
-        .from('connections')
-        .insert({
-          sender_id: currentUserId,
-          project_id: project.id,
-          message: "I'm interested in collaborating on your project.",
-          status: 'pending',
-        })
-
-      if (error?.code === '23505') {
-        // Code 23505 = doublon — demande déjà envoyée
-        setConnStatus('sent')
-      } else if (error) {
-        throw error
-      } else {
-        setConnStatus('sent')
-      }
-    } catch {
-      setConnStatus('error')
-    }
+    setShowModal(true)
   }
+
+// Confirmation de la demande de connexion
+async function handleConfirmInterest(message: string) {
+  setConnStatus('loading')
+
+  try {
+    const { error } = await supabase
+      .from('connections')
+      .insert({
+        sender_id: currentUserId,
+        project_id: project.id,
+        // Message personnalisé envoyé depuis le modal
+        message,
+        status: 'pending',
+      })
+
+    if (error?.code === '23505') {
+      // Code 23505 = doublon — demande déjà envoyée
+      setConnStatus('sent')
+    } else if (error) {
+      throw error
+    } else {
+      setConnStatus('sent')
+    }
+
+    // Ferme le modal après succès
+    setShowModal(false)
+
+  } catch {
+    setConnStatus('error')
+  }
+}
 
   // Cocher/décocher un milestone — optimistic update
   // On met à jour l'UI immédiatement sans attendre Supabase
@@ -1082,6 +1097,35 @@ export default function ProjectDetailClient({
           }}
         />
       )}
+
+      {/* Modal d'intérêt — affiché au-dessus de la page */}
+      {showModal && (
+        <InterestModal
+          projectTitle={project.title}
+
+          // Type de contact préféré du owner
+          preferredContactType={
+            project.profiles?.preferred_contact_type ?? null
+          }
+
+          // Valeur du contact préféré du owner
+          preferredContactValue={
+            project.profiles?.preferred_contact_value ?? null
+          }
+
+          // Confirmation de la demande
+          onConfirm={handleConfirmInterest}
+
+          // Fermeture du modal
+          onCancel={() => setShowModal(false)}
+
+          // Loading pendant l'envoi
+          loading={connStatus === 'loading'}
+
+
+        />
+      )}
+
     </main>
   )
 }

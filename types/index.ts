@@ -104,3 +104,15 @@ export type ProjectMessage = {
     last_name: string | null
   }
 }
+
+// ─── Notification in-app ────────────────────────────────────────
+export type Notification = {
+  id: string
+  user_id: string
+  type: 'connection_request' | 'connection_accepted' | 'new_member' | 'new_message' | 'new_project_published'
+  title: string
+  body: string | null
+  link: string | null
+  read: boolean
+  created_at: string
+}
