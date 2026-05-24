@@ -36,7 +36,7 @@ export default async function ProjectDetailPage({ params }: Props) {
   // Projet introuvable → page 404
   if (error || !project) redirect('/')
 
-  // On fetch les membres acceptés du projet
+  // On fetch les membres acceptés avec leur message de demande initial
   const { data: members } = await supabase
     .from('project_members')
     .select(`
@@ -48,6 +48,22 @@ export default async function ProjectDetailPage({ params }: Props) {
     `)
     .eq('project_id', id)
     .eq('status', 'active')
+
+  //On fetch séparément les messages des connexcions acceptées --- new
+  // pour les afficher dans la section "Team" du projet
+  const { data: acceptedConnections } = await supabase
+    .from('connections')
+    .select('sender_id, message')
+    .eq('project_id', id)
+    .eq('status', 'accepted')
+
+  // On fetch les 50 derniers messages du group chat du projet
+  const { data: messages } = await supabase
+    .from('project_messages')
+    .select('*, profiles(id, name, first_name, last_name)')
+    .eq('project_id', id)
+    .order('created_at', { ascending: true })
+    .limit(50)
 
   // On fetch les milestones du projet
   const { data: milestones } = await supabase
@@ -84,6 +100,8 @@ export default async function ProjectDetailPage({ params }: Props) {
         updates={updates ?? []}
         currentUserId={user?.id ?? null}
         existingConnection={existingConnection}
+        acceptedConnections={acceptedConnections ?? []}
+        initialMessages={messages ?? []}
       />
     </PageTransition>
   )

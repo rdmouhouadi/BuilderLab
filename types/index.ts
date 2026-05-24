@@ -62,7 +62,7 @@ export type Connection = {
   created_at: string
 }
 
-// Milestone — étape d'un projet
+// ─── Milestone — étape d'un projet ─────────────────────────────────────────
 export type Milestone = {
   id: string
   project_id: string
@@ -72,7 +72,7 @@ export type Milestone = {
   created_at: string
 }
 
-// Update posté par un membre dans l'espace projet
+// ─── Update posté par un membre dans l'espace projet ────────────────────────────────────────
 export type ProjectUpdate = {
   id: string
   project_id: string
@@ -87,5 +87,20 @@ export type ProjectUpdate = {
     first_name: string | null
     last_name: string | null
     avg_rating: number
+  }
+}
+
+// ─── Message du group chat d'un projet ────────────────────────────────────────
+export type ProjectMessage = {
+  id: string
+  project_id: string
+  author_id: string
+  content: string
+  created_at: string
+  profiles?: {
+    id: string
+    name: string | null
+    first_name: string | null
+    last_name: string | null
   }
 }

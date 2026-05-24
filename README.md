@@ -1,6 +1,6 @@
 # BuilderLab
 
-> *"Better to have one strong, solid project than several small tutorials."*
+> *"For anyone who learns by building."*
 
 [![License: Source Available](https://img.shields.io/badge/License-Source%20Available-orange.svg)]()
 [![Version](https://img.shields.io/badge/version-0.2.0-teal.svg)]()
@@ -37,22 +37,22 @@ BuilderLab is for **anyone who learns by building**: university students, bootca
 
 ---
 
-## Vision — The Student Builder Ecosystem
+## Vision — The Builder Ecosystem
 
-BuilderLab is more than a project matching platform. It is being built as an end-to-end ecosystem for student builders:
+BuilderLab is more than a project matching platform. It is being built as an end-to-end ecosystem for builders:
 
 ```
 Find your team        →     Validate your project     →     Build together
 (BuilderLab Core)                (HiveCheck)                   (HiveOS)
 ```
 
-Each layer builds on the previous one, serving the same community of student builders at every stage of their journey.
+Each layer builds on the previous one, serving the same community of builders at every stage of their journey.
 
 ### Build in Public — The Core Philosophy
 
 BuilderLab is built around the **build in public** spirit. Projects, feedback, and team journeys are meant to be shared — not hidden away until they are "perfect."
 
-On platforms like LinkedIn, students are often afraid to share work in progress. The fear of judgment from recruiters or seniors creates a culture of silence. BuilderLab is different: **everyone here is a student, everyone is learning, and that shared context makes it safe to be transparent.**
+On platforms like LinkedIn, students are often afraid to share work in progress. The fear of judgment from seniors or recruiters creates a culture of silence. BuilderLab is different: **everyone here is a builder, everyone is learning, and that shared context makes it safe to be transparent.**
 
 Seeing how another builder received tough feedback and improved their project is often more valuable than any tutorial. The projects in the platform are not just deliverables — they are learning resources for the whole community.
 

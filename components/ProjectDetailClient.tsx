@@ -16,6 +16,9 @@ import ProjectUpdates from '@/components/ProjectUpdates'
 // pour garder la cohérence visuelle dans toute l'app
 import { SKILL_COLORS, LEVEL_COLORS, CONTACT_TYPES ,SKILLS, DURATIONS, LEVELS } from '@/lib/constants'
 
+import ProjectChat from '@/components/ProjectChat'
+import { ProjectMessage } from '@/types'
+
 // Type pour un membre du projet
 type Member = {
   id: string           // project_member_id
@@ -40,6 +43,11 @@ type Connection = {
   status: 'pending' | 'accepted' | 'rejected'
 }
 
+type AcceptedConnection = {
+  sender_id: string
+  message: string | null
+}
+
 type Props = {
   project: Project
   members: Member[]
@@ -47,6 +55,8 @@ type Props = {
   updates: ProjectUpdate[]
   currentUserId: string | null
   existingConnection: Connection | null
+  acceptedConnections: AcceptedConnection[]
+  initialMessages: ProjectMessage[]
 }
 
 
@@ -57,6 +67,8 @@ export default function ProjectDetailClient({
   updates,
   currentUserId,
   existingConnection,
+  acceptedConnections,
+  initialMessages,
 }: Props) {
   const router = useRouter()
   const supabase = createBrowserSupabaseClient()
@@ -743,6 +755,19 @@ export default function ProjectDetailClient({
               canPost={isOwner || isMember}
             />
 
+            {/* Espace entre Build Log et Team Chat */}
+            <div className="mt-2" />
+
+            {/* Section Team Chat
+              Visible par tous, mais seulement les membres peuvent écrire */}
+            <ProjectChat
+              projectId={project.id}
+              initialMessages={initialMessages}
+              currentUserId={currentUserId}
+              // Peut chatter si owner ou membre actif
+              canChat={isOwner || isMember}
+            />
+
           </div>
         </div>
 
@@ -821,43 +846,69 @@ export default function ProjectDetailClient({
                 No members yet. Be the first to join!
               </p>
             ) : (
-              <div className="flex flex-col gap-3">
-                {members.map(member => (
-                  <div key={member.id} className="flex items-center gap-3">
-                    {/* Avatar du membre */}
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                      style={{ background: 'linear-gradient(135deg, #0D9488, #0EA5E9)' }}
-                    >
-                      {getInitials(member.profiles)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <Link
-                        href={`/profile/${member.profiles?.id}`}
-                        className="text-sm font-medium truncate hover:underline"
-                        style={{ color: '#F1F5F9' }}
-                      >
-                        {getFullName(member.profiles)}
-                      </Link>
-                      {/* Lien de contact préféré du membre */}
-                      {member.profiles?.preferred_contact_type &&
-                        CONTACT_TYPES[member.profiles.preferred_contact_type] && (
-                        <a
-                          href={member.profiles.preferred_contact_value ?? '#'}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs hover:opacity-80 transition-opacity"
+              <div className="flex flex-col gap-4">
+                {members.map(member => {
+                  // On cherche le message de la demande acceptée pour ce membre
+                  const connectionMessage = acceptedConnections.find(
+                    c => c.sender_id === member.user_id
+                  )?.message
+
+                  return (
+                    <div key={member.id}>
+                      <div className="flex items-center gap-3 mb-2">
+                        {/* Avatar du membre */}
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                          style={{ background: 'linear-gradient(135deg, #0D9488, #0EA5E9)' }}
+                        >
+                          {getInitials(member.profiles)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          {/* Nom cliquable vers le profil public */}
+                          <Link
+                            href={`/profile/${member.profiles?.id}`}
+                            className="text-sm font-medium hover:underline truncate block"
+                            style={{ color: '#F1F5F9' }}
+                          >
+                            {getFullName(member.profiles)}
+                          </Link>
+                          {/* Contact préféré */}
+                          {member.profiles?.preferred_contact_type &&
+                            CONTACT_TYPES[member.profiles.preferred_contact_type] && (
+                            <a
+                             href={member.profiles.preferred_contact_value ?? '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs hover:opacity-80 transition-opacity"
+                              style={{
+                                color: CONTACT_TYPES[member.profiles.preferred_contact_type].color,
+                              }}
+                            >
+                              {CONTACT_TYPES[member.profiles.preferred_contact_type].icon}{' '}
+                              {CONTACT_TYPES[member.profiles.preferred_contact_type].label}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Message de la demande — visible seulement si acceptée
+                          Aide le owner à se souvenir pourquoi ce membre a rejoint */}
+                      {connectionMessage && (
+                        <p
+                          className="text-xs leading-relaxed px-3 py-2 rounded-lg italic"
                           style={{
-                            color: CONTACT_TYPES[member.profiles.preferred_contact_type].color,
+                            color: '#64748B',
+                            backgroundColor: '#0C1120',
+                            border: '1px solid #1E2840',
+                            marginLeft: '44px', // aligne sous l'avatar
                           }}
                         >
-                          {CONTACT_TYPES[member.profiles.preferred_contact_type].icon}{' '}
-                          {CONTACT_TYPES[member.profiles.preferred_contact_type].label}
-                        </a>
+                          "{connectionMessage}"
+                        </p>
                       )}
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
