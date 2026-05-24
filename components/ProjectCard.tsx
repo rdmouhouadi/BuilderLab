@@ -52,6 +52,10 @@ export default function ProjectCard({ project, currentUserId }: Props) {
 
   const isOwner = currentUserId === project.owner_id
 
+  // État du bouton Follow sur la carte
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [followLoading, setFollowLoading] = useState(false)
+
   // Fetch le contact préféré de l'utilisateur connecté
   // pour pré-remplir le message du modal
   useEffect(() => {
@@ -69,6 +73,21 @@ export default function ProjectCard({ project, currentUserId }: Props) {
             value: data.preferred_contact_value,
           })
         }
+      })
+  }, [currentUserId])
+
+  // Vérifie si l'utilisateur suit déjà ce projet au chargement
+  useEffect(() => {
+    if (!currentUserId) return
+
+    supabase
+      .from('project_followers')
+      .select('id')
+      .eq('project_id', project.id)
+      .eq('user_id', currentUserId)
+      .single()
+      .then(({ data }) => {
+        if (data) setIsFollowing(true)
       })
   }, [currentUserId])
 
@@ -115,6 +134,32 @@ export default function ProjectCard({ project, currentUserId }: Props) {
     } finally {
       setShowModal(false)
     }
+  }
+
+  // Suivre ou ne plus suivre depuis la carte
+  async function handleFollow() {
+    if (!currentUserId) {
+      router.push('/login')
+      return
+    }
+
+    setFollowLoading(true)
+
+    if (isFollowing) {
+      await supabase
+        .from('project_followers')
+        .delete()
+        .eq('project_id', project.id)
+        .eq('user_id', currentUserId)
+      setIsFollowing(false)
+    } else {
+      await supabase
+        .from('project_followers')
+        .insert({ project_id: project.id, user_id: currentUserId })
+      setIsFollowing(true)
+    }
+
+    setFollowLoading(false)
   }
 
   function getButtonStyle() {
@@ -405,6 +450,20 @@ export default function ProjectCard({ project, currentUserId }: Props) {
                     disabled={status === 'loading' || status === 'sent'}
                     className="text-xs px-3.5 py-1.5 rounded-lg font-medium flex-shrink-0 whitespace-nowrap"
                     style={getButtonStyle()}
+                    onMouseEnter={e => {
+                    // Hover uniquement sur l'état idle
+                    if (status === 'idle') {
+                      (e.currentTarget as HTMLElement).style.backgroundColor = '#0D9488'
+                      ;(e.currentTarget as HTMLElement).style.color = '#ffffff'
+                    }
+                    }}
+                    onMouseLeave={e => {
+                      // Remet le style original en quittant
+                      if (status === 'idle') {
+                        (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(13,148,136,0.14)'
+                        ;(e.currentTarget as HTMLElement).style.color = '#5EEAD4'
+                      }
+                  }}
                   >
                     {getButtonLabel()}
                 </button>
@@ -424,9 +483,9 @@ export default function ProjectCard({ project, currentUserId }: Props) {
               )}
             </div>
 
-            {/* Ligne 2 : members + activity signal
+            {/* Ligne 2 : members + follow button
                 Toujours affichée pour garder toutes les cartes alignées */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between">
 
               {/* Nombre de membres — toujours affiché même si 0 */}
               <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
@@ -437,7 +496,47 @@ export default function ProjectCard({ project, currentUserId }: Props) {
                 {memberCount} {memberCount === 0 || memberCount === 1 ? 'member' : 'members'}
               </div>
 
+              {/* Bouton Follow — caché pour le owner
+                  Petit, discret, ne rivalise pas avec "I'm interested" */}
+              {!isOwner && (
+                <button
+                  onClick={e => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    handleFollow()
+                  }}
+                  disabled={followLoading}
+                  className="text-xs px-3 py-1.5 rounded-lg font-medium flex-shrink-0 whitespace-nowrap transition-all"
+                  style={{
+                    backgroundColor: isFollowing
+                      ? 'rgba(99,102,241,0.14)'
+                      : 'rgba(255,255,255,0.05)',
+                    color: isFollowing ? '#A5B4FC' : '#64748B',
+                    border: isFollowing
+                      ? '1px solid rgba(99,102,241,0.28)'
+                      : '1px solid #1E2840',
+                    opacity: followLoading ? 0.6 : 1,
+                    cursor: followLoading ? 'not-allowed' : 'pointer',
+                  }}
+                  onMouseEnter={e => {
+                    if (!followLoading && !isFollowing) {
+                      // Sur hover — texte blanc
+                      (e.currentTarget as HTMLElement).style.color = '#F1F5F9'
+                      ;(e.currentTarget as HTMLElement).style.borderColor = '#475569'
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!isFollowing) {
+                      (e.currentTarget as HTMLElement).style.color = '#64748B'
+                      ;(e.currentTarget as HTMLElement).style.borderColor = '#1E2840'
+                    }
+                  }}
+                >
+                  {followLoading ? '...' : isFollowing ? '✓ Following' : '+ Follow'}
+                </button>
+              )}
             </div>
+
           </div>
 
         </div>

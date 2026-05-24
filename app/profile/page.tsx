@@ -45,17 +45,38 @@ export default async function ProfilePage() {
     .eq('user_id', user.id)
     .eq('status', 'active') 
 
+
   // On extrait les projets depuis la jointure
   const joinedProjects = memberProjects
     ?.map(m => m.projects)
     .filter(Boolean) ?? [] as Project[]
+
+  // Projets suivis par l'utilisateur
+  const { data: followedProjects } = await supabase
+    .from('project_followers')
+    .select(`
+      project_id,
+      projects(
+        *,
+        project_skills(skill_needed),
+        profiles!projects_owner_id_fkey(name, country)
+      )
+    `)
+    .eq('user_id', user.id)
+
+  // On extrait les projets depuis la jointure
+  const followedProjectsList = (followedProjects
+    ?.map(f => f.projects)
+    .filter(Boolean) 
+    .flat() ?? []) as Project[]
 
   return (
     <PageTransition>
       <ProfileClient
         profile={profile}
         ownedProjects={(ownedProjects as Project[]) ?? []}
-        joinedProjects={joinedProjects as any}
+        joinedProjects={joinedProjects as any[]}
+        followedProjects={followedProjectsList}
         email={user.email ?? ''}
       />
     </PageTransition>

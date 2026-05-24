@@ -91,6 +91,31 @@ export default async function ProjectDetailPage({ params }: Props) {
     existingConnection = data
   }
 
+  // Nombre de followers du projet
+  const { count: followersCount } = await supabase
+    .from('project_followers')
+    .select('*', { count: 'exact', head: true })
+    .eq('project_id', id)
+
+  // Est-ce que l'utilisateur connecté suit déjà ce projet ?
+  let isFollowing = false
+  if (user) {
+    const { data: followData } = await supabase
+      .from('project_followers')
+      .select('id')
+      .eq('project_id', id)
+      .eq('user_id', user.id)
+      .single()
+    isFollowing = !!followData
+  }
+
+  // Commentaires du projet
+  const { data: comments } = await supabase
+    .from('project_comments')
+    .select('*, profiles(id, name, first_name, last_name, avg_rating)')
+    .eq('project_id', id)
+    .order('created_at', { ascending: false })
+
   return (
     <PageTransition>
       <ProjectDetailClient
@@ -102,6 +127,10 @@ export default async function ProjectDetailPage({ params }: Props) {
         existingConnection={existingConnection}
         acceptedConnections={acceptedConnections ?? []}
         initialMessages={messages ?? []}
+        followersCount={followersCount ?? 0}
+        isFollowing={isFollowing}
+        isFollower={isFollowing}
+        initialComments={comments ?? []}
       />
     </PageTransition>
   )

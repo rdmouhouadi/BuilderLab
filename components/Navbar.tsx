@@ -29,6 +29,7 @@ import {
   Layers,
   Users,
   Bell,
+  Archive,
 } from 'lucide-react'
 
 // Framer Motion — utilisé pour la capsule animée
@@ -96,6 +97,11 @@ export default function Navbar() {
       href: '/',
       label: 'Projects',
       icon: Layers,
+    },
+    {
+      href: '/archive',
+      label: 'Archive',
+      icon: Archive,
     },
     {
       href: '/connections',

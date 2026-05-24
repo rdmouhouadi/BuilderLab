@@ -33,6 +33,13 @@ export type Project = {
   duration: string | null // Ex: "2 weeks", "3 months"
   spots: number | null // nombre de collaborateurs recherhés
   created_at: string
+  is_public?: boolean
+
+  // Privacy settings — true = visible par tous, false = membres + followers seulement
+  show_build_log: boolean
+  show_chat: boolean
+  show_milestones: boolean
+  show_team: boolean
 
   // Ces champs optionnels apparaissent quand on fait des jointures SQL
   // Exemple : quand on fetch un projet avec ses skills ET son auteur en même temps
@@ -42,6 +49,7 @@ export type Project = {
   //Champs pour les activity signals
   project_members?: {user_id: string}[] // Liste des membres connectés à ce projet
   project_updates?: { created_at: string }[] // Date du dernier update posté dans ce projet
+
 }
 
 // ─── Compétence recherchée par un projet ─────────────────────────
@@ -115,4 +123,28 @@ export type Notification = {
   link: string | null
   read: boolean
   created_at: string
+}
+
+// ─── Follower d'un projet ────────────────────────────────────────
+export type ProjectFollower = {
+  id: string
+  project_id: string
+  user_id: string
+  created_at: string
+}
+
+// ─── Commentaire/feedback laissé par un builder sur un projet ────────────────────────────────────────
+export type ProjectComment = {
+  id: string
+  project_id: string
+  author_id: string
+  content: string
+  created_at: string
+  profiles?: {
+    id: string
+    name: string | null
+    first_name: string | null
+    last_name: string | null
+    avg_rating: number
+  }
 }

@@ -25,7 +25,7 @@ export default function InterestModal({
   preferredContactValue,
   onConfirm,
   onCancel,
-  loading,
+  loading,  
 }: Props) {
 
   // On construit le message par défaut

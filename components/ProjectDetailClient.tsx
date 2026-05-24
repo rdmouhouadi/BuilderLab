@@ -4,7 +4,7 @@
 // 'use client' car on utilise useState pour les interactions
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
@@ -19,6 +19,11 @@ import { SKILL_COLORS, LEVEL_COLORS, CONTACT_TYPES ,SKILLS, DURATIONS, LEVELS } 
 
 import ProjectChat from '@/components/ProjectChat'
 import { ProjectMessage } from '@/types'
+
+import CompletionModal from '@/components/CompletionModal'
+
+import ProjectComments from '@/components/ProjectComments'
+import { ProjectComment } from '@/types'
 
 // Type pour un membre du projet
 type Member = {
@@ -58,6 +63,10 @@ type Props = {
   existingConnection: Connection | null
   acceptedConnections: AcceptedConnection[]
   initialMessages: ProjectMessage[]
+  followersCount: number
+  isFollowing: boolean
+  isFollower: boolean
+  initialComments: ProjectComment[]
 }
 
 
@@ -70,6 +79,10 @@ export default function ProjectDetailClient({
   existingConnection,
   acceptedConnections,
   initialMessages,
+  followersCount: initialFollowersCount,
+  isFollowing: initialIsFollowing,
+  isFollower,
+  initialComments,
 }: Props) {
   const router = useRouter()
   const supabase = createBrowserSupabaseClient()
@@ -102,8 +115,20 @@ export default function ProjectDetailClient({
     existingConnection ? 'sent' : 'idle'
   )
 
+  const [userContact, setUserContact] = useState<{
+    type: string | null
+    value: string | null
+    }>({
+      type: null,
+      value: null,
+    })
+
   // État du modal "I'm interested"
   const [showModal, setShowModal] = useState(false)
+  
+  // Etat du modal de confirmation de complétion du projet
+  const [showCompletionModal, setShowCompletionModal] = useState(false)
+  const [completing, setCompleting] = useState(false)
 
   // État des milestones — stocké localement pour éviter un refetch
   // à chaque modification
@@ -127,12 +152,21 @@ export default function ProjectDetailClient({
   // L'utilisateur est-il déjà membre du projet ?
   const isMember = members.some(m => m.user_id === currentUserId)
 
+  // Un utilisateur peut voir les sections privées s'il est :
+  // owner, membre actif, ou follower
+  const canSeePrivate = isOwner || isMember || isFollower
+
   // Progression des milestones en pourcentage
   const progress = milestones.length > 0
     ? Math.round(
         (milestones.filter(m => m.completed).length / milestones.length) * 100
       )
     : 0
+  
+  // État du bouton Follow — optimistic update
+  const [isFollowing, setIsFollowing] = useState(initialIsFollowing)
+  const [followersCount, setFollowersCount] = useState(initialFollowersCount)
+  const [followLoading, setFollowLoading] = useState(false)
 
   // Mode édition du projet
   const [editing, setEditing] = useState(false)
@@ -149,6 +183,25 @@ export default function ProjectDetailClient({
     project.project_skills?.map(s => s.skill_needed) ?? []
   )
   const [saving, setSaving] = useState(false)
+
+  // On récupère le contact préféré de l'utilisateur pour pré-remplir le message du modal "I'm interested"
+  useEffect(() => {
+    if (!currentUserId) return
+
+    supabase
+      .from('profiles')
+      .select('preferred_contact_type, preferred_contact_value')
+      .eq('id', currentUserId)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setUserContact({
+            type: data.preferred_contact_type,
+            value: data.preferred_contact_value,
+          })
+        }
+      })
+  }, [currentUserId])
 
 
   // Nom complet d'un profil — reconstruit depuis first + last name
@@ -180,37 +233,77 @@ export default function ProjectDetailClient({
     setShowModal(true)
   }
 
-// Confirmation de la demande de connexion
-async function handleConfirmInterest(message: string) {
-  setConnStatus('loading')
+  // Confirmation de la demande de connexion
+  async function handleConfirmInterest(message: string) {
+    setConnStatus('loading')
 
-  try {
-    const { error } = await supabase
-      .from('connections')
-      .insert({
-        sender_id: currentUserId,
-        project_id: project.id,
-        // Message personnalisé envoyé depuis le modal
-        message,
-        status: 'pending',
-      })
+    try {
+      const { error } = await supabase
+        .from('connections')
+        .insert({
+          sender_id: currentUserId,
+          project_id: project.id,
+          // Message personnalisé envoyé depuis le modal
+          message,
+          status: 'pending',
+        })
 
-    if (error?.code === '23505') {
-      // Code 23505 = doublon — demande déjà envoyée
-      setConnStatus('sent')
-    } else if (error) {
-      throw error
-    } else {
-      setConnStatus('sent')
+      if (error?.code === '23505') {
+        // Code 23505 = doublon — demande déjà envoyée
+        setConnStatus('sent')
+      } else if (error) {
+        throw error
+      } else {
+        setConnStatus('sent')
+      }
+
+      // Ferme le modal après succès
+      setShowModal(false)
+
+    } catch {
+      setConnStatus('error')
+    }
+  }
+
+  // Suivre ou ne plus suivre un projet
+  // Optimistic update — l'UI se met à jour immédiatement
+  async function handleFollow() {
+    if (!currentUserId) {
+      router.push('/login')
+      return
     }
 
-    // Ferme le modal après succès
-    setShowModal(false)
+    setFollowLoading(true)
 
-  } catch {
-    setConnStatus('error')
+    if (isFollowing) {
+      // Se désabonner — supprime la ligne dans project_followers
+      const { error } = await supabase
+        .from('project_followers')
+        .delete()
+        .eq('project_id', project.id)
+        .eq('user_id', currentUserId)
+
+      if (!error) {
+        setIsFollowing(false)
+        setFollowersCount(prev => Math.max(0, prev - 1))
+      }
+    } else {
+      // Suivre — insère une ligne dans project_followers
+      const { error } = await supabase
+        .from('project_followers')
+        .insert({
+          project_id: project.id,
+          user_id: currentUserId,
+        })
+
+      if (!error) {
+        setIsFollowing(true)
+        setFollowersCount(prev => prev + 1)
+      }
+    }
+
+    setFollowLoading(false)
   }
-}
 
   // Cocher/décocher un milestone — optimistic update
   // On met à jour l'UI immédiatement sans attendre Supabase
@@ -259,21 +352,30 @@ async function handleConfirmInterest(message: string) {
   }
 
   // Marquer le projet comme completed
-  async function handleMarkCompleted() {
-    // On met à jour le status du projet
+  // isPublic = true par défaut (build in public)
+  // Le owner peut opt-out via le modal
+  async function handleMarkCompleted(isPublic: boolean) {
+    setCompleting(true)
+
+    // Étape 1 — Update le status et la visibilité
     await supabase
       .from('projects')
-      .update({ status: 'completed' })
+      .update({
+        status: 'completed',
+        is_public: isPublic,
+      })
       .eq('id', project.id)
 
-    // On marque rating_required = true pour tous les membres
-    // pour déclencher le système de notation obligatoire
+    // Étape 2 — rating_required pour tous les membres
     await supabase
       .from('project_members')
       .update({ rating_required: true })
       .eq('project_id', project.id)
 
-    // On recharge la page pour refléter le nouveau status
+    setCompleting(false)
+    setShowCompletionModal(false)
+
+    // Recharge la page pour refléter le nouveau status
     router.refresh()
   }
 
@@ -723,68 +825,117 @@ async function handleConfirmInterest(message: string) {
             </div>
 
             {/* Formulaire ajout milestone — seulement pour le owner */}
-            {isOwner && (
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Add a milestone..."
-                  value={newMilestone}
-                  onChange={e => setNewMilestone(e.target.value)}
-                  // Enter pour ajouter rapidement sans cliquer le bouton
-                  onKeyDown={e => e.key === 'Enter' && handleAddMilestone()}
-                  className="flex-1 px-3 py-2 rounded-xl text-sm outline-none"
-                  style={{
-                    backgroundColor: '#0C1120',
-                    border: '1px solid #1E2840',
-                    color: '#F1F5F9',
-                  }}
-                  onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                  onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
-                />
-                <button
-                  onClick={handleAddMilestone}
-                  disabled={addingMilestone || !newMilestone.trim()}
-                  className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
-                  style={{
-                    backgroundColor: 'rgba(13,148,136,0.14)',
-                    color: '#5EEAD4',
-                    border: '1px solid rgba(13,148,136,0.28)',
-                    // Opacité réduite si champ vide ou en cours d'ajout
-                    opacity: !newMilestone.trim() ? 0.5 : 1,
-                  }}
-                >
-                  Add
-                </button>
+            {project.show_milestones || canSeePrivate ? (
+              <>
+                {isOwner && (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Add a milestone..."
+                      value={newMilestone}
+                      onChange={e => setNewMilestone(e.target.value)}
+                      // Enter pour ajouter rapidement sans cliquer le bouton
+                      onKeyDown={e => e.key === 'Enter' && handleAddMilestone()}
+                      className="flex-1 px-3 py-2 rounded-xl text-sm outline-none"
+                      style={{
+                        backgroundColor: '#0C1120',
+                        border: '1px solid #1E2840',
+                        color: '#F1F5F9',
+                      }}
+                      onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
+                      onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
+                    />
+                    <button
+                      onClick={handleAddMilestone}
+                      disabled={addingMilestone || !newMilestone.trim()}
+                      className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+                      style={{
+                        backgroundColor: 'rgba(13,148,136,0.14)',
+                        color: '#5EEAD4',
+                        border: '1px solid rgba(13,148,136,0.28)',
+                        // Opacité réduite si champ vide ou en cours d'ajout
+                        opacity: !newMilestone.trim() ? 0.5 : 1,
+                      }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="py-4 text-center">
+                <p className="text-xs" style={{ color: '#475569' }}>
+                  🔒 Milestones are private. Follow to see progress.
+                </p>
               </div>
             )}
 
             {/* Espace entre Milestones et Build Log */}
             <div className="mt-2" />
 
-            {/* Section Build Log — updates du projet */}
-            <ProjectUpdates
-              projectId={project.id}
-              updates={updates}
-              currentUserId={currentUserId}
-              // Peut poster si owner ou membre actif
-              canPost={isOwner || isMember}
-            />
+            {/* Section Build Log - updates du projet
+                Visible par tous si show_build_log = true
+                Sinon visible seulement par membres + followers */}
+            {project.show_build_log || canSeePrivate ? (
+              <ProjectUpdates
+                projectId={project.id}
+                updates={updates}
+                currentUserId={currentUserId}
+                canPost={isOwner || isMember}
+              />
+            ) : (
+              <div
+                className="rounded-2xl p-6 text-center"
+                style={{ backgroundColor: '#0C1120', border: '1px solid #1E2840' }}
+              >
+                <p className="text-xs mb-2" style={{ color: '#475569' }}>
+                  🔒 Build Log is private
+                </p>
+                <p className="text-xs" style={{ color: '#475569' }}>
+                  Follow this project to see updates.
+                </p>
+              </div>
+            )}
 
             {/* Espace entre Build Log et Team Chat */}
             <div className="mt-2" />
 
-            {/* Section Team Chat
-              Visible par tous, mais seulement les membres peuvent écrire */}
-            <ProjectChat
-              projectId={project.id}
-              initialMessages={initialMessages}
-              currentUserId={currentUserId}
-              // Peut chatter si owner ou membre actif
-              canChat={isOwner || isMember}
-            />
+            {/* Team Chat
+              Visible par tous si show_Team_chat = true
+              Sinon visible seulement par membres + followers */}
+            {project.show_chat || canSeePrivate ? (
+              <ProjectChat
+                projectId={project.id}
+                initialMessages={initialMessages}
+                currentUserId={currentUserId}
+                canChat={isOwner || isMember}
+              />
+            ) : (
+              <div
+                className="rounded-2xl p-6 text-center"
+                style={{ backgroundColor: '#0C1120', border: '1px solid #1E2840' }}
+              >
+                <p className="text-xs mb-2" style={{ color: '#475569' }}>
+                  🔒 Team Chat is private
+                </p>
+                <p className="text-xs" style={{ color: '#475569' }}>
+                  Follow this project to see the conversation.
+                </p>
+              </div>
+            )}
 
           </div>
+
+          {/* Section Community Feedback
+            Visible par tous, commentable par n'importe quel builder connecté */}
+          <ProjectComments
+            projectId={project.id}
+            initialComments={initialComments}
+            currentUserId={currentUserId}
+          />
+          
         </div>
+
 
         {/* ── Colonne latérale (1/3) ── */}
         <div className="flex flex-col gap-6">
@@ -848,85 +999,105 @@ async function handleConfirmInterest(message: string) {
           </div>
 
           {/* Card Team */}
-          <div
-            className="rounded-2xl p-5"
-            style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-          >
-            <h2 className="font-semibold text-sm mb-4" style={{ color: '#F1F5F9' }}>
-              Team · {members.length} member{members.length !== 1 ? 's' : ''}
-            </h2>
+          {project.show_team || canSeePrivate ? (
+            <div
+              className="rounded-2xl p-5"
+              style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
+            >
+              <div
+                className="rounded-2xl p-5"
+                style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
+              >
+                <h2 className="font-semibold text-sm mb-4" style={{ color: '#F1F5F9' }}>
+                  Team · {members.length} member{members.length !== 1 ? 's' : ''}
+                </h2>
 
-            {members.length === 0 ? (
-              <p className="text-xs" style={{ color: '#475569' }}>
-                No members yet. Be the first to join!
-              </p>
-            ) : (
-              <div className="flex flex-col gap-4">
-                {members.map(member => {
-                  // On cherche le message de la demande acceptée pour ce membre
-                  const connectionMessage = acceptedConnections.find(
-                    c => c.sender_id === member.user_id
-                  )?.message
+                {members.length === 0 ? (
+                  <p className="text-xs" style={{ color: '#475569' }}>
+                    No members yet. Be the first to join!
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    {members.map(member => {
+                      // On cherche le message de la demande acceptée pour ce membre
+                      const connectionMessage = acceptedConnections.find(
+                        c => c.sender_id === member.user_id
+                      )?.message
 
-                  return (
-                    <div key={member.id}>
-                      <div className="flex items-center gap-3 mb-2">
-                        {/* Avatar du membre */}
-                        <div
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                          style={{ background: 'linear-gradient(135deg, #0D9488, #0EA5E9)' }}
-                        >
-                          {getInitials(member.profiles)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          {/* Nom cliquable vers le profil public */}
-                          <Link
-                            href={`/profile/${member.profiles?.id}`}
-                            className="text-sm font-medium hover:underline truncate block"
-                            style={{ color: '#F1F5F9' }}
-                          >
-                            {getFullName(member.profiles)}
-                          </Link>
-                          {/* Contact préféré */}
-                          {member.profiles?.preferred_contact_type &&
-                            CONTACT_TYPES[member.profiles.preferred_contact_type] && (
-                            <a
-                             href={member.profiles.preferred_contact_value ?? '#'}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs hover:opacity-80 transition-opacity"
+                      return (
+                        <div key={member.id}>
+                          <div className="flex items-center gap-3 mb-2">
+                            {/* Avatar du membre */}
+                            <div
+                              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                              style={{ background: 'linear-gradient(135deg, #0D9488, #0EA5E9)' }}
+                            >
+                              {getInitials(member.profiles)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              {/* Nom cliquable vers le profil public */}
+                              <Link
+                                href={`/profile/${member.profiles?.id}`}
+                                className="text-sm font-medium hover:underline truncate block"
+                                style={{ color: '#F1F5F9' }}
+                              >
+                                {getFullName(member.profiles)}
+                              </Link>
+                              {/* Contact préféré */}
+                              {member.profiles?.preferred_contact_type &&
+                                CONTACT_TYPES[member.profiles.preferred_contact_type] && (
+                                <a
+                                href={member.profiles.preferred_contact_value ?? '#'}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs hover:opacity-80 transition-opacity"
+                                  style={{
+                                    color: CONTACT_TYPES[member.profiles.preferred_contact_type].color,
+                                  }}
+                                >
+                                  {CONTACT_TYPES[member.profiles.preferred_contact_type].icon}{' '}
+                                  {CONTACT_TYPES[member.profiles.preferred_contact_type].label}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Message de la demande — visible seulement si acceptée
+                              Aide le owner à se souvenir pourquoi ce membre a rejoint */}
+                          {connectionMessage && (
+                            <p
+                              className="text-xs leading-relaxed px-3 py-2 rounded-lg italic"
                               style={{
-                                color: CONTACT_TYPES[member.profiles.preferred_contact_type].color,
+                                color: '#64748B',
+                                backgroundColor: '#0C1120',
+                                border: '1px solid #1E2840',
+                                marginLeft: '44px', // aligne sous l'avatar
                               }}
                             >
-                              {CONTACT_TYPES[member.profiles.preferred_contact_type].icon}{' '}
-                              {CONTACT_TYPES[member.profiles.preferred_contact_type].label}
-                            </a>
+                              "{connectionMessage}"
+                            </p>
                           )}
                         </div>
-                      </div>
-
-                      {/* Message de la demande — visible seulement si acceptée
-                          Aide le owner à se souvenir pourquoi ce membre a rejoint */}
-                      {connectionMessage && (
-                        <p
-                          className="text-xs leading-relaxed px-3 py-2 rounded-lg italic"
-                          style={{
-                            color: '#64748B',
-                            backgroundColor: '#0C1120',
-                            border: '1px solid #1E2840',
-                            marginLeft: '44px', // aligne sous l'avatar
-                          }}
-                        >
-                          "{connectionMessage}"
-                        </p>
-                      )}
-                    </div>
-                  )
-                })}
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+
+            </div>
+          ) : (
+            <div
+              className="rounded-2xl p-5 text-center"
+              style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
+            >
+              <p className="text-xs mb-1" style={{ color: '#475569' }}>
+                🔒 Team is private
+              </p>
+              <p className="text-xs" style={{ color: '#475569' }}>
+                Follow to see who's building this.
+              </p>
+            </div>
+          )}
 
           {/* Card Details du projet */}
           <div
@@ -975,6 +1146,19 @@ async function handleConfirmInterest(message: string) {
                   })}
                 </span>
               </div>
+
+              {/* Nombre de followers */}
+              <div className="flex items-center gap-2 text-xs" style={{ color: '#64748B' }}>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <span style={{ color: '#94A3B8' }}>
+                  {followersCount} {followersCount === 1 ? 'follower' : 'followers'}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -983,7 +1167,7 @@ async function handleConfirmInterest(message: string) {
           {/* Bouton Mark as completed — owner seulement, projet encore ouvert */}
           {isOwner && project.status === 'open' && (
             <button
-              onClick={handleMarkCompleted}
+              onClick={() => setShowCompletionModal(true)}
               className="w-full py-3 rounded-xl font-medium text-sm transition-all"
               style={{
                 backgroundColor: 'rgba(99,102,241,0.14)',
@@ -1039,6 +1223,97 @@ async function handleConfirmInterest(message: string) {
                 Rate collaborators →
               </button>
             </div>
+          )}
+
+          {/* Privacy settings — owner seulement */}
+          {isOwner && (
+            <div
+              className="rounded-2xl p-5"
+              style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
+            >
+              <h2 className="font-semibold text-sm mb-4" style={{ color: '#F1F5F9' }}>
+                Privacy
+              </h2>
+              <div className="flex flex-col gap-3">
+                {[
+                  { key: 'show_milestones', label: 'Milestones' },
+                  { key: 'show_build_log', label: 'Build Log' },
+                  { key: 'show_chat', label: 'Team Chat' },
+                  { key: 'show_team', label: 'Team members' },
+                ].map(({ key, label }) => (
+                  <div key={key} className="flex items-center justify-between">
+                    <span className="text-xs" style={{ color: '#94A3B8' }}>{label}</span>
+                    <button
+                      onClick={async () => {
+                        // Toggle la valeur dans Supabase
+                        const currentValue = (project as any)[key]
+                        await supabase
+                          .from('projects')
+                          .update({ [key]: !currentValue })
+                          .eq('id', project.id)
+                        // Recharge la page pour refléter le changement
+                        router.refresh()
+                      }}
+                      className="text-xs px-2.5 py-1 rounded-lg transition-all"
+                      style={{
+                        backgroundColor: (project as any)[key]
+                          ? 'rgba(16,185,129,0.14)'
+                          : 'rgba(255,255,255,0.05)',
+                        color: (project as any)[key] ? '#6EE7B7' : '#64748B',
+                        border: (project as any)[key]
+                          ? '1px solid rgba(16,185,129,0.28)'
+                          : '1px solid #1E2840',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#0D9488')}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(16,185,129,0.14)')}
+                    >
+                      {(project as any)[key] ? 'Public' : 'Private'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs mt-3" style={{ color: '#475569' }}>
+                Private sections are visible to members and followers only.
+              </p>
+            </div>
+          )}
+
+          {/* Bouton Follow — visible pour tous sauf le owner et les membres
+              Les membres n'ont pas besoin de suivre — ils sont déjà dans le projet */}
+          {!isOwner && !isMember && (
+            <button
+              onClick={handleFollow}
+              disabled={followLoading}
+              className="w-full py-3 rounded-xl font-medium text-sm transition-all"
+              style={{
+                backgroundColor: isFollowing
+                  ? 'rgba(99,102,241,0.14)'
+                  : 'rgba(255,255,255,0.05)',
+                color: isFollowing ? '#A5B4FC' : '#94A3B8',
+                border: isFollowing
+                  ? '1px solid rgba(99,102,241,0.28)'
+                  : '1px solid #1E2840',
+                opacity: followLoading ? 0.7 : 1,
+                cursor: followLoading ? 'not-allowed' : 'pointer',
+              }}
+              onMouseEnter={e => {
+                if (!followLoading) {
+                  (e.currentTarget as HTMLElement).style.borderColor = '#475569'
+                }
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = isFollowing
+                  ? 'rgba(99,102,241,0.28)'
+                  : '#1E2840'
+              }}
+            >
+              {followLoading
+                ? '...'
+                : isFollowing
+                ? '✓ Following'
+                : '+ Follow this project'
+              }
+            </button>
           )}
 
           {/* Bouton "I'm interested" — caché si owner ou déjà membre */}
@@ -1104,14 +1379,10 @@ async function handleConfirmInterest(message: string) {
           projectTitle={project.title}
 
           // Type de contact préféré du owner
-          preferredContactType={
-            project.profiles?.preferred_contact_type ?? null
-          }
+          preferredContactType={userContact.type}
 
           // Valeur du contact préféré du owner
-          preferredContactValue={
-            project.profiles?.preferred_contact_value ?? null
-          }
+          preferredContactValue={userContact.value}
 
           // Confirmation de la demande
           onConfirm={handleConfirmInterest}
@@ -1123,6 +1394,16 @@ async function handleConfirmInterest(message: string) {
           loading={connStatus === 'loading'}
 
 
+        />
+      )}
+      
+      {/* Modal de confirmation de complétion du projet */}
+      {showCompletionModal && (
+        <CompletionModal
+          projectTitle={project.title}
+          onConfirm={handleMarkCompleted}
+          onCancel={() => setShowCompletionModal(false)}
+          loading={completing}
         />
       )}
 
