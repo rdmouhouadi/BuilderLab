@@ -18,6 +18,10 @@
    - [ratings](#37-ratings)
    - [milestones](#38-milestones)
    - [project_updates](#39-project_updates *(added in V0.2.0)*)
+   - [project_message](#310-project_messages *(added in V0.3.0)*)
+   - [notifications](#311 notifications *(added in V0.3.0)*)
+   - [project_followers](#312 project_followers *(added in V0.4.0)*)
+   - [project_comments](#313 project_comments *(added in V0.4.0)*)
 4. [Row Level Security Policies](#4-row-level-security-policies)
 5. [Triggers & Functions](#5-triggers--functions)
 6. [Key Design Decisions](#6-key-design-decisions)
@@ -27,7 +31,7 @@
 ## 1. Overview
 
 ```
-Total tables    : 9
+Total tables    : 13
 RLS enabled     : Yes (all tables)
 Triggers        : 4
 Functions       : 3
@@ -51,10 +55,13 @@ profiles
     │           ├── 1:N → project_skills
     │           ├── 1:N → connections (sender → project)
     │           ├── 1:N → project_members
-    │           │               │
     │           │               └── 1:N → ratings
     │           ├── 1:N → milestones
-    │           └── 1:N → project_updates
+    │           ├── 1:N → project_updates
+    │           ├── 1:N → project_messages
+    │           ├── 1:N → project_followers
+    │           └── 1:N → project_comments
+    └── 1:N → notifications
 ```
 
 ---
@@ -75,7 +82,7 @@ create table profiles (
   major                   text,
   avg_rating              float    default 0,
   ratings_count           int      default 0,
-  preferred_contact_type  text,    -- 'discord'|'whatsapp'|'slack'|'telegram'|'email'|'linkedin'
+  preferred_contact_type  text,
   preferred_contact_value text,
   created_at              timestamptz default now()
 );
@@ -95,22 +102,37 @@ create table user_skills (
 
 ```sql
 create table projects (
-  id         uuid    default gen_random_uuid() primary key,
-  owner_id   uuid    references profiles(id) on delete cascade,
-  title      text    not null,
-  problem    text,
-  level      text    check (level in (
-               'beginner', 'intermediate', 'advanced',
-               'débutant', 'intermédiaire', 'avancé'
-             )),
-  domain     text,
-  status     text    default 'open'
-                     check (status in ('open', 'in_progress', 'completed')),
-  duration   text,
-  spots      int,
-  created_at timestamptz default now()
+  id              uuid    default gen_random_uuid() primary key,
+  owner_id        uuid    references profiles(id) on delete cascade,
+  title           text    not null,
+  problem         text,
+  level           text    check (level in (
+                    'beginner', 'intermediate', 'advanced',
+                    'débutant', 'intermédiaire', 'avancé'
+                  )),
+  domain          text,
+  status          text    default 'open'
+                          check (status in ('open', 'in_progress', 'completed')),
+  duration        text,
+  spots           int,
+  -- Privacy settings (V0.4.0)
+  is_public       boolean default true,
+  show_build_log  boolean default true,
+  show_chat       boolean default true,
+  show_milestones boolean default true,
+  show_team       boolean default true,
+  created_at      timestamptz default now()
 );
 ```
+
+**Privacy columns (added in V0.4.0):**
+- `is_public` — controls archive visibility when completed
+- `show_build_log` — controls Build Log visibility
+- `show_chat` — controls Team Chat visibility
+- `show_milestones` — controls Milestones visibility
+- `show_team` — controls Team members visibility
+
+When a section is private (`false`), it is visible only to project members and followers.
 
 ### 3.4 project_skills
 
@@ -194,38 +216,105 @@ create table project_updates (
 );
 ```
 
+### 3.10 project_messages *(added in V0.3.0)*
+
+```sql
+create table project_messages (
+  id         uuid default gen_random_uuid() primary key,
+  project_id uuid references projects(id) on delete cascade,
+  author_id  uuid references profiles(id) on delete cascade,
+  content    text not null,
+  created_at timestamptz default now()
+);
+```
+
 **Notes:**
-- Only project members and the owner can post updates (enforced by RLS)
-- Authors can delete their own updates
-- Used to compute the activity signal on project cards
+- Used for the group chat inside each project workspace
+- Fetched with polling every 5 seconds
+- Only members and the owner can send messages
+- Authors can delete their own messages
+
+### 3.11 notifications *(added in V0.3.0)*
+
+```sql
+create table notifications (
+  id         uuid default gen_random_uuid() primary key,
+  user_id    uuid references profiles(id) on delete cascade,
+  type       text not null check (type in (
+               'connection_request',
+               'connection_accepted',
+               'new_member',
+               'new_message'
+             )),
+  title      text not null,
+  body       text,
+  link       text,
+  read       boolean default false,
+  created_at timestamptz default now()
+);
+```
+
+**Notes:**
+- Each user sees only their own notifications (RLS)
+- Created by API routes using `supabaseAdmin`
+- `read` is set to `true` when the user opens the notifications dropdown or page
+- Additional types planned: `new_milestone`, `project_completed`, `new_update`
+
+### 3.12 project_followers *(added in V0.4.0)*
+
+```sql
+create table project_followers (
+  id         uuid default gen_random_uuid() primary key,
+  project_id uuid references projects(id) on delete cascade,
+  user_id    uuid references profiles(id) on delete cascade,
+  created_at timestamptz default now(),
+  unique(project_id, user_id)
+);
+```
+
+**Notes:**
+- A user can follow a project without being a member
+- Followers have access to private sections (Build Log, Chat, Milestones, Team)
+- Unique constraint prevents duplicate follows
+
+### 3.13 project_comments *(added in V0.4.0)*
+
+```sql
+create table project_comments (
+  id         uuid default gen_random_uuid() primary key,
+  project_id uuid references projects(id) on delete cascade,
+  author_id  uuid references profiles(id) on delete cascade,
+  content    text not null,
+  created_at timestamptz default now()
+);
+```
+
+**Notes:**
+- Distinct from HiveCheck peer reviews — informal, conversational feedback
+- Any authenticated builder can comment (not restricted to members or followers)
+- Authors can delete their own comments
+- Maximum 500 characters (enforced at application level)
 
 ---
 
 ## 4. Row Level Security Policies
 
-RLS is **enabled on all 9 tables**.
+RLS is **enabled on all 13 tables**.
 
 ### profiles
 | Policy | Operation | Rule |
 |---|---|---|
-| Profiles visible by all | SELECT | `true` |
+| Visible by all | SELECT | `true` |
 | Create own profile | INSERT | `auth.uid() = id` |
 | Update own profile | UPDATE | `auth.uid() = id` |
 
 ### projects
 | Policy | Operation | Rule |
 |---|---|---|
-| Projects visible by all | SELECT | `true` |
+| Visible by all | SELECT | `true` |
 | Create own project | INSERT | `auth.uid() = owner_id` |
 | Update own project | UPDATE | `auth.uid() = owner_id` |
 | Delete own project | DELETE | `auth.uid() = owner_id` |
-
-### project_skills
-| Policy | Operation | Rule |
-|---|---|---|
-| Visible by all | SELECT | `true` |
-| Owner adds skills | INSERT | `auth.uid() = project.owner_id` |
-| Owner deletes skills | DELETE | `auth.uid() = project.owner_id` |
 
 ### connections
 | Policy | Operation | Rule |
@@ -255,11 +344,40 @@ RLS is **enabled on all 9 tables**.
 | Owner updates | UPDATE | `auth.uid() = project.owner_id` |
 | Owner deletes | DELETE | `auth.uid() = project.owner_id` |
 
-### project_updates *(added in V0.2.0)*
+### project_updates
 | Policy | Operation | Rule |
 |---|---|---|
 | Visible by all | SELECT | `true` |
 | Members can post | INSERT | `auth.uid() = author_id AND (is member OR is owner)` |
+| Author can delete | DELETE | `auth.uid() = author_id` |
+
+### project_messages
+| Policy | Operation | Rule |
+|---|---|---|
+| Visible by all | SELECT | `true` |
+| Members can send | INSERT | `auth.uid() = author_id AND (is member OR is owner)` |
+| Author can delete | DELETE | `auth.uid() = author_id` |
+
+### notifications
+| Policy | Operation | Rule |
+|---|---|---|
+| Users see own | SELECT | `auth.uid() = user_id` |
+| System can insert | INSERT | `true` (via supabaseAdmin) |
+| Users can update own | UPDATE | `auth.uid() = user_id` |
+| Users can delete own | DELETE | `auth.uid() = user_id` |
+
+### project_followers
+| Policy | Operation | Rule |
+|---|---|---|
+| Visible by all | SELECT | `true` |
+| Users can follow | INSERT | `auth.uid() = user_id` |
+| Users can unfollow | DELETE | `auth.uid() = user_id` |
+
+### project_comments
+| Policy | Operation | Rule |
+|---|---|---|
+| Visible by all | SELECT | `true` |
+| Authenticated users can comment | INSERT | `auth.uid() = author_id` |
 | Author can delete | DELETE | `auth.uid() = author_id` |
 
 ---
@@ -342,26 +460,32 @@ create trigger on_connection_accepted
 ## 6. Key Design Decisions
 
 ### Separate skills tables
-`user_skills` and `project_skills` are separate tables for efficient filtering and future matching.
+`user_skills` and `project_skills` are separate tables for efficient filtering and future matching algorithm.
 
 ### avg_rating stored on profile
-Pre-computed via trigger for fast reads across the feed.
+Pre-computed via trigger for fast reads across the feed without JOIN overhead.
 
 ### Bidirectional ratings
-`rater_id` + `rated_id` with `unique(project_member_id, rater_id)` prevents double-rating and enables trust in both directions.
+`rater_id` + `rated_id` with `unique(project_member_id, rater_id)` prevents double-rating.
 
 ### rating_required flag
-Boolean on `project_members` — simpler than querying the ratings table to check completion status.
+Boolean on `project_members` — simpler than querying the ratings table on every page load.
 
 ### ON DELETE CASCADE everywhere
-Automatic cleanup when a user or project is deleted.
+Automatic cleanup when a user or project is deleted — no orphaned rows.
 
 ### RLS as the security layer
-Security enforced at the database level — safe even if the anon key is exposed.
+Security enforced at the database level — safe even if the anon key is exposed in the frontend.
 
-### project_updates type enum
-The `type` column (`update`, `milestone`, `blocker`, `decision`, `demo`) enables visual categorization in the Build Log without additional tables.
+### Privacy at the column level
+Privacy settings are stored as boolean columns on `projects` rather than a separate settings table. Simpler reads, no joins required for display logic.
+
+### Followers as a trust tier
+The `project_followers` table creates a middle trust tier between anonymous visitors and project members. This powers the "follow to see private sections" mechanic without complex role systems.
+
+### project_comments separate from HiveCheck
+Community feedback (`project_comments`) is intentionally kept separate from HiveCheck peer reviews. Different purpose, different audience, different constraints — merging them would compromise both.
 
 ---
 
-*Last updated: BuilderLab v0.2.0*
+*Last updated: BuilderLab v0.4.0*

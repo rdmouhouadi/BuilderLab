@@ -3,7 +3,7 @@
 > *"For anyone who learns by building."*
 
 [![License: Source Available](https://img.shields.io/badge/License-Source%20Available-orange.svg)]()
-[![Version](https://img.shields.io/badge/version-0.2.0-teal.svg)]()
+[![Version](https://img.shields.io/badge/version-0.4.0-teal.svg)]()
 [![Built with Next.js](https://img.shields.io/badge/Built%20with-Next.js-black.svg)](https://nextjs.org)
 [![Powered by Supabase](https://img.shields.io/badge/Powered%20by-Supabase-green.svg)](https://supabase.com)
 
@@ -23,7 +23,7 @@
 
 Nowadays, breaking into tech requires real projects — not tutorials, not toy apps, but portfolio-worthy projects that solve actual technical or business problems. That is hard to do alone, and even harder when you are not sure where to start.
 
-BuilderLab is for **anyone who learns by building**: university students, bootcamp graduates, self-taught developers, career switchers, and online learners. If you are building skills and want to ship something real alongside people who are doing the same — this is your hive.
+BuilderLab is for **anyone who learns by building**: university students, bootcamp graduates, self-taught developers, career switchers, and online learners. If you are building skills and want to ship something real alongside people who are doing the same — this is your platform.
 
 **A builder is not defined by where they studied. They are defined by what they ship.**
 
@@ -77,7 +77,7 @@ Seeing how another builder received tough feedback and improved their project is
 │                                                     │
 │  ┌─────────────┐  ┌──────────┐  ┌───────────────┐   │
 │  │  PostgreSQL │  │   Auth   │  │  Row Level    │   │
-│  │  9 tables   │  │  (JWT)   │  │  Security     │   │
+│  │  13 tables  │  │  (JWT)   │  │  Security     │   │
 │  └─────────────┘  └──────────┘  └───────────────┘   │
 └─────────────────────────────────────────────────────┘
                       │
@@ -95,7 +95,7 @@ Seeing how another builder received tough feedback and improved their project is
 
 ---
 
-## Current Status — v0.2.0
+## Current Status — v0.4.0
 
 | Feature | Status |
 |---|---|
@@ -104,7 +104,7 @@ Seeing how another builder received tough feedback and improved their project is
 | Public profile pages `/profile/[id]` | ✅ Live |
 | Post a project (title, problem, skills, level, duration, spots) | ✅ Live |
 | Edit and delete a project | ✅ Live |
-| Project feed with search and filters (skill, level, duration) | ✅ Live |
+| Project feed with search and filters | ✅ Live |
 | Feed filters out owned and joined projects | ✅ Live |
 | Project detail page | ✅ Live |
 | Express interest with personalized message + contact pre-fill | ✅ Live |
@@ -114,6 +114,15 @@ Seeing how another builder received tough feedback and improved their project is
 | Project milestones with progress bar | ✅ Live |
 | Project Updates — Build Log | ✅ Live |
 | Activity signals on project cards | ✅ Live |
+| Group chat (polling) inside project workspace | ✅ Live |
+| Connection message visible in team section | ✅ Live |
+| In-app notifications (bell + dropdown + `/notifications`) | ✅ Live |
+| Follow system (cards + project detail) | ✅ Live |
+| "Projects I follow" section in profile | ✅ Live |
+| Per-section privacy settings (Build Log, Chat, Milestones, Team) | ✅ Live |
+| Project archive `/archive` | ✅ Live |
+| Completion modal (opt-out, public by default) | ✅ Live |
+| Community feedback section on project pages | ✅ Live |
 | Team contact links (Discord, WhatsApp, Slack, etc.) | ✅ Live |
 | Clickable builder names → public profiles | ✅ Live |
 | Mandatory rating system at project completion | ✅ Live |
@@ -126,46 +135,6 @@ Seeing how another builder received tough feedback and improved their project is
 
 ## Roadmap
 
-### V0.3.0 — Conversation Layer
-*Turning "I'm interested" into "we are building together."*
-
-The current MVP enables discovery and intent expression. V0.3.0 adds the conversation layer that makes real collaboration decisions possible.
-
-- [ ] 1:1 chat tied to connection requests (Supabase Realtime)
-- [ ] Connection request message visible on project detail page
-- [ ] Group chat inside project workspace
-- [ ] In-app notification system
-
-### V0.4.0 — Build in Public & Privacy 🌐
-*Giving builders control over what they share — and making going public feel like an achievement.*
-
-BuilderLab's build in public philosophy requires a thoughtful privacy model. Transparency is encouraged, never forced. Builders choose what to share, and the platform prompts them at the right moment.
-
-**Privacy defaults by content type:**
-
-| Content | Default | Can change to |
-|---|---|---|
-| Project title, problem, domain | Public | Private |
-| Team members & skills | Public | Private |
-| Milestone progress | Public | Private (opt-out) |
-| Peer reviews received | Private | Public (opt-in) |
-| Reviewer identities | Always anonymous | — |
-| Team meeting notes (HiveOS) | Private | Public per note |
-| Weekly digest (HiveOS) | Private | Public (opt-in) |
-| Project journey page | Private | Public (opt-in) |
-
-**Going public UX — three trigger moments:**
-- 🎉 **Project completion** — a celebratory modal: *"You shipped it. Want to share your journey so other builders can learn from it?"*
-- 📬 **After receiving reviews** — a quiet nudge: *"Your project received 4 reviews. The community learns a lot from public feedback — want to share yours?"*
-- 📋 **Weekly digest (HiveOS)** — a single toggle: *"This digest is private. Share it with the community?"*
-
-**Features:**
-- [ ] Per-project privacy settings
-- [ ] Project completion modal with granular share options
-- [ ] Post-review nudge to publish feedback publicly
-- [ ] Global privacy dashboard in user settings
-- [ ] Project archive — completed projects history
-
 ### V0.5.0 — HiveCheck ⭐
 *Helping builders validate their work and grow through peer feedback.*
 
@@ -176,6 +145,7 @@ Public feedback threads mean anyone can read the reviews a project received — 
 - [ ] Project submission for peer review (GitHub link, demo, description)
 - [ ] Structured review form (technical depth, clarity, relevance, overall score)
 - [ ] Anonymous feedback — reviewers always anonymous to submitters
+- [ ] Reviewer eligibility (3+ years experience, verified)
 - [ ] Public project leaderboard by domain and skill
 - [ ] "Top Project" badge on builder profiles
 - [ ] Reviewer reputation score
@@ -222,10 +192,10 @@ The rebrand is a deliberate launch moment — not just a name change, but a publ
 **What changes:**
 - **Name**: BuilderLab → ***B.hive***
 - **Tagline**: → **"Where builders swarm."**
-- **Domain**: → **b.hive** (or bhive.io)
+- **Domain**: → **bhive.io** (or equivalent)
 - **Visual identity**: hexagonal motifs, amber + teal palette
 - **Logo**: hexagonal bee-inspired mark
-- **In-app vocabulary** fully adopted across all UI copy:
+- **In-app vocabulary** fully adopted across all UI copy
 
 **Vocabulary update:**
 
@@ -241,19 +211,14 @@ The rebrand is a deliberate launch moment — not just a name change, but a publ
 | Weekly digest | Hive Report |
 | Going public | Flying from the hive |
 
-- Updated onboarding flow with BNest identity
-- Social & SEO metadata updated (Open Graph, Twitter card, etc.)
-- Announcement post — build in public, share the story behind the rename
-
 **Why wait for V1.0.0?**
 Beta testers know BuilderLab. Rebranding mid-beta creates confusion. The rename becomes a public launch moment worth celebrating — a signal to the community that something real has been built.
 
 ### Future
-- [ ] University email verification (optional — for builders who want to signal their affiliation)
+- [ ] University email verification
 - [ ] Mobile app (React Native)
 - [ ] Recruiter portal — access to top-rated projects and builder profiles (B2B monetization)
-- [ ] Learning path integration — connect with online platforms (Coursera, freeCodeCamp, etc.)
-
+- [ ] Learning path integration (Coursera, freeCodeCamp, etc.)
 
 ---
 
@@ -329,6 +294,8 @@ builderlab/
 │   ├── page.tsx                        # Home — project feed
 │   ├── login/page.tsx                  # Authentication
 │   ├── post/page.tsx                   # Post a new project
+│   ├── archive/page.tsx               # Completed projects archive
+│   ├── notifications/page.tsx          # All notifications
 │   ├── profile/
 │   │   ├── page.tsx                    # Own profile (edit)
 │   │   └── [id]/page.tsx              # Public profile (read-only)
@@ -337,18 +304,23 @@ builderlab/
 │   ├── auth/callback/route.ts          # Supabase auth callback
 │   └── api/
 │       └── notify/
-│           ├── interest/route.ts       # Email: new interest
-│           └── accepted/route.ts       # Email: request accepted
+│           ├── interest/route.ts       # Email + notif: new interest
+│           └── accepted/route.ts       # Email + notif: request accepted
 │
 ├── components/
-│   ├── Navbar.tsx
+│   ├── Navbar.tsx                      # Navbar with notifications bell
 │   ├── Feed.tsx
 │   ├── ProjectCard.tsx
 │   ├── ProjectDetailClient.tsx
-│   ├── ProjectUpdates.tsx
+│   ├── ProjectUpdates.tsx              # Build Log
+│   ├── ProjectChat.tsx                 # Group chat
+│   ├── ProjectComments.tsx             # Community feedback
 │   ├── ProfileClient.tsx
 │   ├── ConnectionsClient.tsx
+│   ├── NotificationsClient.tsx
+│   ├── ArchiveClient.tsx
 │   ├── InterestModal.tsx
+│   ├── CompletionModal.tsx             # Celebratory completion modal
 │   ├── RatingModal.tsx
 │   ├── BackButton.tsx
 │   └── PageTransition.tsx
@@ -395,8 +367,6 @@ Feedback, discussions, bug reports, and carefully scoped contributions are welco
 | `docs:` | Documentation |
 | `refactor:` | Code restructuring |
 
-All feedback, suggestions, and PRs are welcome.
-
 ---
 
 ## LICENSE
@@ -409,12 +379,7 @@ Commercial usage, hosted competition, and production redistribution are prohibit
 
 See the [LICENSE](./LICENSE) file for details.
 
----
-
-> Historical note:
->
-> Versions prior to v0.3.0 were released under AGPLv3.
-> Starting with v0.3.0, BuilderLab transitioned to a custom source-available license.
+> Historical note: Versions prior to v0.3.0 were released under AGPLv3. Starting with v0.3.0, BuilderLab transitioned to a custom source-available license.
 
 ---
 
@@ -423,6 +388,7 @@ See the [LICENSE](./LICENSE) file for details.
   <p>
     <a href="https://builderlab-tau.vercel.app">Live App</a> ·
     <a href="./docs/ARCHITECTURE.md">Architecture</a> ·
-    <a href="./docs/DATABASE.md">Database</a>
+    <a href="./docs/DATABASE.md">Database</a> ·
+    <a href="./CHANGELOG.md">Changelog</a>
   </p>
 </div>

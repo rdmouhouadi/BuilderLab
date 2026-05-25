@@ -32,6 +32,9 @@ export default function ProjectChat({
   // Ref vers le bas du chat pour auto-scroll
   const bottomRef = useRef<HTMLDivElement>(null)
 
+  // Ne scroller vers le bas que si un nouveau message est arrivé
+  const prevCountRef = useRef(initialMessages.length)
+
   // Nom complet depuis un profil
   function getFullName(profile: ProjectMessage['profiles']) {
     if (!profile) return 'Anonymous'
@@ -68,7 +71,12 @@ export default function ProjectChat({
 
   // Auto-scroll vers le bas quand de nouveaux messages arrivent
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    // On scroll seulement si le nombre de messages a augmenté
+    // pas à chaque polling
+    if (messages.length > prevCountRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+      prevCountRef.current = messages.length
+    }
   }, [messages])
 
   // Envoyer un message
