@@ -1,9 +1,14 @@
 // components/CompletionModal.tsx
-// Modal celebratoire affiché quand le owner marque un projet comme completed
-// Build in public par défaut — le owner peut opt-out
+// Celebratory modal shown when the owner marks a project as completed.
+// Public by default — owner can opt out (build in public philosophy).
 'use client'
 
 import { useState } from 'react'
+import { colors, radius, fontSize, styles } from '@/lib/design-tokens'
+
+// ─────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────
 
 type Props = {
   projectTitle: string
@@ -12,108 +17,128 @@ type Props = {
   loading: boolean
 }
 
-export default function CompletionModal({
-  projectTitle,
-  onConfirm,
-  onCancel,
-  loading,
-}: Props) {
-  // Par défaut — public (build in public philosophy)
-  // Le owner peut opt-out en cochant la case
+// ─────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────
+
+export default function CompletionModal({ projectTitle, onConfirm, onCancel, loading }: Props) {
+  // Public by default — owner can opt out
   const [keepPrivate, setKeepPrivate] = useState(false)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
-      onClick={e => {
-        if (e.target === e.currentTarget) onCancel()
+      style={{
+        position: 'fixed', inset: 0, zIndex: 50,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '0 16px',
+        backgroundColor: 'rgba(0,0,0,0.6)',
       }}
+      onClick={e => { if (e.target === e.currentTarget) onCancel() }}
     >
       <div
-        className="w-full max-w-md rounded-2xl p-8"
-        style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
+        style={{
+          width: '100%', maxWidth: '440px',
+          backgroundColor: colors.bg.elevated,
+          border: `0.5px solid ${colors.border.hover}`,
+          borderRadius: radius.xxl,
+          padding: '28px',
+        }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Emoji celebratoire */}
-        <div className="text-center mb-6">
-          <span className="text-5xl">🎉</span>
+        {/* Celebration emoji */}
+        <div style={{ textAlign: 'center', marginBottom: '16px', fontSize: '40px' }}>
+          🎉
         </div>
 
-        {/* Titre */}
-        <h2
-          className="text-xl font-bold text-center mb-2"
-          style={{ color: '#F1F5F9' }}
-        >
+        {/* Title */}
+        <h2 style={{
+          fontSize: fontSize.xl,
+          fontWeight: 500,
+          color: colors.text.primary,
+          letterSpacing: '-0.02em',
+          textAlign: 'center',
+          marginBottom: '6px',
+        }}>
           You shipped it!
         </h2>
 
-        {/* Sous-titre */}
-        <p className="text-sm text-center mb-6" style={{ color: '#64748B' }}>
-          <span style={{ color: '#5EEAD4' }}>"{projectTitle}"</span>{' '}
-          is now complete. Congratulations to your whole team.
+        {/* Subtitle */}
+        <p style={{
+          fontSize: fontSize.sm,
+          color: colors.text.muted,
+          textAlign: 'center',
+          marginBottom: '20px',
+          lineHeight: 1.6,
+        }}>
+          <span style={{ color: colors.accent.tealText }}>"{projectTitle}"</span>{' '}
+          is complete. Congratulations to your whole team.
         </p>
 
-        {/* Message build in public */}
-        <div
-          className="rounded-xl px-4 py-4 mb-6"
-          style={{
-            backgroundColor: 'rgba(13,148,136,0.08)',
-            border: '1px solid rgba(13,148,136,0.2)',
-          }}
-        >
-          <p className="text-xs leading-relaxed" style={{ color: '#94A3B8' }}>
-            🌍 By default, your completed project will be{' '}
-            <span style={{ color: '#5EEAD4' }}>
+        {/* Build in public message */}
+        <div style={{
+          backgroundColor: colors.accent.tealDim,
+          border: `0.5px solid ${colors.accent.tealBorder}`,
+          borderRadius: radius.lg,
+          padding: '12px 14px',
+          marginBottom: '18px',
+        }}>
+          <p style={{ fontSize: fontSize.xs, color: colors.text.secondary, lineHeight: 1.6 }}>
+            🌍 By default, your project will be{' '}
+            <span style={{ color: colors.accent.tealText, fontWeight: 500 }}>
               published in the Archive
             </span>{' '}
-            so other builders can learn from your journey. This is the spirit
-            of building in public.
+            so other builders can learn from your journey. This is the spirit of building in public.
           </p>
         </div>
 
-        {/* Option opt-out */}
-        <label
-          className="flex items-start gap-3 mb-6 cursor-pointer"
-          onClick={() => setKeepPrivate(!keepPrivate)}
+        {/* Opt-out checkbox */}
+        <div
+          onClick={() => setKeepPrivate(p => !p)}
+          style={{
+            display: 'flex', alignItems: 'flex-start', gap: '10px',
+            marginBottom: '20px', cursor: 'pointer',
+          }}
         >
-          <div
-            className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 mt-0.5 transition-all"
-            style={{
-              backgroundColor: keepPrivate ? '#0D9488' : 'transparent',
-              borderColor: keepPrivate ? '#0D9488' : '#1E2840',
-            }}
-          >
+          {/* Custom checkbox */}
+          <div style={{
+            width: '14px', height: '14px',
+            flexShrink: 0, marginTop: '1px',
+            borderRadius: '3px',
+            border: `1px solid ${keepPrivate ? colors.accent.teal : colors.border.active}`,
+            backgroundColor: keepPrivate ? colors.accent.teal : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'all 0.15s',
+          }}>
             {keepPrivate && (
-              <svg className="w-2.5 h-2.5 text-white" fill="none"
-                viewBox="0 0 24 24" stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round"
-                  strokeWidth={3} d="M5 13l4 4L19 7" />
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                <path d="M5 13l4 4L19 7" />
               </svg>
             )}
           </div>
-          <span className="text-xs" style={{ color: '#64748B' }}>
-            Keep this project private (don't publish it in the Archive)
+          <span style={{ fontSize: fontSize.xs, color: colors.text.muted, lineHeight: 1.5 }}>
+            Keep this project private — don't publish it in the Archive.
           </span>
-        </label>
+        </div>
 
-        {/* Boutons */}
-        <div className="flex gap-3">
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={onCancel}
-            className="flex-1 py-2.5 rounded-xl text-sm transition-colors"
-            style={{ color: '#64748B', border: '1px solid #1E2840' }}
+            style={{
+              ...styles.btnGhost,
+              flex: 1, padding: '9px',
+              fontSize: fontSize.sm,
+            }}
           >
             Cancel
           </button>
           <button
             onClick={() => onConfirm(!keepPrivate)}
             disabled={loading}
-            className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
             style={{
-              backgroundColor: '#0D9488',
-              color: 'white',
+              ...styles.btnPrimary,
+              flex: 1, padding: '9px',
+              fontSize: fontSize.sm,
               opacity: loading ? 0.7 : 1,
               cursor: loading ? 'not-allowed' : 'pointer',
             }}

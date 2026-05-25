@@ -1,21 +1,34 @@
+// components/BackButton.tsx
+// Smart back button — remembers the previous page via sessionStorage.
+// Falls back to a default URL if no history is available.
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { colors, radius, fontSize } from '@/lib/design-tokens'
 
 type Props = {
-  // URL de fallback si pas d'historique
-  fallback?: string
-  label?: string
+  fallback?: string // Default URL if no history — defaults to '/'
 }
 
-export default function BackButton({ fallback = '/', label = '← Back' }: Props) {
+export default function BackButton({ fallback = '/' }: Props) {
   const router = useRouter()
+  const [label, setLabel] = useState('← Back')
+
+  useEffect(() => {
+    // Read the referrer stored by the feed/profile/hivecheck pages
+    const from = sessionStorage.getItem('projectDetailFrom')
+    if (from === '/') setLabel('← Back to projects')
+    else if (from?.startsWith('/profile')) setLabel('← Back to profile')
+    else if (from?.startsWith('/hivecheck')) setLabel('← Back to HiveCheck')
+    else if (from?.startsWith('/archive')) setLabel('← Back to archive')
+    else setLabel('← Back')
+  }, [])
 
   function handleBack() {
-    // Si l'utilisateur a un historique → retour arrière
-    // Sinon → on redirige vers le fallback
-    if (window.history.length > 1) {
-      router.back()
+    const from = sessionStorage.getItem('projectDetailFrom')
+    if (from) {
+      router.push(from)
     } else {
       router.push(fallback)
     }
@@ -24,15 +37,27 @@ export default function BackButton({ fallback = '/', label = '← Back' }: Props
   return (
     <button
       onClick={handleBack}
-      className="inline-flex items-center gap-2 text-sm mb-6 transition-colors px-3 py-1.5 rounded-md font-medium"
-      style={{ color: '#475569', border: '1px solid #1E2840' }}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        fontSize: fontSize.sm,
+        color: colors.text.muted,
+        backgroundColor: 'transparent',
+        border: `0.5px solid ${colors.border.default}`,
+        borderRadius: radius.lg,
+        padding: '5px 12px',
+        cursor: 'pointer',
+        marginBottom: '20px',
+        transition: 'all 0.15s',
+      }}
       onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.color = '#F1F5F9'
-        ;(e.currentTarget as HTMLElement).style.borderColor = '#94A3B8'
+        (e.currentTarget as HTMLElement).style.color = colors.text.secondary
+        ;(e.currentTarget as HTMLElement).style.borderColor = colors.border.hover
       }}
       onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.color = '#475569'
-        ;(e.currentTarget as HTMLElement).style.borderColor = '#1E2840'
+        (e.currentTarget as HTMLElement).style.color = colors.text.muted
+        ;(e.currentTarget as HTMLElement).style.borderColor = colors.border.default
       }}
     >
       {label}

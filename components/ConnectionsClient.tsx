@@ -1,11 +1,16 @@
 // components/ConnectionsClient.tsx
-// Affiche les demandes reçues et envoyées
-// Permet d'accepter ou rejeter les demandes reçues
+// Displays received and sent connection requests.
+// Allows the user to accept or decline pending requests.
 'use client'
 
 import { useState } from 'react'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
+import { colors, radius, fontSize, styles } from '@/lib/design-tokens'
+
+// ─────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────
 
 type Connection = {
   id: string
@@ -29,25 +34,50 @@ type Props = {
   currentUserId: string
 }
 
-export default function ConnectionsClient({ received, sent, currentUserId }: Props) {
+// ─────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────
+
+function getInitials(name: string | null | undefined) {
+  if (!name) return '?'
+  return name.split(' ').map(w => w[0]).join('').toUpperCase()
+}
+
+// Status badge style — monochrome except for semantic meaning
+function statusStyle(status: string) {
+  switch (status) {
+    case 'accepted': return {
+      backgroundColor: colors.status.successDim,
+      color: colors.status.success,
+      border: `0.5px solid rgba(16,185,129,0.25)`,
+    }
+    case 'rejected': return {
+      backgroundColor: colors.status.dangerDim,
+      color: colors.status.danger,
+      border: `0.5px solid rgba(239,68,68,0.25)`,
+    }
+    default: return {
+      backgroundColor: colors.status.warningDim,
+      color: colors.status.warning,
+      border: `0.5px solid rgba(245,158,11,0.25)`,
+    }
+  }
+}
+
+// ─────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────
+
+export default function ConnectionsClient({ received, sent }: Props) {
   const supabase = createBrowserSupabaseClient()
 
-  // Onglet actif — "received" ou "sent"
-  const [activeTab, setActiveTab] = useState<'received' | 'sent'>('received')
-
-  // État local des connexions reçues
-  // On les stocke en state pour mettre à jour l'UI
-  // On garde toutes les connexions pour référence
+  const [activeTab,   setActiveTab]   = useState<'received' | 'sent'>('received')
   const [connections, setConnections] = useState(received)
 
-  //On filtre - seule les pending s'affichent dans la Liste
-  //Les "accepted/rejected" disparaissent après action
-  const pendingConnections = connections.filter(c => c.status === 'pending')
-  const resolvedConnections = connections.filter(c => c.status !== 'pending')
+  // Only pending requests are shown in the received tab
+  const pending = connections.filter(c => c.status === 'pending')
 
-  
-  // Met à jour le status d'une connexion
-  // Si accepté → envoie aussi une notification email au sender
+  // Accept or decline a connection request
   async function handleAction(id: string, action: 'accepted' | 'rejected') {
     const { error } = await supabase
       .from('connections')
@@ -55,22 +85,12 @@ export default function ConnectionsClient({ received, sent, currentUserId }: Pro
       .eq('id', id)
 
     if (!error) {
-      // Met à jour l'UI immédiatement sans attendre un refetch
+      // Optimistic update — reflect the change immediately
       setConnections(prev =>
         prev.map(c => c.id === id ? { ...c, status: action } : c)
       )
 
-      // Si accepté → envoie la notification email au sender
-      // On ne bloque pas l'UI si l'email échoue — catch silencieux
-      if (action === 'accepted') {
-        fetch('/api/notify/accepted', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ connectionId: id }),
-        }).catch(console.error)
-      }
-
-      // Notification "new_member" pour le owner quand quelqu'un est accepté
+      // Send email notification to the sender on accept — non-blocking
       if (action === 'accepted') {
         fetch('/api/notify/accepted', {
           method: 'POST',
@@ -81,109 +101,145 @@ export default function ConnectionsClient({ received, sent, currentUserId }: Pro
     }
   }
 
-  // Couleur du badge de status
-  function getStatusStyle(status: string) {
-    switch (status) {
-      case 'accepted': return { bg: 'rgba(16,185,129,0.14)', text: '#6EE7B7', border: '1px solid rgba(16,185,129,0.28)' }
-      case 'rejected': return { bg: 'rgba(239,68,68,0.14)',  text: '#FCA5A5', border: '1px solid rgba(239,68,68,0.28)' }
-      default:         return { bg: 'rgba(245,158,11,0.14)', text: '#FCD34D', border: '1px solid rgba(245,158,11,0.28)' }
-    }
-  }
-
-  // Initiales pour l'avatar
-  function getInitials(name: string | null | undefined) {
-    if (!name) return '?'
-    return name.split(' ').map(w => w[0]).join('').toUpperCase()
-  }
+  // ─────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────
 
   return (
-    <main className="max-w-3xl mx-auto px-4 py-10">
+    <main style={{ maxWidth: '672px', margin: '0 auto', padding: '32px 16px' }}>
 
-      {/* En-tête */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-1" style={{ color: '#F1F5F9' }}>
+      {/* Header */}
+      <div style={{ marginBottom: '24px' }}>
+        <h1 style={{
+          fontSize: fontSize.xl,
+          fontWeight: 500,
+          color: colors.text.primary,
+          letterSpacing: '-0.02em',
+          marginBottom: '4px',
+        }}>
           Connections
         </h1>
-        <p className="text-sm" style={{ color: '#475569' }}>
+        <p style={{ fontSize: fontSize.sm, color: colors.text.muted }}>
           Manage your collaboration requests
         </p>
       </div>
 
-      {/* Onglets Received / Sent */}
-      <div
-        className="flex gap-1 p-1 rounded-xl mb-6 w-fit"
-        style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-      >
-        {(['received', 'sent'] as const).map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className="px-5 py-2 rounded-lg text-sm font-medium capitalize transition-all"
-            style={{
-              backgroundColor: activeTab === tab ? '#0D9488' : 'transparent',
-              color: activeTab === tab ? 'white' : '#64748B',
-            }}
-          >
-            {tab}
-            {/* Badge - on affiche seulement les pending pour Request Received */}
-            <span
-              className="ml-2 text-xs px-1.5 py-0.5 rounded-md"
+      {/* Tabs — Received / Sent */}
+      <div style={{
+        display: 'flex',
+        gap: '2px',
+        padding: '3px',
+        borderRadius: radius.xl,
+        backgroundColor: colors.bg.elevated,
+        border: `0.5px solid ${colors.border.default}`,
+        width: 'fit-content',
+        marginBottom: '20px',
+      }}>
+        {(['received', 'sent'] as const).map(tab => {
+          const isActive = activeTab === tab
+          const count    = tab === 'received' ? pending.length : sent.length
+
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
               style={{
-                backgroundColor: activeTab === tab
-                  ? 'rgba(255,255,255,0.2)'
-                  : 'rgba(255,255,255,0.07)',
-                color: activeTab === tab ? 'white' : '#475569',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '5px 16px',
+                borderRadius: radius.lg,
+                fontSize: fontSize.sm,
+                fontWeight: isActive ? 500 : 400,
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                textTransform: 'capitalize',
+                backgroundColor: isActive ? colors.bg.hover    : 'transparent',
+                color:           isActive ? colors.text.primary : colors.text.muted,
+                border:          isActive ? `0.5px solid ${colors.border.active}` : 'none',
               }}
             >
-              {tab === 'received' ? pendingConnections.length : sent.length}
-            </span>
-          </button>
-        ))}
+              {tab}
+              {/* Count badge */}
+              <span style={{
+                fontSize: fontSize.xs,
+                padding: '1px 5px',
+                borderRadius: radius.sm,
+                backgroundColor: isActive ? colors.bg.elevated : colors.bg.hover,
+                color: isActive ? colors.text.secondary : colors.text.muted,
+              }}>
+                {count}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
-      {/* Liste des demandes reçues - seulement les pending */}
+      {/* Received tab */}
       {activeTab === 'received' && (
-        <div className="flex flex-col gap-3">
-          {pendingConnections.length === 0 ? (
-            <div
-              className="rounded-2xl p-8 text-center"
-              style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-            >
-              <p className="text-sm" style={{ color: '#475569' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {pending.length === 0 ? (
+            <div style={{
+              ...styles.card ?? {},
+              backgroundColor: colors.bg.elevated,
+              border: `0.5px solid ${colors.border.default}`,
+              borderRadius: radius.xxl,
+              padding: '32px',
+              textAlign: 'center',
+            }}>
+              <p style={{ fontSize: fontSize.sm, color: colors.text.muted }}>
                 No pending requests.
               </p>
             </div>
           ) : (
-            pendingConnections.map(conn => (
+            pending.map(conn => (
               <div
                 key={conn.id}
-                className="rounded-2xl p-5"
-                style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
+                style={{
+                  backgroundColor: colors.bg.elevated,
+                  border: `0.5px solid ${colors.border.default}`,
+                  borderRadius: radius.xxl,
+                  padding: '16px',
+                }}
               >
-                <div className="flex items-start justify-between gap-4">
-
-                  {/* Infos du sender */}
-                  <div className="flex items-center gap-3">
+                {/* Top row — sender info + status badge */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  marginBottom: '10px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {/* Avatar */}
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold text-white flex-shrink-0"
-                      style={{ background: 'linear-gradient(135deg, #0D9488, #0EA5E9)' }}
-                    >
+                    <div style={{
+                      width: '34px', height: '34px',
+                      borderRadius: radius.lg,
+                      backgroundColor: colors.accent.teal,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: fontSize.xs, fontWeight: 500,
+                      color: '#fff', flexShrink: 0,
+                    }}>
                       {getInitials(conn.profiles?.name)}
                     </div>
 
                     <div>
                       <Link
                         href={`/profile/${conn.profiles?.id}`}
-                        className="text-sm font-medium hover:underline"
-                        style={{ color: '#F1F5F9' }}
-                        onClick={e => e.stopPropagation()}
+                        style={{
+                          fontSize: fontSize.sm,
+                          fontWeight: 500,
+                          color: colors.text.primary,
+                          textDecoration: 'none',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                        onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
                       >
                         {conn.profiles?.name ?? 'Anonymous'}
                       </Link>
-                      <p className="text-xs" style={{ color: '#475569' }}>
-                        {conn.profiles?.country ?? ''} ·{' '}
-                        ⭐ {conn.profiles?.avg_rating
+                      <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
+                        {conn.profiles?.country ?? ''} · ⭐{' '}
+                        {conn.profiles?.avg_rating
                           ? conn.profiles.avg_rating.toFixed(1)
                           : 'New'
                         }
@@ -191,86 +247,108 @@ export default function ConnectionsClient({ received, sent, currentUserId }: Pro
                     </div>
                   </div>
 
-                  {/* Badge pending */}
-                  <span
-                    className="text-xs px-2.5 py-1 rounded-lg font-medium capitalize flex-shrink-0"
-                    style={{
-                      //backgroundColor: getStatusStyle(conn.status).bg, --old
-                      backgroundColor: 'rgba(245,158,11,0.14)',
-                      //color: getStatusStyle(conn.status).text, --old
-                      color: '#FCD34D',
-                      //border: getStatusStyle(conn.status).border,--old
-                      border: '1px solid rgba(245,158,11,0.28)',
-                    }}
-                  >
-                    pending
+                  {/* Pending badge */}
+                  <span style={{
+                    ...statusStyle('pending'),
+                    fontSize: fontSize.xs,
+                    padding: '2px 8px',
+                    borderRadius: radius.md,
+                    flexShrink: 0,
+                  }}>
+                    Pending
                   </span>
                 </div>
 
-                {/* Projet concerné */}
-                <p className="text-xs mt-3 mb-2" style={{ color: '#475569' }}>
+                {/* Project name */}
+                <p style={{ fontSize: fontSize.xs, color: colors.text.muted, marginBottom: '8px' }}>
                   Interested in:{' '}
-                  <span style={{ color: '#94A3B8' }}>
+                  <span style={{ color: colors.text.secondary }}>
                     {conn.projects?.title ?? 'Unknown project'}
                   </span>
                 </p>
 
                 {/* Message */}
                 {conn.message && (
-                  <p
-                    className="text-xs leading-relaxed mb-4 px-3 py-2 rounded-lg"
-                    style={{
-                      color: '#64748B',
-                      backgroundColor: '#0C1120',
-                      border: '1px solid #1E2840',
-                    }}
-                  >
+                  <p style={{
+                    fontSize: fontSize.xs,
+                    lineHeight: 1.6,
+                    padding: '8px 10px',
+                    borderRadius: radius.lg,
+                    fontStyle: 'italic',
+                    color: colors.text.muted,
+                    backgroundColor: colors.bg.surface,
+                    border: `0.5px solid ${colors.border.default}`,
+                    marginBottom: '12px',
+                  }}>
                     "{conn.message}"
                   </p>
                 )}
 
-                {/* Boutons Accept / Reject — seulement si pending */}
-                {conn.status === 'pending' && (
-                  <div className="flex gap-2 mt-3">
-                    <button
-                      onClick={() => handleAction(conn.id, 'accepted')}
-                      className="text-xs px-4 py-2 rounded-lg font-medium transition-all"
-                      style={{
-                        backgroundColor: 'rgba(16,185,129,0.14)',
-                        color: '#6EE7B7',
-                        border: '1px solid rgba(16,185,129,0.28)',
-                      }}
-                    >
-                      ✓ Accept
-                    </button>
-                    <button
-                      onClick={() => handleAction(conn.id, 'rejected')}
-                      className="text-xs px-4 py-2 rounded-lg font-medium transition-all"
-                      style={{
-                        backgroundColor: 'rgba(239,68,68,0.14)',
-                        color: '#FCA5A5',
-                        border: '1px solid rgba(239,68,68,0.28)',
-                      }}
-                    >
-                      ✕ Decline
-                    </button>
-                  </div>
-                )}
+                {/* Accept / Decline buttons */}
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    onClick={() => handleAction(conn.id, 'accepted')}
+                    style={{
+                      fontSize: fontSize.xs,
+                      fontWeight: 500,
+                      padding: '5px 12px',
+                      borderRadius: radius.lg,
+                      cursor: 'pointer',
+                      backgroundColor: colors.status.successDim,
+                      color: colors.status.success,
+                      border: `0.5px solid rgba(16,185,129,0.25)`,
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(16,185,129,0.2)')}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = colors.status.successDim)}
+                  >
+                    ✓ Accept
+                  </button>
+                  <button
+                    onClick={() => handleAction(conn.id, 'rejected')}
+                    style={{
+                      fontSize: fontSize.xs,
+                      fontWeight: 500,
+                      padding: '5px 12px',
+                      borderRadius: radius.lg,
+                      cursor: 'pointer',
+                      backgroundColor: 'transparent',
+                      color: colors.text.muted,
+                      border: `0.5px solid ${colors.border.default}`,
+                      transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => {
+                      (e.currentTarget.style.backgroundColor = colors.status.dangerDim)
+                      ;(e.currentTarget.style.color = colors.status.danger)
+                      ;(e.currentTarget.style.borderColor = 'rgba(239,68,68,0.25)')
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget.style.backgroundColor = 'transparent')
+                      ;(e.currentTarget.style.color = colors.text.muted)
+                      ;(e.currentTarget.style.borderColor = colors.border.default)
+                    }}
+                  >
+                    Decline
+                  </button>
+                </div>
               </div>
             ))
           )}
         </div>
       )}
 
-      {/* Liste des demandes envoyées */}
+      {/* Sent tab */}
       {activeTab === 'sent' && (
-        <div className="flex flex-col gap-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {sent.length === 0 ? (
-            <div
-              className="rounded-2xl p-8 text-center"
-              style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-            >
-              <p className="text-sm" style={{ color: '#475569' }}>
+            <div style={{
+              backgroundColor: colors.bg.elevated,
+              border: `0.5px solid ${colors.border.default}`,
+              borderRadius: radius.xxl,
+              padding: '32px',
+              textAlign: 'center',
+            }}>
+              <p style={{ fontSize: fontSize.sm, color: colors.text.muted }}>
                 You haven't sent any requests yet.
               </p>
             </div>
@@ -278,29 +356,41 @@ export default function ConnectionsClient({ received, sent, currentUserId }: Pro
             sent.map(conn => (
               <div
                 key={conn.id}
-                className="rounded-2xl p-5 flex items-center justify-between"
-                style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: colors.bg.elevated,
+                  border: `0.5px solid ${colors.border.default}`,
+                  borderRadius: radius.xxl,
+                  padding: '14px 16px',
+                }}
               >
                 <div>
-                  <p className="text-sm font-medium mb-1" style={{ color: '#F1F5F9' }}>
+                  <p style={{
+                    fontSize: fontSize.sm,
+                    fontWeight: 500,
+                    color: colors.text.primary,
+                    marginBottom: '3px',
+                  }}>
                     {conn.projects?.title ?? 'Unknown project'}
                   </p>
-                  <p className="text-xs" style={{ color: '#475569' }}>
+                  <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
                     Sent {new Date(conn.created_at).toLocaleDateString('en-US', {
-                      month: 'short', day: 'numeric', year: 'numeric'
+                      month: 'short', day: 'numeric', year: 'numeric',
                     })}
                   </p>
                 </div>
 
-                {/* Badge status */}
-                <span
-                  className="text-xs px-2.5 py-1 rounded-lg font-medium capitalize"
-                  style={{
-                    backgroundColor: getStatusStyle(conn.status).bg,
-                    color: getStatusStyle(conn.status).text,
-                    border: getStatusStyle(conn.status).border,
-                  }}
-                >
+                {/* Status badge */}
+                <span style={{
+                  ...statusStyle(conn.status),
+                  fontSize: fontSize.xs,
+                  padding: '2px 8px',
+                  borderRadius: radius.md,
+                  textTransform: 'capitalize',
+                  flexShrink: 0,
+                }}>
                   {conn.status}
                 </span>
               </div>
@@ -308,7 +398,6 @@ export default function ConnectionsClient({ received, sent, currentUserId }: Pro
           )}
         </div>
       )}
-
     </main>
   )
 }

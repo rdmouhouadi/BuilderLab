@@ -1,5 +1,5 @@
 // components/NotificationsClient.tsx
-// Affiche toutes les notifications de l'utilisateur
+// Displays all user notifications
 'use client'
 
 import Link from 'next/link'
@@ -11,7 +11,7 @@ type Props = {
   notifications: Notification[]
 }
 
-// Config visuelle par type de notification
+// Visual config by notification type
 const NOTIF_CONFIG: Record<string, { icon: string; label: string; color: string }> = {
   connection_request: { icon: '👋', label: 'New interest',    color: '#5EEAD4' },
   connection_accepted:{ icon: '✅', label: 'Request accepted', color: '#6EE7B7' },
@@ -20,7 +20,7 @@ const NOTIF_CONFIG: Record<string, { icon: string; label: string; color: string 
 }
 
 export default function NotificationsClient({ notifications }: Props) {
-  // Séparer les non lues des lues
+  // Separate unread from read notifications
   const unread = notifications.filter(n => !n.read)
   const read = notifications.filter(n => n.read)
 
@@ -40,7 +40,7 @@ export default function NotificationsClient({ notifications }: Props) {
         onMouseEnter={e => (e.currentTarget.style.borderColor = '#0D9488')}
         onMouseLeave={e => (e.currentTarget.style.borderColor = '#1E2840')}
       >
-        {/* Icône */}
+        {/* Icon */}
         <span className="text-xl flex-shrink-0 mt-0.5">{config.icon}</span>
 
         <div className="flex-1 min-w-0">
@@ -60,12 +60,12 @@ export default function NotificationsClient({ notifications }: Props) {
             </span>
           </div>
 
-          {/* Titre */}
+          {/* Title */}
           <p className="text-sm font-medium mb-0.5" style={{ color: '#F1F5F9' }}>
             {notif.title}
           </p>
 
-          {/* Corps */}
+          {/* Body */}
           {notif.body && (
             <p className="text-xs leading-relaxed" style={{ color: '#64748B' }}>
               {notif.body}
@@ -106,7 +106,7 @@ export default function NotificationsClient({ notifications }: Props) {
       ) : (
         <div className="flex flex-col gap-6">
 
-          {/* Section non lues */}
+          {/* Unread section */}
           {unread.length > 0 && (
             <div>
               <h2 className="text-xs font-semibold uppercase tracking-widest mb-3"
@@ -120,7 +120,7 @@ export default function NotificationsClient({ notifications }: Props) {
             </div>
           )}
 
-          {/* Section lues */}
+          {/* Read section */}
           {read.length > 0 && (
             <div>
               <h2 className="text-xs font-semibold uppercase tracking-widest mb-3"

@@ -1,6 +1,7 @@
-// Ce composant affiche UN projet sous forme de carte
-// Il reçoit un projet en "prop" depuis la page principale
-// Une prop c'est comme un argument de fonction — des données passées de parent à enfant
+// components/ProjectCard.tsx
+// Displays a single project as a card in the feed.
+// Handles: interest request, follow/unfollow, activity signal.
+// The InterestModal is rendered outside the Link to prevent click conflicts.
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -10,119 +11,408 @@ import { Project } from '@/types'
 import Link from 'next/link'
 import { getTimeLabel } from '@/lib/timeLabel'
 import InterestModal from '@/components/InterestModal'
+import { colors, radius, fontSize } from '@/lib/design-tokens'
 
+// ─────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────
 
 type Props = {
   project: Project
   currentUserId?: string | null
 }
 
-export default function ProjectCard({ project, currentUserId }: Props) {
-  const router = useRouter()
-  const supabase = createBrowserSupabaseClient()
-  const [status, setStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle')
-  const [showModal, setShowModal] = useState(false)
-  const [userContact, setUserContact] = useState<{
-    type: string | null
-    value: string | null
-  }>({ type: null, value: null })
+type InterestStatus = 'idle' | 'loading' | 'sent' | 'error'
 
-  const skillColors: Record<string, { bg: string; text: string }> = {
-    'Developer':      { bg: 'rgba(13,148,136,0.14)',  text: '#5EEAD4' },
-    'Designer':       { bg: 'rgba(14,165,233,0.14)',  text: '#7DD3FC' },
-    'Data Scientist': { bg: 'rgba(99,102,241,0.14)',  text: '#A5B4FC' },
-    'Business':       { bg: 'rgba(245,158,11,0.14)',  text: '#FCD34D' },
-    'Marketing':      { bg: 'rgba(236,72,153,0.14)',  text: '#F9A8D4' },
-  }
+// ─────────────────────────────────────────
+// Constants
+// ─────────────────────────────────────────
 
-  const levelColors: Record<string, { bg: string; text: string }> = {
-    'beginner':      { bg: 'rgba(16,185,129,0.14)',  text: '#6EE7B7' },
-    'intermediate':  { bg: 'rgba(245,158,11,0.14)',  text: '#FCD34D' },
-    'advanced':      { bg: 'rgba(239,68,68,0.14)',   text: '#FCA5A5' },
-    'débutant':      { bg: 'rgba(16,185,129,0.14)',  text: '#6EE7B7' },
-    'intermédiaire': { bg: 'rgba(245,158,11,0.14)',  text: '#FCD34D' },
-    'avancé':        { bg: 'rgba(239,68,68,0.14)',   text: '#FCA5A5' },
-  }
+// All skill tags use the same neutral monochrome style — Linear aesthetic
+const TAG_STYLE = {
+  backgroundColor: colors.bg.hover,
+  border: `0.5px solid ${colors.border.default}`,
+  borderRadius: radius.md,
+  color: colors.text.secondary,
+  fontSize: fontSize.xs,
+  padding: '2px 7px',
+  display: 'inline-block' as const,
+}
 
-  const initials = project.profiles?.name
+// ─────────────────────────────────────────
+// Sub-component: CardAuthor
+// ─────────────────────────────────────────
+
+type CardAuthorProps = {
+  name: string | null | undefined
+  country: string | null | undefined
+  activitySignal: string | null
+}
+
+function CardAuthor({ name, country, activitySignal }: CardAuthorProps) {
+  // Compute initials from full name
+  const initials = name
     ?.split(' ')
-    .map(word => word[0])
+    .map(w => w[0])
     .join('')
     .toUpperCase() ?? '?'
 
-  const isOwner = currentUserId === project.owner_id
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Avatar */}
+        <div style={{
+          width: '24px', height: '24px',
+          borderRadius: radius.lg,
+          backgroundColor: colors.accent.teal,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: fontSize.xs,
+          fontWeight: 500,
+          color: '#fff',
+          flexShrink: 0,
+        }}>
+          {initials}
+        </div>
+        <div>
+          <p style={{ fontSize: fontSize.sm, fontWeight: 500, color: colors.text.secondary }}>
+            {name ?? 'Anonymous'}
+          </p>
+          {country && (
+            <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
+              {country}
+            </p>
+          )}
+        </div>
+      </div>
 
-  // État du bouton Follow sur la carte
+      {/* Activity signal — pulsing dot + label */}
+      {activitySignal && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <span style={{ position: 'relative', display: 'flex', width: '6px', height: '6px' }}>
+            <span style={{
+              position: 'absolute', inset: 0,
+              borderRadius: radius.full,
+              backgroundColor: colors.status.success,
+              opacity: 0.5,
+              animation: 'ping 1.5s cubic-bezier(0,0,0.2,1) infinite',
+            }} />
+            <span style={{
+              borderRadius: radius.full,
+              width: '6px', height: '6px',
+              backgroundColor: colors.status.success,
+            }} />
+          </span>
+          <span style={{ fontSize: fontSize.xs, color: colors.status.success }}>
+            {activitySignal}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────
+// Sub-component: CardTags
+// ─────────────────────────────────────────
+
+type CardTagsProps = {
+  skills: { skill_needed: string }[] | undefined
+  level: string | undefined
+}
+
+function CardTags({ skills, level }: CardTagsProps) {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '14px' }}>
+      {skills?.slice(0, 2).map(skill => (
+        <span key={skill.skill_needed} style={TAG_STYLE}>
+          {skill.skill_needed}
+        </span>
+      ))}
+
+      {/* Show overflow count if more than 2 skills */}
+      {skills && skills.length > 2 && (
+        <span style={{ ...TAG_STYLE, color: colors.text.muted }}>
+          +{skills.length - 2} more
+        </span>
+      )}
+
+      {/* Level badge */}
+      {level && (
+        <span style={{ ...TAG_STYLE, color: colors.text.muted }}>
+          {level}
+        </span>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────
+// Sub-component: CardFooter
+// ─────────────────────────────────────────
+
+type CardFooterProps = {
+  project: Project
+  isOwner: boolean
+  interestStatus: InterestStatus
+  isFollowing: boolean
+  followLoading: boolean
+  onInterest: () => void
+  onFollow: (e: React.MouseEvent) => void
+}
+
+function CardFooter({
+  project,
+  isOwner,
+  interestStatus,
+  isFollowing,
+  followLoading,
+  onInterest,
+  onFollow,
+}: CardFooterProps) {
+  const memberCount = project.project_members?.length ?? 0
+
+  // Interest button style changes based on status
+  function getInterestStyle() {
+    switch (interestStatus) {
+      case 'sent':    return { backgroundColor: colors.status.successDim, color: colors.status.success, border: `0.5px solid rgba(16,185,129,0.25)`, cursor: 'default' as const }
+      case 'error':   return { backgroundColor: colors.status.dangerDim,  color: colors.status.danger,  border: `0.5px solid rgba(239,68,68,0.25)`,  cursor: 'pointer' as const }
+      case 'loading': return { backgroundColor: colors.accent.tealDim,    color: colors.accent.tealText, border: `0.5px solid ${colors.accent.tealBorder}`, cursor: 'not-allowed' as const, opacity: 0.6 }
+      default:        return { backgroundColor: colors.accent.tealDim,    color: colors.accent.tealText, border: `0.5px solid ${colors.accent.tealBorder}`, cursor: 'pointer' as const }
+    }
+  }
+
+  function getInterestLabel() {
+    switch (interestStatus) {
+      case 'loading': return 'Sending...'
+      case 'sent':    return '✓ Sent'
+      case 'error':   return 'Try again'
+      default:        return "I'm interested"
+    }
+  }
+
+  return (
+    <div style={{
+      marginTop: 'auto',
+      paddingTop: '10px',
+      borderTop: `0.5px solid ${colors.border.default}`,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px',
+    }}>
+      {/* Row 1 — meta + interest button */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+          {/* Rating or timestamp */}
+          <span style={{ fontSize: fontSize.xs, color: colors.text.muted, flexShrink: 0 }}>
+            ⭐ {project.profiles?.avg_rating
+              ? project.profiles.avg_rating.toFixed(1)
+              : getTimeLabel(project.created_at)
+            }
+          </span>
+
+          {/* Duration */}
+          {project.duration && (
+            <span style={{ fontSize: fontSize.xs, color: colors.text.muted, flexShrink: 0 }}>
+              {project.duration}
+            </span>
+          )}
+
+          {/* Spots — hidden on small screens */}
+          {project.spots && (
+            <span
+              className="hidden lg:inline"
+              style={{ fontSize: fontSize.xs, color: colors.text.muted }}
+            >
+              {project.spots} {project.spots === 1 ? 'spot' : 'spots'}
+            </span>
+          )}
+        </div>
+
+        {/* Interest button or "Your project" badge */}
+        {!isOwner ? (
+          <button
+            onClick={e => {
+              e.preventDefault()
+              e.stopPropagation()
+              onInterest()
+            }}
+            disabled={interestStatus === 'loading' || interestStatus === 'sent'}
+            style={{
+              ...getInterestStyle(),
+              borderRadius: radius.lg,
+              fontSize: fontSize.xs,
+              fontWeight: 500,
+              padding: '4px 10px',
+              flexShrink: 0,
+              whiteSpace: 'nowrap' as const,
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => {
+              if (interestStatus === 'idle') {
+                (e.currentTarget as HTMLElement).style.backgroundColor = colors.accent.teal
+                ;(e.currentTarget as HTMLElement).style.color = '#ffffff'
+              }
+            }}
+            onMouseLeave={e => {
+              if (interestStatus === 'idle') {
+                (e.currentTarget as HTMLElement).style.backgroundColor = colors.accent.tealDim
+                ;(e.currentTarget as HTMLElement).style.color = colors.accent.tealText
+              }
+            }}
+          >
+            {getInterestLabel()}
+          </button>
+        ) : (
+          <span style={{
+            fontSize: fontSize.xs,
+            color: colors.text.muted,
+            backgroundColor: colors.bg.hover,
+            border: `0.5px solid ${colors.border.default}`,
+            borderRadius: radius.lg,
+            padding: '4px 10px',
+            flexShrink: 0,
+          }}>
+            Your project
+          </span>
+        )}
+      </div>
+
+      {/* Row 2 — member count + follow button */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
+          {memberCount} {memberCount === 1 ? 'member' : 'members'}
+        </span>
+
+        {/* Follow button — hidden for owner */}
+        {!isOwner && (
+          <button
+            onClick={e => {
+              e.preventDefault()
+              e.stopPropagation()
+              onFollow(e)
+            }}
+            disabled={followLoading}
+            style={{
+              fontSize: fontSize.xs,
+              fontWeight: 500,
+              padding: '3px 9px',
+              borderRadius: radius.lg,
+              flexShrink: 0,
+              whiteSpace: 'nowrap' as const,
+              transition: 'all 0.15s',
+              cursor: followLoading ? 'not-allowed' : 'pointer',
+              opacity: followLoading ? 0.6 : 1,
+              backgroundColor: isFollowing ? colors.accent.indigoDim : 'transparent',
+              color: isFollowing ? colors.accent.indigoText : colors.text.muted,
+              border: isFollowing
+                ? `0.5px solid ${colors.accent.indigoBorder}`
+                : `0.5px solid ${colors.border.default}`,
+            }}
+            onMouseEnter={e => {
+              if (!followLoading && !isFollowing) {
+                (e.currentTarget as HTMLElement).style.color = colors.text.secondary
+                ;(e.currentTarget as HTMLElement).style.borderColor = colors.border.hover
+              }
+            }}
+            onMouseLeave={e => {
+              if (!isFollowing) {
+                (e.currentTarget as HTMLElement).style.color = colors.text.muted
+                ;(e.currentTarget as HTMLElement).style.borderColor = colors.border.default
+              }
+            }}
+          >
+            {followLoading ? '...' : isFollowing ? '✓ Following' : '+ Follow'}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────
+// Main component: ProjectCard
+// ─────────────────────────────────────────
+
+export default function ProjectCard({ project, currentUserId }: Props) {
+  const router = useRouter()
+  const supabase = createBrowserSupabaseClient()
+
+  const [interestStatus, setInterestStatus] = useState<InterestStatus>('idle')
+  const [showModal, setShowModal] = useState(false)
+  const [userContact, setUserContact] = useState<{ type: string | null; value: string | null }>({
+    type: null, value: null,
+  })
   const [isFollowing, setIsFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
 
-  // Fetch le contact préféré de l'utilisateur connecté
-  // pour pré-remplir le message du modal
+  const isOwner = currentUserId === project.owner_id
+
+  // Fetch user's preferred contact to pre-fill the interest modal
   useEffect(() => {
     if (!currentUserId) return
-
     supabase
       .from('profiles')
       .select('preferred_contact_type, preferred_contact_value')
       .eq('id', currentUserId)
       .single()
       .then(({ data }) => {
-        if (data) {
-          setUserContact({
-            type: data.preferred_contact_type,
-            value: data.preferred_contact_value,
-          })
-        }
+        if (data) setUserContact({ type: data.preferred_contact_type, value: data.preferred_contact_value })
       })
   }, [currentUserId])
 
-  // Vérifie si l'utilisateur suit déjà ce projet au chargement
+  // Check if the user is already following this project
   useEffect(() => {
     if (!currentUserId) return
-
     supabase
       .from('project_followers')
       .select('id')
       .eq('project_id', project.id)
       .eq('user_id', currentUserId)
       .single()
-      .then(({ data }) => {
-        if (data) setIsFollowing(true)
-      })
+      .then(({ data }) => { if (data) setIsFollowing(true) })
   }, [currentUserId])
 
-  // Ouvre le modal au lieu d'envoyer directement
+  // Compute activity signal from latest project update
+  function getActivitySignal(): string | null {
+    const updates = project.project_updates
+    if (!updates?.length) return null
+
+    const latest = updates.reduce((a, b) =>
+      new Date(a.created_at) > new Date(b.created_at) ? a : b
+    )
+    const diffHours = Math.floor((Date.now() - new Date(latest.created_at).getTime()) / 3600000)
+
+    if (diffHours < 24) return 'Active today'
+    if (diffHours < 48) return '1d ago'
+    const diffDays = Math.floor(diffHours / 24)
+    if (diffDays < 7)  return `${diffDays}d ago`
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`
+    return null
+  }
+
+  // Open interest modal — redirect to login if not authenticated
   function handleInterest() {
-    if (!currentUserId) {
-      router.push('/login')
-      return
-    }
+    if (!currentUserId) { router.push('/login'); return }
     setShowModal(true)
   }
 
-  // Envoie la demande avec le message personnalisé
+  // Submit interest request with personalized message
   async function handleConfirmInterest(message: string) {
-    setStatus('loading')
+    setInterestStatus('loading')
     try {
-      const { data,error } = await supabase
+      const { data, error } = await supabase
         .from('connections')
-        .insert({
-          sender_id: currentUserId,
-          project_id: project.id,
-          message: message,
-          status: 'pending',
-        })
+        .insert({ sender_id: currentUserId, project_id: project.id, message, status: 'pending' })
         .select()
         .single()
 
       if (error?.code === '23505') {
-        setStatus('sent')
+        setInterestStatus('sent')
       } else if (error) {
         throw error
       } else {
-        setStatus('sent')
-        // On envoie la notification email au owner
-        // On ne bloque pas l'UI si l'email échoue
+        setInterestStatus('sent')
+        // Send email notification — non-blocking
         fetch('/api/notify/interest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -130,31 +420,23 @@ export default function ProjectCard({ project, currentUserId }: Props) {
         }).catch(console.error)
       }
     } catch {
-      setStatus('error')
+      setInterestStatus('error')
     } finally {
       setShowModal(false)
     }
   }
 
-  // Suivre ou ne plus suivre depuis la carte
+  // Toggle follow/unfollow — optimistic update
   async function handleFollow() {
-    if (!currentUserId) {
-      router.push('/login')
-      return
-    }
-
+    if (!currentUserId) { router.push('/login'); return }
     setFollowLoading(true)
 
     if (isFollowing) {
-      await supabase
-        .from('project_followers')
-        .delete()
-        .eq('project_id', project.id)
-        .eq('user_id', currentUserId)
+      await supabase.from('project_followers').delete()
+        .eq('project_id', project.id).eq('user_id', currentUserId)
       setIsFollowing(false)
     } else {
-      await supabase
-        .from('project_followers')
+      await supabase.from('project_followers')
         .insert({ project_id: project.id, user_id: currentUserId })
       setIsFollowing(true)
     }
@@ -162,387 +444,86 @@ export default function ProjectCard({ project, currentUserId }: Props) {
     setFollowLoading(false)
   }
 
-  function getButtonStyle() {
-    switch (status) {
-      case 'sent':    return { backgroundColor: 'rgba(16,185,129,0.14)', color: '#6EE7B7', border: '1px solid rgba(16,185,129,0.28)', cursor: 'default' }
-      case 'error':   return { backgroundColor: 'rgba(239,68,68,0.14)', color: '#FCA5A5', border: '1px solid rgba(239,68,68,0.28)', cursor: 'pointer' }
-      case 'loading': return { backgroundColor: 'rgba(13,148,136,0.14)', color: '#5EEAD4', border: '1px solid rgba(13,148,136,0.28)', cursor: 'not-allowed', opacity: 0.6 }
-      default:        return { backgroundColor: 'rgba(13,148,136,0.14)', color: '#5EEAD4', border: '1px solid rgba(13,148,136,0.28)', cursor: 'pointer' }
-    }
-  }
+  // ─────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────
 
-  function getButtonLabel() {
-    switch (status) {
-      case 'loading': return 'Sending...'
-      case 'sent':    return '✓ Request sent'
-      case 'error':   return 'Try again'
-      default:        return "I'm interested"
-    }
-  }
-
-  // Calcule le signal d'activité du projet
-  // Basé sur le dernier update posté par un membre
-  function getActivitySignal(): string | null {
-    const updates = project.project_updates
-    if (!updates || updates.length === 0) return null
-
-    // On prend le plus récent — le premier dans la liste
-    // car on fetch avec order created_at desc
-    const latest = updates.reduce((a, b) =>
-      new Date(a.created_at) > new Date(b.created_at) ? a : b
-    )
-
-    const diffHours = Math.floor(
-      (Date.now() - new Date(latest.created_at).getTime()) / (1000 * 60 * 60)
-    )
-
-    if (diffHours < 24) return 'Active today'
-    if (diffHours < 48) return 'Active yesterday'
-
-    const diffDays = Math.floor(diffHours / 24)
-    if (diffDays < 7) return `Active ${diffDays}d ago`
-    if (diffDays < 30) return `Active ${Math.floor(diffDays / 7)}w ago`
-    return null // Trop inactif — on n'affiche rien
-  }
-
-  const activitySignal = getActivitySignal()
-  const memberCount = project.project_members?.length ?? 0
-
-  // Rectangle unique, pas de double encapsulation
   return (
     <>
-     <Link href={`/projects/${project.id}`} className="block h-full">
+      <Link 
+        href={`/projects/${project.id}`} 
+        onClick={() => sessionStorage.setItem('projectDetailFrom', '/')}
+        style={{ display: 'block', height: '100%', textDecoration: 'none' }}
+      >
         <div
-          className="  relative
-                      rounded-2xl
-                      p-5
-                      flex flex-col
-                      h-full
-                      cursor-pointer
-                      transition-all
-                      duration-300
-                      overflow-hidden
-
-                      group
-                      hover:border-teal-500/40
-                      hover:shadow-[0_10px_40px_rgba(13,148,136,0.15)]
-                      hover:-translate-y-1"
           style={{
-            backgroundColor: '#161B28',
-            border: '1px solid #1E2840',
-            boxShadow: '0 2px 16px rgba(0,0,0,0.25)',
+            backgroundColor: colors.bg.elevated,
+            border: `0.5px solid ${colors.border.default}`,
+            borderRadius: radius.xxl,
+            padding: '14px',
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100%',
+            cursor: 'pointer',
+            transition: 'border-color 0.15s',
           }}
-          onMouseEnter={e => (e.currentTarget.style.borderColor = '#0D9488')}
-          onMouseLeave={e => (e.currentTarget.style.borderColor = '#1E2840')}
+          onMouseEnter={e => (e.currentTarget.style.borderColor = colors.border.hover)}
+          onMouseLeave={e => (e.currentTarget.style.borderColor = colors.border.default)}
         >
-          {/* ========================================================= */}
-          {/* HOVER GLOW BLOBS (PURE VISUAL DEPTH LAYER) */}
-          {/* ========================================================= */}
+          {/* Author row + activity signal */}
+          <CardAuthor
+            name={project.profiles?.name}
+            country={project.profiles?.country}
+            activitySignal={getActivitySignal()}
+          />
 
-          <div className="
-            absolute inset-0
-            opacity-0
-            group-hover:opacity-100
-            transition-opacity
-            duration-500
-            pointer-events-none
-          ">
-
-            {/* top-right glow */}
-            <div className="
-              absolute
-              -top-20
-              -right-20
-              w-64 h-64
-              bg-teal-500/10
-              blur-3xl
-              rounded-full
-            " />
-
-            {/* bottom-left glow */}
-            <div className="
-              absolute
-              -bottom-20
-              -left-20
-              w-64 h-64
-              bg-cyan-500/10
-              blur-3xl
-              rounded-full
-            " />
-
-          </div>
-
-          {/* ========================================================= */}
-          {/* ACTIVITY SIGNAL (TOP RIGHT - SINGLE SOURCE OF TRUTH) */}
-          {/* ========================================================= */}
-
-          {activitySignal && (
-            <div className="
-              absolute top-4 right-4 z-20
-              flex items-center gap-2
-            ">
-
-              {/* pulsing dot */}
-              <span className="relative flex h-2 w-2">
-
-                {/* pulse ring */}
-                <span className="
-                  animate-ping absolute inline-flex h-full w-full
-                  rounded-full bg-emerald-400 opacity-60
-                " />
-
-                {/* core dot */}
-                <span className="
-                  relative inline-flex rounded-full h-2 w-2 bg-emerald-400
-                " />
-
-              </span>
-
-              {/* label */}
-              <span className="
-                text-[10px]
-                font-medium
-                text-emerald-300/90
-                tracking-wide
-              ">
-                {activitySignal}
-              </span>
-
-            </div>
-          )}
-
-
-
-          {/* En-tête : auteur + pays */}
-          <div className="flex items-center gap-3 mb-4">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #0D9488, #0EA5E9)' }}
-            >
-              {initials}
-            </div>
-            <div>
-              <p className="text-sm font-medium" style={{ color: '#F1F5F9' }}>
-                {project.profiles?.name ?? 'Anonymous'}
-              </p>
-              {project.profiles?.country && (
-                <p className="text-xs" style={{ color: '#475569' }}>
-                  {project.profiles.country}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Titre */}
-          <h3 className="font-semibold text-base mb-2 leading-snug" style={{ color: '#F1F5F9' }}>
+          {/* Title */}
+          <h3 style={{
+            fontSize: fontSize.md,
+            fontWeight: 500,
+            color: colors.text.primary,
+            letterSpacing: '-0.01em',
+            marginBottom: '6px',
+            lineHeight: 1.4,
+          }}>
             {project.title}
           </h3>
 
           {/* Description */}
-          <p className="text-sm leading-relaxed line-clamp-3 flex-1 mb-4" style={{ color: '#64748B' }}>
+          <p style={{
+            fontSize: fontSize.sm,
+            color: colors.text.muted,
+            lineHeight: 1.6,
+            marginBottom: '12px',
+            flex: 1,
+            display: '-webkit-box',
+            WebkitLineClamp: 3,
+            WebkitBoxOrient: 'vertical' as const,
+            overflow: 'hidden',
+          }}>
             {project.problem}
           </p>
 
-          {/* Skills + niveau
-          On affiche seulement les 2 premières skills
-          et un badge "+N more" si il y en a plus */}
-          <div className="flex flex-wrap gap-2 mb-5">
-            {project.project_skills?.slice(0, 2).map(skill => {
-              const colors = skillColors[skill.skill_needed] ?? {
-                bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
-              }
-              return (
-                <span
-                  key={skill.skill_needed}
-                  className="text-xs px-2.5 py-0.5 rounded-md font-medium"
-                  style={{ backgroundColor: colors.bg, color: colors.text }}
-                >
-                  {skill.skill_needed}
-                </span>
-              )
-            })}
-
-            {/* Badge "+N more" si plus de 2 skills */}
-            {project.project_skills && project.project_skills.length > 2 && (
-              <span
-                className="text-xs px-2.5 py-0.5 rounded-md font-medium"
-                style={{
-                  backgroundColor: 'rgba(255,255,255,0.07)',
-                  color: '#64748B',
-                  border: '1px solid #1E2840',
-                }}
-              >
-                +{project.project_skills.length - 2} more
-              </span>
-            )}
-
-            {/* Badge niveau — toujours affiché */}
-            {project.level && (() => {
-              const colors = levelColors[project.level] ?? {
-                bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
-              }
-              return (
-                <span
-                  className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"
-                  style={{ backgroundColor: colors.bg, color: colors.text }}
-                >
-                  {project.level}
-                </span>
-              )
-            })()}
-          </div>
+          {/* Tags */}
+          <CardTags
+            skills={project.project_skills}
+            level={project.level}
+          />
 
           {/* Footer */}
-          <div
-            className="flex flex-col gap-2 pt-3 mt-auto border-t border-white/10"
-            style={{ borderTop: '1px solid #1E2840' }}
-          >
-            {/* Ligne 1 : rating + duration + spots + bouton */}
-            <div className="flex items-center justify-between gap-2">
-
-              {/* Groupe gauche — infos condensées */}
-              <div className="flex items-center gap-2 min-w-0">
-
-                {/* Rating ou timestamp */}
-                <div className="flex items-center gap-1 text-xs flex-shrink-0" style={{ color: '#475569' }}>
-                  <span>⭐</span>
-                  <span>
-                    {project.profiles?.avg_rating
-                      ? project.profiles.avg_rating.toFixed(1)
-                      : getTimeLabel(project.created_at)
-                    }
-                  </span>
-                </div>
-
-                {/* Duration */}
-                {project.duration && (
-                  <div className="flex items-center gap-1 text-xs flex-shrink-0" style={{ color: '#475569' }}>
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {project.duration}
-                  </div>
-                )}
-
-                {/* Spots — caché sur mobile, visible sur sm+ */}
-                {project.spots && (
-                  <div className="hidden lg:flex items-center gap-1 text-xs flex-shrink-0" style={{ color: '#475569' }}>
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    {project.spots} {project.spots === 1 ? 'spot' : 'spots'}
-                  </div>
-                )}
-              </div>
-
-              {/* Bouton — flex-shrink-0 + whitespace-nowrap garantissent
-                  qu'il ne wrap jamais et ne rétrécit jamais */}
-              {!isOwner && (
-                <button
-                    onClick={e => {
-                      // Empêche la navigation vers la page détail
-                      e.preventDefault()
-                      e.stopPropagation()
-                      handleInterest()
-                    }}
-                    disabled={status === 'loading' || status === 'sent'}
-                    className="text-xs px-3.5 py-1.5 rounded-lg font-medium flex-shrink-0 whitespace-nowrap"
-                    style={getButtonStyle()}
-                    onMouseEnter={e => {
-                    // Hover uniquement sur l'état idle
-                    if (status === 'idle') {
-                      (e.currentTarget as HTMLElement).style.backgroundColor = '#0D9488'
-                      ;(e.currentTarget as HTMLElement).style.color = '#ffffff'
-                    }
-                    }}
-                    onMouseLeave={e => {
-                      // Remet le style original en quittant
-                      if (status === 'idle') {
-                        (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(13,148,136,0.14)'
-                        ;(e.currentTarget as HTMLElement).style.color = '#5EEAD4'
-                      }
-                  }}
-                  >
-                    {getButtonLabel()}
-                </button>
-              )}
-
-              {isOwner && (
-                <span
-                  className="text-xs px-3 py-1.5 rounded-lg font-medium flex-shrink-0 whitespace-nowrap"
-                  style={{
-                    backgroundColor: 'rgba(99,102,241,0.14)',
-                    color: '#A5B4FC',
-                    border: '1px solid rgba(99,102,241,0.28)',
-                  }}
-                >
-                  Your project
-                </span>
-              )}
-            </div>
-
-            {/* Ligne 2 : members + follow button
-                Toujours affichée pour garder toutes les cartes alignées */}
-            <div className="flex items-center justify-between">
-
-              {/* Nombre de membres — toujours affiché même si 0 */}
-              <div className="flex items-center gap-1 text-xs" style={{ color: '#475569' }}>
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                {memberCount} {memberCount === 0 || memberCount === 1 ? 'member' : 'members'}
-              </div>
-
-              {/* Bouton Follow — caché pour le owner
-                  Petit, discret, ne rivalise pas avec "I'm interested" */}
-              {!isOwner && (
-                <button
-                  onClick={e => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    handleFollow()
-                  }}
-                  disabled={followLoading}
-                  className="text-xs px-3 py-1.5 rounded-lg font-medium flex-shrink-0 whitespace-nowrap transition-all"
-                  style={{
-                    backgroundColor: isFollowing
-                      ? 'rgba(99,102,241,0.14)'
-                      : 'rgba(255,255,255,0.05)',
-                    color: isFollowing ? '#A5B4FC' : '#64748B',
-                    border: isFollowing
-                      ? '1px solid rgba(99,102,241,0.28)'
-                      : '1px solid #1E2840',
-                    opacity: followLoading ? 0.6 : 1,
-                    cursor: followLoading ? 'not-allowed' : 'pointer',
-                  }}
-                  onMouseEnter={e => {
-                    if (!followLoading && !isFollowing) {
-                      // Sur hover — texte blanc
-                      (e.currentTarget as HTMLElement).style.color = '#F1F5F9'
-                      ;(e.currentTarget as HTMLElement).style.borderColor = '#475569'
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    if (!isFollowing) {
-                      (e.currentTarget as HTMLElement).style.color = '#64748B'
-                      ;(e.currentTarget as HTMLElement).style.borderColor = '#1E2840'
-                    }
-                  }}
-                >
-                  {followLoading ? '...' : isFollowing ? '✓ Following' : '+ Follow'}
-                </button>
-              )}
-            </div>
-
-          </div>
-
+          <CardFooter
+            project={project}
+            isOwner={isOwner}
+            interestStatus={interestStatus}
+            isFollowing={isFollowing}
+            followLoading={followLoading}
+            onInterest={handleInterest}
+            onFollow={handleFollow}
+          />
         </div>
       </Link>
 
-      {/* Modal d'intérêt — rendu en dehors du Link pour éviter les conflits de clics */ }
+      {/* Interest modal — outside Link to prevent navigation on click */}
       {showModal && (
         <InterestModal
           projectTitle={project.title}
@@ -550,7 +531,7 @@ export default function ProjectCard({ project, currentUserId }: Props) {
           preferredContactValue={userContact.value}
           onConfirm={handleConfirmInterest}
           onCancel={() => setShowModal(false)}
-          loading={status === 'loading'}
+          loading={interestStatus === 'loading'}
         />
       )}
     </>

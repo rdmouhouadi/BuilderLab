@@ -1,6 +1,6 @@
 // app/post/page.tsx
-// Page pour créer un nouveau projet
-// 'use client' car on utilise useState pour gérer le formulaire
+// Page to create a new project.
+// 'use client' — uses useState to manage the form.
 'use client'
 
 import { useState } from 'react'
@@ -8,61 +8,102 @@ import { useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import PageTransition from '@/components/PageTransition'
 import { SKILLS, DOMAINS, LEVELS, DURATIONS } from '@/lib/constants'
+import { colors, radius, fontSize, styles } from '@/lib/design-tokens'
+
+// ─────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────
+
+type FormState = {
+  title: string
+  problem: string
+  level: string
+  domain: string
+  duration: string
+  spots: string
+  website_url: string
+  github_url: string
+}
+
+// ─────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────
+
+const inputStyle = {
+  width: '100%',
+  backgroundColor: colors.bg.elevated,
+  border: `0.5px solid ${colors.border.default}`,
+  borderRadius: radius.lg,
+  color: colors.text.primary,
+  fontSize: fontSize.sm,
+  padding: '8px 12px',
+  outline: 'none',
+  fontFamily: 'inherit',
+  transition: 'border-color 0.15s',
+}
+
+const labelStyle = {
+  fontSize: fontSize.xs,
+  color: colors.text.muted,
+  marginBottom: '4px',
+  display: 'block' as const,
+}
+
+const requiredMark = (
+  <span style={{ color: colors.accent.tealText, marginLeft: '2px' }}>*</span>
+)
+
+// ─────────────────────────────────────────
+// Main component
+// ─────────────────────────────────────────
 
 export default function PostProjectPage() {
   const router = useRouter()
   const supabase = createBrowserSupabaseClient()
 
-  // État du formulaire — un objet qui contient tous les champs
-  const [form, setForm] = useState({
-    title: '',
-    problem: '',
-    level: '',
-    domain: '',
-    duration: '', // Durée estimée du projet
-    spots: '',    // Nombre de collaborateurs recherchés
+  const [form, setForm] = useState<FormState>({
+    title:       '',
+    problem:     '',
+    level:       '',
+    domain:      '',
+    duration:    '',
+    spots:       '',
+    website_url: '',
+    github_url:  '',
   })
 
-  // Les skills recherchées sont un tableau séparé
-  // car un projet peut en avoir plusieurs
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
+  const [loading, setLoading]               = useState(false)
+  const [error, setError]                   = useState<string | null>(null)
 
-  // État de chargement — pour désactiver le bouton pendant l'envoi
-  const [loading, setLoading] = useState(false)
+  // Focus / blur border handlers
+  const onFocus = (e: React.FocusEvent<HTMLElement>) =>
+    (e.currentTarget as HTMLElement).style.borderColor = colors.accent.teal
+  const onBlur  = (e: React.FocusEvent<HTMLElement>) =>
+    (e.currentTarget as HTMLElement).style.borderColor = colors.border.default
 
-  // Message d'erreur à afficher si quelque chose échoue
-  const [error, setError] = useState<string | null>(null)
-
-  // Met à jour un champ du formulaire
-  // On utilise le nom du champ pour savoir lequel mettre à jour
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
-  // Ajoute ou retire une skill de la sélection
-  // Si elle est déjà sélectionnée, on la retire — sinon on l'ajoute
+  // Toggle a skill in/out of the selection
   function toggleSkill(skill: string) {
     setSelectedSkills(prev =>
-      prev.includes(skill)
-        ? prev.filter(s => s !== skill)
-        : [...prev, skill]
+      prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
     )
   }
 
-  // Soumission du formulaire
   async function handleSubmit(e: React.FormEvent) {
-    // Empêche le rechargement de la page par défaut
     e.preventDefault()
     setError(null)
 
-    // Validation — les champs obligatoires doivent être remplis
+    // Validation
     if (!form.title || !form.problem || !form.level || !form.domain) {
-      setError('All fields are mandatory.')
+      setError('Title, problem, domain and level are required.')
       return
     }
-
     if (selectedSkills.length === 0) {
       setError('Select at least one skill.')
       return
@@ -71,299 +112,280 @@ export default function PostProjectPage() {
     setLoading(true)
 
     try {
-      // On récupère l'utilisateur connecté
       const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/login'); return }
 
-      if (!user) {
-        // Ne devrait pas arriver grâce au middleware
-        // mais on gère le cas par sécurité
-        router.push('/login')
-        return
-      }
-
-      // Étape 1 — On insère le projet dans la table projects
+      // Step 1 — Insert the project
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
-          owner_id: user.id,
-          title: form.title,
-          problem: form.problem,
-          level: form.level,
-          domain: form.domain,
-          // parseInt retourne NaN si vide — on stocke null dans ce cas
-          spots: form.spots ? parseInt(form.spots) : null,
-          duration: form.duration || null,
-          status: 'open',
+          owner_id:    user.id,
+          title:       form.title,
+          problem:     form.problem,
+          level:       form.level,
+          domain:      form.domain,
+          spots:       form.spots    ? parseInt(form.spots) : null,
+          duration:    form.duration || null,
+          website_url: form.website_url.trim() || null,
+          github_url:  form.github_url.trim()  || null,
+          status:      'open',
         })
-        // .select() retourne le projet créé avec son id généré
         .select()
         .single()
 
       if (projectError) throw projectError
 
-      // Étape 2 — On insère les skills recherchées
-      // On crée un objet par skill avec le project_id
-      const skillsToInsert = selectedSkills.map(skill => ({
-        project_id: project.id,
-        skill_needed: skill,
-      }))
-
+      // Step 2 — Insert the required skills
       const { error: skillsError } = await supabase
         .from('project_skills')
-        .insert(skillsToInsert)
+        .insert(selectedSkills.map(skill => ({
+          project_id:   project.id,
+          skill_needed: skill,
+        })))
 
       if (skillsError) throw skillsError
 
-      // Tout s'est bien passé — on redirige vers le feed
       router.push('/')
 
     } catch (err: any) {
-      // On intercepte les erreurs connues et on affiche
-      // un message clair et humain à la place du message SQL brut
-
       if (err.message?.includes('projects_level_check')) {
-        setError('Please select a valid level (Beginner, Intermediate, or Advanced).')
-      } else if (err.message?.includes('project_skills')) {
-        setError('Something went wrong with the skills. Please try again.')
+        setError('Please select a valid level.')
       } else if (err.message?.includes('duplicate')) {
         setError('A project with this title already exists.')
       } else {
-        // Message générique pour toutes les autres erreurs
         setError('Something went wrong. Please check your inputs and try again.')
       }
+    } finally {
+      setLoading(false)
     }
   }
 
+  // ─────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────
+
   return (
     <PageTransition>
-      <main className="max-w-2xl mx-auto px-4 py-10">
+      <main style={{ maxWidth: '640px', margin: '0 auto', padding: '32px 16px' }}>
 
-        {/* En-tête */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold mb-2" style={{ color: '#F1F5F9' }}>
+        {/* Header */}
+        <div style={{ marginBottom: '28px' }}>
+          <h1 style={{
+            fontSize: fontSize.xl,
+            fontWeight: 500,
+            color: colors.text.primary,
+            letterSpacing: '-0.02em',
+            marginBottom: '4px',
+          }}>
             Post a project
           </h1>
-          <p className="text-sm" style={{ color: '#64748B' }}>
-            Describe your project and the skills needed.
+          <p style={{ fontSize: fontSize.sm, color: colors.text.muted }}>
+            Describe your project and the skills you're looking for.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-          {/* Project title */}
-          <div className="flex flex-col gap-2">
-            <label htmlFor="title" className="text-sm font-medium" style={{ color: '#94A3B8' }}>
-              Project title <span style={{ color: '#0D9488' }}>*</span>
-            </label>
+          {/* Title */}
+          <div>
+            <label style={labelStyle}>Project title {requiredMark}</label>
             <input
-              id="title"
-              name="title"
-              type="text"
-              placeholder="Ex: Nutritional Tracking App for Rural Areas"
-              value={form.title}
-              onChange={handleChange}
-              className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-colors"
-              style={{ backgroundColor: '#161B28', border: '1px solid #1E2840', color: '#F1F5F9' }}
-              onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-              onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
+              name="title" type="text"
+              placeholder="e.g. Nutritional tracking app for rural areas"
+              value={form.title} onChange={handleChange}
+              style={inputStyle} onFocus={onFocus} onBlur={onBlur}
             />
           </div>
 
-          {/* Problem description */}
-          <div className="flex flex-col gap-2">
-            <label htmlFor="problem" className="text-sm font-medium" style={{ color: '#94A3B8' }}>
-              Problem being solved <span style={{ color: '#0D9488' }}>*</span>
-            </label>
+          {/* Problem */}
+          <div>
+            <label style={labelStyle}>Problem being solved {requiredMark}</label>
             <textarea
-              id="problem"
               name="problem"
-              placeholder="Describe the problem your project aims to solve and what you are trying to build..."
-              value={form.problem}
-              onChange={handleChange}
+              placeholder="Describe the problem your project aims to solve and what you're building..."
+              value={form.problem} onChange={handleChange}
               rows={4}
-              className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-colors resize-none"
-              style={{ backgroundColor: '#161B28', border: '1px solid #1E2840', color: '#F1F5F9' }}
-              onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-              onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
+              style={{ ...inputStyle, resize: 'none' }}
+              onFocus={onFocus} onBlur={onBlur}
             />
           </div>
 
-          {/* Domain + Level sur la même ligne */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Domain + Level */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
 
             {/* Domain */}
-            <div className="flex flex-col gap-2">
-              <label htmlFor="domain" className="text-sm font-medium" style={{ color: '#94A3B8' }}>
-                Domain <span style={{ color: '#0D9488' }}>*</span>
-              </label>
+            <div>
+              <label style={labelStyle}>Domain {requiredMark}</label>
               <select
-                id="domain"
-                name="domain"
-                value={form.domain}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-colors"
+                name="domain" value={form.domain} onChange={handleChange}
                 style={{
-                  backgroundColor: '#161B28',
-                  border: '1px solid #1E2840',
-                  color: form.domain ? '#F1F5F9' : '#475569',
+                  ...inputStyle,
+                  color: form.domain ? colors.text.primary : colors.text.muted,
                 }}
-                onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
+                onFocus={onFocus} onBlur={onBlur}
               >
                 <option value="" disabled>Choose a domain</option>
-                {DOMAINS.map(domain => (
-                  <option key={domain} value={domain} style={{ backgroundColor: '#161B28' }}>
-                    {domain}
-                  </option>
+                {DOMAINS.map(d => (
+                  <option key={d} value={d} style={{ backgroundColor: colors.bg.elevated }}>{d}</option>
                 ))}
               </select>
             </div>
 
             {/* Level */}
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium" style={{ color: '#94A3B8' }}>
-                Expected level <span style={{ color: '#0D9488' }}>*</span>
-              </label>
-              <div className="flex gap-2">
-                {/* On utilise LEVELS depuis constants.ts
-                    pour avoir la même liste partout dans l'app */}
-                {LEVELS.map(level => (
-                  <button
-                    key={level}
-                    type="button"
-                    // type="button" est crucial — sans ça le bouton
-                    // soumet le formulaire au lieu de sélectionner le niveau
-                    onClick={() => setForm(prev => ({ ...prev, level }))}
-                    className="flex-1 py-2.5 rounded-xl text-xs font-medium capitalize transition-all"
-                    style={{
-                      backgroundColor: form.level === level
-                        ? 'rgba(13,148,136,0.2)'
-                        : '#161B28',
-                      border: form.level === level
-                        ? '1px solid #0D9488'
-                        : '1px solid #1E2840',
-                      color: form.level === level ? '#5EEAD4' : '#64748B',
-                    }}
-                  >
-                    {level}
-                  </button>
-                ))}
+            <div>
+              <label style={labelStyle}>Expected level {requiredMark}</label>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {LEVELS.map(level => {
+                  const isActive = form.level === level
+                  return (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => setForm(prev => ({ ...prev, level }))}
+                      style={{
+                        flex: 1,
+                        padding: '7px 4px',
+                        borderRadius: radius.lg,
+                        fontSize: fontSize.xs,
+                        fontWeight: isActive ? 500 : 400,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                        textTransform: 'capitalize',
+                        backgroundColor: isActive ? colors.accent.tealDim  : colors.bg.elevated,
+                        border:          isActive ? `0.5px solid ${colors.accent.tealBorder}` : `0.5px solid ${colors.border.default}`,
+                        color:           isActive ? colors.accent.tealText : colors.text.muted,
+                      }}
+                    >
+                      {level}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           </div>
 
-          {/* Duration + Spots sur la même ligne */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Duration + Spots */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
 
             {/* Duration */}
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium" style={{ color: '#94A3B8' }}>
-                Estimated duration
-              </label>
+            <div>
+              <label style={labelStyle}>Estimated duration</label>
               <select
-                name="duration"
-                value={form.duration}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-colors"
+                name="duration" value={form.duration} onChange={handleChange}
                 style={{
-                  backgroundColor: '#161B28',
-                  border: '1px solid #1E2840',
-                  color: form.duration ? '#F1F5F9' : '#475569',
+                  ...inputStyle,
+                  color: form.duration ? colors.text.primary : colors.text.muted,
                 }}
-                onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
+                onFocus={onFocus} onBlur={onBlur}
               >
                 <option value="">Select duration</option>
-                {/* On utilise DURATIONS depuis constants.ts */}
                 {DURATIONS.map(d => (
-                  <option key={d} value={d} style={{ backgroundColor: '#161B28' }}>
-                    {d}
-                  </option>
+                  <option key={d} value={d} style={{ backgroundColor: colors.bg.elevated }}>{d}</option>
                 ))}
               </select>
             </div>
 
             {/* Spots */}
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium" style={{ color: '#94A3B8' }}>
-                Spots needed
-              </label>
+            <div>
+              <label style={labelStyle}>Spots needed</label>
               <input
-                name="spots"
-                type="number"
-                min="1"
-                max="10"
-                placeholder="Ex: 3"
-                value={form.spots}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-colors"
-                style={{ backgroundColor: '#161B28', border: '1px solid #1E2840', color: '#F1F5F9' }}
-                onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
+                name="spots" type="number" min="1" max="10"
+                placeholder="e.g. 3"
+                value={form.spots} onChange={handleChange}
+                style={inputStyle} onFocus={onFocus} onBlur={onBlur}
               />
             </div>
           </div>
 
-          {/* Desired skills */}
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium" style={{ color: '#94A3B8' }}>
-              Desired skills <span style={{ color: '#0D9488' }}>*</span>
-              <span className="ml-2 text-xs" style={{ color: '#475569' }}>
-                (Multiple selections possible)
-              </span>
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {/* On utilise SKILLS depuis constants.ts
-                  pour avoir la même liste partout dans l'app */}
-              {SKILLS.map(skill => (
-                <button
-                  key={skill}
-                  type="button"
-                  onClick={() => toggleSkill(skill)}
-                  className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
-                  style={{
-                    backgroundColor: selectedSkills.includes(skill)
-                      ? 'rgba(13,148,136,0.2)'
-                      : '#161B28',
-                    border: selectedSkills.includes(skill)
-                      ? '1px solid #0D9488'
-                      : '1px solid #1E2840',
-                    color: selectedSkills.includes(skill) ? '#5EEAD4' : '#64748B',
-                  }}
-                >
-                  {skill}
-                </button>
-              ))}
+          {/* Website + GitHub */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+
+            {/* Website / Demo */}
+            <div>
+              <label style={labelStyle}>Demo / Website</label>
+              <input
+                name="website_url" type="url"
+                placeholder="https://your-demo.vercel.app"
+                value={form.website_url} onChange={handleChange}
+                style={inputStyle} onFocus={onFocus} onBlur={onBlur}
+              />
+            </div>
+
+            {/* GitHub */}
+            <div>
+              <label style={labelStyle}>GitHub repository</label>
+              <input
+                name="github_url" type="url"
+                placeholder="https://github.com/you/repo"
+                value={form.github_url} onChange={handleChange}
+                style={inputStyle} onFocus={onFocus} onBlur={onBlur}
+              />
             </div>
           </div>
 
-          {/* Message d'erreur */}
+          {/* Skills */}
+          <div>
+            <label style={{ ...labelStyle, marginBottom: '8px' }}>
+              Skills needed {requiredMark}
+              <span style={{ color: colors.text.muted, marginLeft: '6px', fontWeight: 400 }}>
+                (multiple selections allowed)
+              </span>
+            </label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {SKILLS.map(skill => {
+                const isActive = selectedSkills.includes(skill)
+                return (
+                  <button
+                    key={skill}
+                    type="button"
+                    onClick={() => toggleSkill(skill)}
+                    style={{
+                      fontSize: fontSize.xs,
+                      fontWeight: isActive ? 500 : 400,
+                      padding: '4px 10px',
+                      borderRadius: radius.lg,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      backgroundColor: isActive ? colors.accent.tealDim  : colors.bg.elevated,
+                      border:          isActive ? `0.5px solid ${colors.accent.tealBorder}` : `0.5px solid ${colors.border.default}`,
+                      color:           isActive ? colors.accent.tealText : colors.text.muted,
+                    }}
+                  >
+                    {skill}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Error message */}
           {error && (
-            <div
-              className="px-4 py-3 rounded-xl text-sm"
-              style={{
-                backgroundColor: 'rgba(239,68,68,0.1)',
-                border: '1px solid rgba(239,68,68,0.3)',
-                color: '#FCA5A5',
-              }}
-            >
+            <div style={{
+              padding: '10px 14px',
+              borderRadius: radius.lg,
+              backgroundColor: colors.status.dangerDim,
+              border: `0.5px solid rgba(239,68,68,0.25)`,
+              color: colors.status.danger,
+              fontSize: fontSize.sm,
+            }}>
               {error}
             </div>
           )}
 
-          {/* Publish button */}
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl font-medium text-sm transition-all"
             style={{
-              backgroundColor: loading ? '#0F766E' : '#0D9488',
-              color: 'white',
+              ...styles.btnPrimary,
+              width: '100%',
+              padding: '10px',
+              fontSize: fontSize.sm,
               opacity: loading ? 0.7 : 1,
               cursor: loading ? 'not-allowed' : 'pointer',
             }}
           >
-            {loading ? 'Publishing...' : 'Publish the project'}
+            {loading ? 'Publishing...' : 'Publish project'}
           </button>
 
         </form>

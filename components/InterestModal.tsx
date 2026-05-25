@@ -1,17 +1,20 @@
 // components/InterestModal.tsx
-// Modal qui s'affiche quand un utilisateur clique sur "I'm interested"
-// Permet d'envoyer un message personnalisé avec la demande de connexion
-// Le message est pré-rempli avec le contact préféré de l'utilisateur
+// Modal displayed when a user clicks "I'm interested".
+// Allows sending a personalized message with the connection request.
+// Pre-fills the message with the user's preferred contact if set.
 'use client'
 
 import { useState } from 'react'
 import { CONTACT_TYPES } from '@/lib/constants'
 import Link from 'next/link'
+import { colors, radius, fontSize, styles } from '@/lib/design-tokens'
+
+// ─────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────
 
 type Props = {
   projectTitle: string
-  // Contact préféré de l'utilisateur connecté
-  // pour pré-remplir le message automatiquement
   preferredContactType: string | null
   preferredContactValue: string | null
   onConfirm: (message: string) => void
@@ -19,17 +22,20 @@ type Props = {
   loading: boolean
 }
 
+// ─────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────
+
 export default function InterestModal({
   projectTitle,
   preferredContactType,
   preferredContactValue,
   onConfirm,
   onCancel,
-  loading,  
+  loading,
 }: Props) {
 
-  // On construit le message par défaut
-  // Si l'utilisateur a un contact préféré → on l'inclut automatiquement
+  // Pre-fill message with preferred contact if available
   const defaultMessage = preferredContactType && preferredContactValue
     ? `Hi! I'm interested in collaborating on your project. Feel free to reach me on ${
         CONTACT_TYPES[preferredContactType]?.label ?? preferredContactType
@@ -38,56 +44,66 @@ export default function InterestModal({
 
   const [message, setMessage] = useState(defaultMessage)
 
+  const isOverLimit = message.length > 300
+  const canSubmit   = !loading && message.trim() && !isOverLimit
+
   return (
-    // Overlay sombre
-    // e.stopPropagation() empêche le clic de remonter au Link parent
-    // et de naviguer vers la page détail du projet
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
-      onClick={e => {
-        e.stopPropagation()
-        e.preventDefault()
-        if (e.target === e.currentTarget) onCancel()
+      style={{
+        position: 'fixed', inset: 0, zIndex: 50,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '0 16px',
+        backgroundColor: 'rgba(0,0,0,0.6)',
       }}
+      onClick={e => { if (e.target === e.currentTarget) onCancel() }}
     >
       <div
-        className="w-full max-w-md rounded-2xl p-6"
-        style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-        // Stoppe aussi la propagation sur le contenu du modal
-        onClick={e => {
-          e.stopPropagation()
-          e.preventDefault()
+        style={{
+          width: '100%', maxWidth: '440px',
+          backgroundColor: colors.bg.elevated,
+          border: `0.5px solid ${colors.border.hover}`,
+          borderRadius: radius.xxl,
+          padding: '24px',
         }}
+        onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="mb-4">
-          <h2 className="text-base font-bold mb-1" style={{ color: '#F1F5F9' }}>
+        <div style={{ marginBottom: '16px' }}>
+          <h2 style={{
+            fontSize: fontSize.md,
+            fontWeight: 500,
+            color: colors.text.primary,
+            marginBottom: '4px',
+            letterSpacing: '-0.01em',
+          }}>
             Express your interest
           </h2>
-          <p className="text-xs" style={{ color: '#64748B' }}>
-            Send a message to the owner of{' '}
-            <span style={{ color: '#5EEAD4' }}>"{projectTitle}"</span>
+          <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
+            Sending a request to join{' '}
+            <span style={{ color: colors.accent.tealText }}>"{projectTitle}"</span>
           </p>
         </div>
 
-        {/* Hint si pas de contact préféré renseigné */}
+        {/* Hint — shown if no preferred contact is set */}
         {!preferredContactType && (
-          <div
-            className="flex items-start gap-2 px-3 py-2.5 rounded-xl mb-4 text-xs"
-            style={{
-              backgroundColor: 'rgba(245,158,11,0.1)',
-              border: '1px solid rgba(245,158,11,0.2)',
-              color: '#FCD34D',
-            }}
-          >
+          <div style={{
+            display: 'flex', alignItems: 'flex-start', gap: '8px',
+            padding: '10px 12px',
+            borderRadius: radius.lg,
+            marginBottom: '14px',
+            backgroundColor: colors.status.warningDim,
+            border: `0.5px solid rgba(245,158,11,0.25)`,
+            fontSize: fontSize.xs,
+            color: colors.status.warning,
+          }}>
             <span>💡</span>
             <span>
               Add your preferred contact in your{' '}
-              <Link href="/profile" 
-                    style={{ textDecoration: 'underline' }}
-                    onClick={e => e.stopPropagation()}
-                >
+              <Link
+                href="/profile"
+                style={{ color: colors.status.warning, textDecoration: 'underline' }}
+                onClick={e => e.stopPropagation()}
+              >
                 profile
               </Link>
               {' '}to pre-fill it automatically next time.
@@ -95,62 +111,72 @@ export default function InterestModal({
           </div>
         )}
 
-        {/* Textarea du message */}
+        {/* Message textarea */}
         <textarea
           value={message}
           onChange={e => setMessage(e.target.value)}
           rows={4}
           placeholder="Introduce yourself and explain why you're interested..."
-          className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none mb-2"
-          style={{
-            backgroundColor: '#0C1120',
-            border: '1px solid #1E2840',
-            color: '#F1F5F9',
-          }}
-          onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-          onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
           autoFocus
+          style={{
+            width: '100%',
+            backgroundColor: colors.bg.surface,
+            border: `0.5px solid ${colors.border.default}`,
+            borderRadius: radius.lg,
+            color: colors.text.primary,
+            fontSize: fontSize.sm,
+            padding: '10px 12px',
+            outline: 'none',
+            resize: 'none',
+            marginBottom: '8px',
+            fontFamily: 'inherit',
+            lineHeight: 1.6,
+          }}
+          onFocus={e => (e.currentTarget.style.borderColor = colors.accent.teal)}
+          onBlur={e => (e.currentTarget.style.borderColor = colors.border.default)}
         />
 
-        {/* Compteur de caractères */}
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-xs" style={{ color: '#475569' }}>
+        {/* Character count */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '16px',
+        }}>
+          <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
             Keep it short and genuine 👋
           </p>
-          <span
-            className="text-xs"
-            style={{ color: message.length > 300 ? '#FCA5A5' : '#475569' }}
-          >
+          <span style={{
+            fontSize: fontSize.xs,
+            color: isOverLimit ? colors.status.danger : colors.text.muted,
+          }}>
             {message.length}/300
           </span>
         </div>
 
-        {/* Boutons */}
-        <div className="flex gap-2">
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: '8px' }}>
           <button
-            onClick={e => {
-              e.stopPropagation()
-              e.preventDefault()
-              onCancel()
+            onClick={onCancel}
+            style={{
+              ...styles.btnGhost,
+              flex: 1,
+              padding: '8px',
+              fontSize: fontSize.sm,
             }}
-            className="flex-1 py-2.5 rounded-xl text-sm transition-colors"
-            style={{ color: '#64748B', border: '1px solid #1E2840' }}
           >
             Cancel
           </button>
           <button
-            onClick={e => {
-              e.stopPropagation()
-              e.preventDefault()
-              onConfirm(message)
-            }}
-            disabled={loading || !message.trim() || message.length > 300}
-            className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
+            onClick={() => canSubmit && onConfirm(message)}
+            disabled={!canSubmit}
             style={{
-              backgroundColor: '#0D9488',
-              color: 'white',
-              opacity: loading || !message.trim() ? 0.7 : 1,
-              cursor: loading || !message.trim() ? 'not-allowed' : 'pointer',
+              ...styles.btnPrimary,
+              flex: 1,
+              padding: '8px',
+              fontSize: fontSize.sm,
+              opacity: canSubmit ? 1 : 0.5,
+              cursor: canSubmit ? 'pointer' : 'not-allowed',
             }}
           >
             {loading ? 'Sending...' : 'Send request →'}

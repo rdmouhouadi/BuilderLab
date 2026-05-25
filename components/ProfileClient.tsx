@@ -1,15 +1,18 @@
 // components/ProfileClient.tsx
-// Gère l'affichage ET l'édition du profil
-// 'use client' car on utilise useState pour le mode édition
+// Displays and edits the authenticated user's profile.
+// Broken into sub-components: ProfileEditForm, ProjectRow, ProjectSection.
 'use client'
 
 import { useState } from 'react'
 import Link from 'next/link'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import { Project } from '@/types'
-// On importe les couleurs et constantes depuis lib/constants.ts
-// pour éviter de les redéfinir ici
-import { SKILL_COLORS, LEVEL_COLORS, CONTACT_TYPES } from '@/lib/constants'
+import { CONTACT_TYPES } from '@/lib/constants'
+import { colors, radius, fontSize, styles } from '@/lib/design-tokens'
+
+// ─────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────
 
 type Profile = {
   id: string
@@ -19,10 +22,25 @@ type Profile = {
   bio: string | null
   school: string | null
   major: string | null
+  builder_type: 'student' | 'bootcamp' | 'self_learner' | 'professional' | null
+  institution: string | null
+  program: string | null
   avg_rating: number
   ratings_count: number
   preferred_contact_type: string | null
   preferred_contact_value: string | null
+}
+
+type ProfileForm = {
+  first_name: string
+  last_name: string
+  country: string
+  bio: string
+  builder_type: string
+  institution: string
+  program: string
+  preferred_contact_type: string
+  preferred_contact_value: string
 }
 
 type Props = {
@@ -33,217 +51,418 @@ type Props = {
   email: string
 }
 
+// ─────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────
+
+const inputStyle = {
+  backgroundColor: colors.bg.surface,
+  border: `0.5px solid ${colors.border.default}`,
+  borderRadius: radius.lg,
+  color: colors.text.primary,
+  fontSize: fontSize.sm,
+  padding: '7px 10px',
+  outline: 'none',
+  width: '100%',
+  fontFamily: 'inherit',
+}
+
+const tagStyle = {
+  ...styles.tag,
+  fontSize: fontSize.xs,
+  padding: '2px 7px',
+}
+
+// ─────────────────────────────────────────
+// Sub-component: ProjectRow
+// ─────────────────────────────────────────
+
+function ProjectRow({ project, showOwner = false }: {
+  project: Project
+  showOwner?: boolean
+}) {
+  return (
+    <Link
+      href={`/projects/${project.id}`}
+      onClick={() => sessionStorage.setItem('projectDetailFrom', '/profile')}
+      style={{
+        display: 'block',
+        textDecoration: 'none',
+        backgroundColor: colors.bg.elevated,
+        border: `0.5px solid ${colors.border.default}`,
+        borderRadius: radius.xxl,
+        padding: '14px',
+        transition: 'border-color 0.15s',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.borderColor = colors.border.hover)}
+      onMouseLeave={e => (e.currentTarget.style.borderColor = colors.border.default)}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+        <h3 style={{ fontSize: fontSize.sm, fontWeight: 500, color: colors.text.primary }}>
+          {project.title}
+        </h3>
+        <span style={{
+          fontSize: fontSize.xs,
+          padding: '2px 7px',
+          borderRadius: radius.md,
+          backgroundColor: project.status === 'open' ? colors.status.successDim : colors.status.warningDim,
+          color: project.status === 'open' ? colors.status.success : colors.status.warning,
+          textTransform: 'capitalize',
+          flexShrink: 0,
+        }}>
+          {project.status}
+        </span>
+      </div>
+
+      {showOwner && (project.profiles as any)?.name && (
+        <p style={{ fontSize: fontSize.xs, color: colors.text.muted, marginBottom: '4px' }}>
+          by {(project.profiles as any).name}
+        </p>
+      )}
+
+      <p style={{
+        fontSize: fontSize.xs,
+        color: colors.text.muted,
+        lineHeight: 1.5,
+        marginBottom: '10px',
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical' as const,
+        overflow: 'hidden',
+      }}>
+        {project.problem}
+      </p>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+        {project.project_skills?.map(skill => (
+          <span key={skill.skill_needed} style={tagStyle}>{skill.skill_needed}</span>
+        ))}
+        {project.level && (
+          <span style={{ ...tagStyle, color: colors.text.muted, textTransform: 'capitalize' }}>
+            {project.level}
+          </span>
+        )}
+      </div>
+    </Link>
+  )
+}
+
+// ─────────────────────────────────────────
+// Sub-component: ProjectSection
+// ─────────────────────────────────────────
+
+function ProjectSection({
+  title, count, projects, showOwner = false, emptyMessage, emptyAction,
+}: {
+  title: string
+  count: number
+  projects: Project[]
+  showOwner?: boolean
+  emptyMessage: string
+  emptyAction?: React.ReactNode
+}) {
+  return (
+    <div style={{ marginBottom: '32px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+        <h2 style={{ fontSize: fontSize.base, fontWeight: 500, color: colors.text.secondary }}>
+          {title}
+        </h2>
+        <span style={{
+          fontSize: fontSize.xs,
+          padding: '1px 6px',
+          borderRadius: radius.md,
+          backgroundColor: colors.bg.hover,
+          color: colors.text.muted,
+          border: `0.5px solid ${colors.border.default}`,
+        }}>
+          {count}
+        </span>
+      </div>
+
+      {projects.length === 0 ? (
+        <div style={{
+          backgroundColor: colors.bg.elevated,
+          border: `0.5px solid ${colors.border.default}`,
+          borderRadius: radius.xxl,
+          padding: '32px',
+          textAlign: 'center',
+        }}>
+          <p style={{ fontSize: fontSize.sm, color: colors.text.muted, marginBottom: emptyAction ? '8px' : '0' }}>
+            {emptyMessage}
+          </p>
+          {emptyAction}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {projects.map(project => (
+            <ProjectRow key={project.id} project={project} showOwner={showOwner} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────
+// Sub-component: ProfileEditForm
+// ─────────────────────────────────────────
+
+const BUILDER_CONTEXT: Record<string, {
+  institution: string
+  program: string
+  institutionPlaceholder: string
+  programPlaceholder: string
+}> = {
+  student:      { institution: 'University / School',      program: 'Major / Specialty',       institutionPlaceholder: 'e.g. MIT, DSTI',           programPlaceholder: 'e.g. Computer Science' },
+  bootcamp:     { institution: 'Bootcamp name',            program: 'Program',                  institutionPlaceholder: 'e.g. Le Wagon, Ironhack',  programPlaceholder: 'e.g. Full-Stack Web' },
+  self_learner: { institution: 'Main learning platform',   program: 'Focus area',               institutionPlaceholder: 'e.g. Coursera, YouTube',   programPlaceholder: 'e.g. Machine Learning' },
+  professional: { institution: 'Company / Organization',   program: 'Domain switching to',      institutionPlaceholder: 'e.g. Google, Freelance',   programPlaceholder: 'e.g. Data Engineering' },
+}
+
+const BUILDER_TYPES = [
+  { value: 'student',      label: '🎓 Student' },
+  { value: 'bootcamp',     label: '⚡ Bootcamp' },
+  { value: 'self_learner', label: '📚 Self-learner' },
+  { value: 'professional', label: '💼 Professional' },
+]
+
+function ProfileEditForm({ form, onChange, onBuilderTypeChange }: {
+  form: ProfileForm
+  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void
+  onBuilderTypeChange: (type: string) => void
+}) {
+  const context = BUILDER_CONTEXT[form.builder_type] ?? BUILDER_CONTEXT.student
+
+  const focusStyle = (e: React.FocusEvent<HTMLElement>) =>
+    (e.currentTarget as HTMLElement).style.borderColor = colors.accent.teal
+  const blurStyle  = (e: React.FocusEvent<HTMLElement>) =>
+    (e.currentTarget as HTMLElement).style.borderColor = colors.border.default
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+      {/* Builder type selector */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <label style={{ fontSize: fontSize.xs, color: colors.text.muted }}>I am a...</label>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {BUILDER_TYPES.map(type => {
+            const isActive = form.builder_type === type.value
+            return (
+              <button
+                key={type.value}
+                type="button"
+                onClick={() => onBuilderTypeChange(type.value)}
+                style={{
+                  fontSize: fontSize.xs,
+                  fontWeight: isActive ? 500 : 400,
+                  padding: '5px 12px',
+                  borderRadius: radius.lg,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                  backgroundColor: isActive ? colors.accent.tealDim  : 'transparent',
+                  color:           isActive ? colors.accent.tealText : colors.text.muted,
+                  border:          isActive
+                    ? `0.5px solid ${colors.accent.tealBorder}`
+                    : `0.5px solid ${colors.border.default}`,
+                }}
+                onMouseEnter={e => {
+                  if (!isActive) {
+                    (e.currentTarget as HTMLElement).style.borderColor = colors.border.hover
+                    ;(e.currentTarget as HTMLElement).style.color = colors.text.secondary
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isActive) {
+                    (e.currentTarget as HTMLElement).style.borderColor = colors.border.default
+                    ;(e.currentTarget as HTMLElement).style.color = colors.text.muted
+                  }
+                }}
+              >
+                {type.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Grid fields */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <label style={{ fontSize: fontSize.xs, color: colors.text.muted }}>Country</label>
+          <input name="country" type="text" placeholder="e.g. France"
+            value={form.country} onChange={onChange}
+            style={inputStyle} onFocus={focusStyle} onBlur={blurStyle} />
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <label style={{ fontSize: fontSize.xs, color: colors.text.muted }}>{context.institution}</label>
+          <input name="institution" type="text" placeholder={context.institutionPlaceholder}
+            value={form.institution} onChange={onChange}
+            style={inputStyle} onFocus={focusStyle} onBlur={blurStyle} />
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <label style={{ fontSize: fontSize.xs, color: colors.text.muted }}>{context.program}</label>
+          <input name="program" type="text" placeholder={context.programPlaceholder}
+            value={form.program} onChange={onChange}
+            style={inputStyle} onFocus={focusStyle} onBlur={blurStyle} />
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <label style={{ fontSize: fontSize.xs, color: colors.text.muted }}>Preferred contact</label>
+          <select name="preferred_contact_type" value={form.preferred_contact_type}
+            onChange={onChange}
+            style={{ ...inputStyle, color: form.preferred_contact_type ? colors.text.primary : colors.text.muted }}
+            onFocus={focusStyle} onBlur={blurStyle}>
+            <option value="">Select a platform</option>
+            {Object.entries(CONTACT_TYPES).map(([key, val]) => (
+              <option key={key} value={key} style={{ backgroundColor: colors.bg.elevated }}>
+                {val.icon} {val.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {form.preferred_contact_type && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: '1 / -1' }}>
+            <label style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
+              {CONTACT_TYPES[form.preferred_contact_type]?.label} link or username
+            </label>
+            <input name="preferred_contact_value" type="text"
+              placeholder={form.preferred_contact_type === 'email' ? 'your@email.com' : 'https://...'}
+              value={form.preferred_contact_value} onChange={onChange}
+              style={inputStyle} onFocus={focusStyle} onBlur={blurStyle} />
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: '1 / -1' }}>
+          <label style={{ fontSize: fontSize.xs, color: colors.text.muted }}>Bio</label>
+          <textarea name="bio" rows={3}
+            placeholder="Tell others about yourself, your skills, and what you want to build..."
+            value={form.bio} onChange={onChange}
+            style={{ ...inputStyle, resize: 'none' }}
+            onFocus={focusStyle} onBlur={blurStyle} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────
+// Main component: ProfileClient
+// ─────────────────────────────────────────
+
 export default function ProfileClient({ profile, ownedProjects, joinedProjects, followedProjects, email }: Props) {
   const supabase = createBrowserSupabaseClient()
 
-  // Mode édition — true = formulaire visible, false = affichage
   const [editing, setEditing] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [saving,  setSaving]  = useState(false)
+  const [saved,   setSaved]   = useState(false)
 
-  // État du formulaire — initialisé avec les données du profil
-  const [form, setForm] = useState({
-    first_name: profile?.first_name ?? '',
-    last_name: profile?.last_name ?? '',
-    country: profile?.country ?? '',
-    bio: profile?.bio ?? '',
-    school: profile?.school ?? '',
-    major: profile?.major ?? '',
-    preferred_contact_type: profile?.preferred_contact_type ?? '',
+  const [form, setForm] = useState<ProfileForm>({
+    first_name:              profile?.first_name              ?? '',
+    last_name:               profile?.last_name               ?? '',
+    country:                 profile?.country                 ?? '',
+    bio:                     profile?.bio                     ?? '',
+    builder_type:            profile?.builder_type            ?? 'student',
+    institution:             profile?.institution ?? profile?.school ?? '',
+    program:                 profile?.program     ?? profile?.major  ?? '',
+    preferred_contact_type:  profile?.preferred_contact_type  ?? '',
     preferred_contact_value: profile?.preferred_contact_value ?? '',
   })
 
-  // Nom complet reconstruit depuis first + last name
   const fullName = [form.first_name, form.last_name].filter(Boolean).join(' ')
+  const initials = ([form.first_name?.[0], form.last_name?.[0]]
+    .filter(Boolean).join('').toUpperCase()) || email[0].toUpperCase()
 
-  // Initiales pour l'avatar — première lettre de chaque prénom/nom
-  const initials = [form.first_name?.[0], form.last_name?.[0]]
-    .filter(Boolean)
-    .join('')
-    .toUpperCase() || email[0].toUpperCase()
-
-  // Met à jour un champ du formulaire
   function handleChange(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
-  // Sauvegarde le profil dans Supabase
+  function handleBuilderTypeChange(type: string) {
+    setForm(prev => ({ ...prev, builder_type: type }))
+  }
+
   async function handleSave() {
     setSaving(true)
-
-    await supabase
-      .from('profiles')
-      .update({
-        first_name: form.first_name,
-        last_name: form.last_name,
-        // On reconstruit name pour la compatibilité
-        // avec les autres parties de l'app qui utilisent profiles.name
-        name: fullName || null,
-        country: form.country,
-        bio: form.bio,
-        school: form.school,
-        major: form.major,
-        preferred_contact_type: form.preferred_contact_type || null,
-        preferred_contact_value: form.preferred_contact_value || null,
-      })
-      .eq('id', profile.id)
+    await supabase.from('profiles').update({
+      first_name:              form.first_name,
+      last_name:               form.last_name,
+      name:                    fullName || null,
+      country:                 form.country,
+      bio:                     form.bio,
+      builder_type:            form.builder_type,
+      institution:             form.institution  || null,
+      program:                 form.program      || null,
+      preferred_contact_type:  form.preferred_contact_type  || null,
+      preferred_contact_value: form.preferred_contact_value || null,
+    }).eq('id', profile.id)
 
     setSaving(false)
     setSaved(true)
     setEditing(false)
-
-    // Reset le message "Saved" après 2 secondes
     setTimeout(() => setSaved(false), 2000)
   }
 
-  // Style commun pour tous les inputs en mode édition
-  const inputStyle = {
-    backgroundColor: '#0C1120',
-    border: '1px solid #1E2840',
-    color: '#F1F5F9',
-  }
-
-  // Composant interne — affiche un projet sous forme de ligne
-  // Réutilisé dans les deux sections (owned + joined)
-  function ProjectRow({ project, showOwner = false }: {
-    project: Project
-    showOwner?: boolean  // Affiche le owner si c'est un projet rejoint
-  }) {
-    return (
-      <Link
-        href={`/projects/${project.id}`}
-        className="block rounded-2xl p-5 transition-all"
-        style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-        onMouseEnter={e => (e.currentTarget.style.borderColor = '#0D9488')}
-        onMouseLeave={e => (e.currentTarget.style.borderColor = '#1E2840')}
-      >
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold text-sm" style={{ color: '#F1F5F9' }}>
-            {project.title}
-          </h3>
-          <span
-            className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"
-            style={{
-              backgroundColor: project.status === 'open'
-                ? 'rgba(16,185,129,0.14)'
-                : 'rgba(245,158,11,0.14)',
-              color: project.status === 'open' ? '#6EE7B7' : '#FCD34D',
-            }}
-          >
-            {project.status}
-          </span>
-        </div>
-
-        {/* Affiche le owner si c'est un projet rejoint */}
-        {showOwner && project.profiles && (
-          <p className="text-xs mb-2" style={{ color: '#475569' }}>
-            by {(project.profiles as any).name ?? 'Anonymous'}
-          </p>
-        )}
-
-        <p
-          className="text-xs leading-relaxed line-clamp-2 mb-3"
-          style={{ color: '#64748B' }}
-        >
-          {project.problem}
-        </p>
-
-        <div className="flex flex-wrap gap-2">
-          {project.project_skills?.map(skill => {
-            const colors = SKILL_COLORS[skill.skill_needed] ?? {
-              bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
-            }
-            return (
-              <span
-                key={skill.skill_needed}
-                className="text-xs px-2.5 py-0.5 rounded-md font-medium"
-                style={{ backgroundColor: colors.bg, color: colors.text }}
-              >
-                {skill.skill_needed}
-              </span>
-            )
-          })}
-          {project.level && (() => {
-            const colors = LEVEL_COLORS[project.level] ?? {
-              bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
-            }
-            return (
-              <span
-                className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"
-                style={{ backgroundColor: colors.bg, color: colors.text }}
-              >
-                {project.level}
-              </span>
-            )
-          })()}
-        </div>
-      </Link>
-    )
-  }
+  // ─────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────
 
   return (
-    <main className="max-w-4xl mx-auto px-4 py-10">
+    <main style={{ maxWidth: '768px', margin: '0 auto', padding: '32px 16px' }}>
 
-      {/* Header du profil */}
-      <div
-        className="rounded-2xl p-8 mb-6"
-        style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-      >
-        <div className="flex items-start justify-between mb-6">
+      {/* Profile card */}
+      <div style={{
+        backgroundColor: colors.bg.elevated,
+        border: `0.5px solid ${colors.border.default}`,
+        borderRadius: radius.xxl,
+        padding: '24px',
+        marginBottom: '32px',
+      }}>
 
-          {/* Avatar + infos principales */}
-          <div className="flex items-center gap-5">
+        {/* Top row — avatar + name + actions */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
 
-            {/* Avatar avec initiales */}
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #0D9488, #0EA5E9)' }}
-            >
+            {/* Avatar */}
+            <div style={{
+              width: '52px', height: '52px',
+              borderRadius: radius.xl,
+              backgroundColor: colors.accent.teal,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: fontSize.lg,
+              fontWeight: 500,
+              color: '#fff',
+              flexShrink: 0,
+            }}>
               {initials}
             </div>
 
+            {/* Name inputs or display */}
             {editing ? (
-              // Mode édition — first name + last name séparés
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  name="first_name"
-                  type="text"
-                  placeholder="First name"
-                  value={form.first_name}
-                  onChange={handleChange}
-                  className="px-3 py-2 rounded-lg text-sm outline-none"
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <input name="first_name" type="text" placeholder="First name"
+                  value={form.first_name} onChange={handleChange}
                   style={inputStyle}
-                  onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                  onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
-                />
-                <input
-                  name="last_name"
-                  type="text"
-                  placeholder="Last name"
-                  value={form.last_name}
-                  onChange={handleChange}
-                  className="px-3 py-2 rounded-lg text-sm outline-none"
+                  onFocus={e => (e.currentTarget.style.borderColor = colors.accent.teal)}
+                  onBlur={e => (e.currentTarget.style.borderColor = colors.border.default)} />
+                <input name="last_name" type="text" placeholder="Last name"
+                  value={form.last_name} onChange={handleChange}
                   style={inputStyle}
-                  onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                  onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
-                />
+                  onFocus={e => (e.currentTarget.style.borderColor = colors.accent.teal)}
+                  onBlur={e => (e.currentTarget.style.borderColor = colors.border.default)} />
               </div>
             ) : (
-              // Mode affichage
               <div>
-                <h1 className="text-xl font-bold mb-1" style={{ color: '#F1F5F9' }}>
+                <h1 style={{ fontSize: fontSize.lg, fontWeight: 500, color: colors.text.primary, marginBottom: '2px' }}>
                   {fullName || 'No name yet'}
                 </h1>
-                <p className="text-sm" style={{ color: '#475569' }}>
-                  {email}
-                </p>
-                {/* Contact préféré affiché sous l'email */}
+                <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>{email}</p>
                 {form.preferred_contact_type && CONTACT_TYPES[form.preferred_contact_type] && (
-                  <p className="text-xs mt-1" style={{
-                    color: CONTACT_TYPES[form.preferred_contact_type].color
-                  }}>
+                  <p style={{ fontSize: fontSize.xs, marginTop: '3px', color: CONTACT_TYPES[form.preferred_contact_type].color }}>
                     {CONTACT_TYPES[form.preferred_contact_type].icon}{' '}
                     {CONTACT_TYPES[form.preferred_contact_type].label}
                   </p>
@@ -252,512 +471,117 @@ export default function ProfileClient({ profile, ownedProjects, joinedProjects, 
             )}
           </div>
 
-          {/* Boutons Edit / Save / Cancel */}
-          <div className="flex items-center gap-2">
+          {/* Edit / Save / Cancel */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {saved && (
-              <span className="text-xs" style={{ color: '#6EE7B7' }}>✓ Saved</span>
+              <span style={{ fontSize: fontSize.xs, color: colors.status.success }}>✓ Saved</span>
             )}
             {editing ? (
               <>
-                <button
-                  onClick={() => setEditing(false)}
-                  className="text-sm px-4 py-2 rounded-lg transition-colors"
-                  style={{ color: '#64748B', border: '1px solid #1E2840' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="text-sm px-4 py-2 rounded-lg font-medium transition-colors"
-                  style={{
-                    backgroundColor: '#0D9488',
-                    color: 'white',
-                    opacity: saving ? 0.7 : 1,
-                  }}
-                >
+                <button onClick={() => setEditing(false)} style={styles.btnGhost}>Cancel</button>
+                <button onClick={handleSave} disabled={saving}
+                  style={{ ...styles.btnPrimary, opacity: saving ? 0.7 : 1 }}>
                   {saving ? 'Saving...' : 'Save'}
                 </button>
               </>
             ) : (
-              <button
-                onClick={() => setEditing(true)}
-                className="text-sm px-4 py-2 rounded-lg transition-colors"
-                style={{
-                  backgroundColor: 'rgba(13,148,136,0.14)',
-                  color: '#5EEAD4',
-                  border: '1px solid rgba(13,148,136,0.28)',
-                }}
-              >
+              <button onClick={() => setEditing(true)} style={styles.btnTeal}>
                 Edit profile
               </button>
             )}
           </div>
         </div>
 
-        {/* Champs détaillés — mode édition */}
+        {/* Edit form or display mode */}
         {editing ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-            {/* Country */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium" style={{ color: '#64748B' }}>
-                Country
-              </label>
-              <input
-                name="country"
-                type="text"
-                placeholder="Ex: Congo"
-                value={form.country}
-                onChange={handleChange}
-                className="px-3 py-2 rounded-lg text-sm outline-none"
-                style={inputStyle}
-                onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
-              />
-            </div>
-
-            {/* School */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium" style={{ color: '#64748B' }}>
-                School / University
-              </label>
-              <input
-                name="school"
-                type="text"
-                placeholder="Ex: DataScienceTech Institute"
-                value={form.school}
-                onChange={handleChange}
-                className="px-3 py-2 rounded-lg text-sm outline-none"
-                style={inputStyle}
-                onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
-              />
-            </div>
-
-            {/* Major */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium" style={{ color: '#64748B' }}>
-                Major / Specialty
-              </label>
-              <input
-                name="major"
-                type="text"
-                placeholder="Ex: Computer Science"
-                value={form.major}
-                onChange={handleChange}
-                className="px-3 py-2 rounded-lg text-sm outline-none"
-                style={inputStyle}
-                onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
-              />
-            </div>
-
-            {/* Preferred contact type */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium" style={{ color: '#64748B' }}>
-                Preferred contact
-              </label>
-              <select
-                name="preferred_contact_type"
-                value={form.preferred_contact_type}
-                onChange={handleChange}
-                className="px-3 py-2 rounded-lg text-sm outline-none"
-                style={{
-                  ...inputStyle,
-                  color: form.preferred_contact_type ? '#F1F5F9' : '#475569',
-                }}
-                onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
-              >
-                <option value="">Select a platform</option>
-                {/* On itère sur CONTACT_TYPES depuis constants.ts */}
-                {Object.entries(CONTACT_TYPES).map(([key, val]) => (
-                  <option key={key} value={key} style={{ backgroundColor: '#161B28' }}>
-                    {val.icon} {val.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Preferred contact value — affiché seulement si type sélectionné */}
-            {form.preferred_contact_type && (
-              <div className="flex flex-col gap-1.5 md:col-span-2">
-                <label className="text-xs font-medium" style={{ color: '#64748B' }}>
-                  {CONTACT_TYPES[form.preferred_contact_type]?.label} link or username
-                </label>
-                <input
-                  name="preferred_contact_value"
-                  type="text"
-                  placeholder={
-                    form.preferred_contact_type === 'email'
-                      ? 'your@email.com'
-                      : form.preferred_contact_type === 'discord'
-                      ? 'https://discord.gg/yourserver'
-                      : 'https://...'
-                  }
-                  value={form.preferred_contact_value}
-                  onChange={handleChange}
-                  className="px-3 py-2 rounded-lg text-sm outline-none"
-                  style={inputStyle}
-                  onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                  onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
-                />
-              </div>
-            )}
-
-            {/* Bio — prend toute la largeur */}
-            <div className="flex flex-col gap-1.5 md:col-span-2">
-              <label className="text-xs font-medium" style={{ color: '#64748B' }}>
-                Bio
-              </label>
-              <textarea
-                name="bio"
-                placeholder="Tell others about yourself, your skills and what you want to build..."
-                value={form.bio}
-                onChange={handleChange}
-                rows={3}
-                className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none"
-                style={inputStyle}
-                onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
-              />
-            </div>
-          </div>
-
+          <ProfileEditForm
+            form={form}
+            onChange={handleChange}
+            onBuilderTypeChange={handleBuilderTypeChange}
+          />
         ) : (
-          // Mode affichage — bio + infos secondaires
-          <div className="flex flex-col gap-4">
-            <p className="text-sm leading-relaxed" style={{ color: '#64748B' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <p style={{ fontSize: fontSize.sm, color: colors.text.muted, lineHeight: 1.6 }}>
               {form.bio || 'No bio yet. Click "Edit profile" to add one.'}
             </p>
-
-            {/* Infos secondaires — pays, école, spécialité */}
-            <div className="flex flex-wrap gap-4">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
               {form.country && (
-                <div className="flex items-center gap-1.5 text-xs" style={{ color: '#475569' }}>
-                  <span>🌍</span>
-                  <span>{form.country}</span>
-                </div>
+                <span style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
+                  🌍 {form.country}
+                </span>
               )}
-              {form.school && (
-                <div className="flex items-center gap-1.5 text-xs" style={{ color: '#475569' }}>
-                  <span>🎓</span>
-                  <span>{form.school}</span>
-                </div>
+              {form.institution && (
+                <span style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
+                  {form.builder_type === 'student'      ? '🎓' :
+                   form.builder_type === 'bootcamp'     ? '⚡' :
+                   form.builder_type === 'self_learner' ? '📚' : '💼'} {form.institution}
+                </span>
               )}
-              {form.major && (
-                <div className="flex items-center gap-1.5 text-xs" style={{ color: '#475569' }}>
-                  <span>📚</span>
-                  <span>{form.major}</span>
-                </div>
+              {form.program && (
+                <span style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
+                  · {form.program}
+                </span>
               )}
             </div>
           </div>
         )}
 
-        {/* Stats : rating moyen + nombre de projets */}
-        <div
-          className="flex items-center gap-6 mt-6 pt-6"
-          style={{ borderTop: '1px solid #1E2840' }}
-        >
+        {/* Stats */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '24px',
+          marginTop: '20px',
+          paddingTop: '16px',
+          borderTop: `0.5px solid ${colors.border.default}`,
+        }}>
           <div>
-            <p className="text-xl font-bold" style={{ color: '#F1F5F9' }}>
+            <p style={{ fontSize: fontSize.xl, fontWeight: 500, color: colors.text.primary, letterSpacing: '-0.02em' }}>
               {profile?.avg_rating ? profile.avg_rating.toFixed(1) : '—'}
             </p>
-            <p className="text-xs" style={{ color: '#475569' }}>
-              ⭐ Average rating ({profile?.ratings_count ?? 0} reviews)
+            <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
+              ⭐ avg rating · {profile?.ratings_count ?? 0} reviews
             </p>
           </div>
           <div>
-            <p className="text-xl font-bold" style={{ color: '#F1F5F9' }}>
+            <p style={{ fontSize: fontSize.xl, fontWeight: 500, color: colors.text.primary, letterSpacing: '-0.02em' }}>
               {ownedProjects.length}
             </p>
-            <p className="text-xs" style={{ color: '#475569' }}>
-              Projects posted
+            <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
+              projects posted
             </p>
           </div>
         </div>
       </div>
 
-      {/* Projets postés par l'utilisateur */}
-      <div>
-        {/* Section 1 — Projets créés */}
-        <h2 className="text-base font-semibold mb-4" style={{ color: '#94A3B8' }}>
-          Posted projects
-          <span
-            className="ml-2 text-xs px-2 py-0.5 rounded-md"
-            style={{ backgroundColor: '#0C1120', color: '#475569' }}
-          >
-            {ownedProjects.length}
-          </span>
-        </h2>
+      {/* Project sections */}
+      <ProjectSection
+        title="Posted projects"
+        count={ownedProjects.length}
+        projects={ownedProjects}
+        emptyMessage="You haven't posted any projects yet."
+        emptyAction={
+          <Link href="/post" style={{ fontSize: fontSize.sm, color: colors.accent.tealText }}>
+            Post your first project →
+          </Link>
+        }
+      />
 
-        {ownedProjects.length === 0 ? (
-          <div
-            className="rounded-2xl p-8 text-center mb-6"
-            style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-          >
-            <p className="text-sm mb-3" style={{ color: '#475569' }}>
-              You haven't posted any projects yet.
-            </p>
-            <Link href="/post" className="text-sm font-medium" style={{ color: '#0D9488' }}>
-              Post your first project →
-            </Link>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3 mb-8">
-            {ownedProjects.map(project => (
-              <Link
-                key={project.id}
-                href={`/projects/${project.id}`}
-                className="block rounded-2xl p-5 transition-all"
-                style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = '#1E2840')}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-sm" style={{ color: '#F1F5F9' }}>
-                    {project.title}
-                  </h3>
-                  <span
-                    className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"
-                    style={{
-                      backgroundColor: project.status === 'open'
-                        ? 'rgba(16,185,129,0.14)'
-                        : 'rgba(245,158,11,0.14)',
-                      color: project.status === 'open' ? '#6EE7B7' : '#FCD34D',
-                    }}
-                  >
-                    {project.status}
-                  </span>
-                </div>
-                <p className="text-xs leading-relaxed line-clamp-2 mb-3" style={{ color: '#64748B' }}>
-                  {project.problem}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {project.project_skills?.map(skill => {
-                    const colors = SKILL_COLORS[skill.skill_needed] ?? {
-                      bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
-                    }
-                    return (
-                      <span
-                        key={skill.skill_needed}
-                        className="text-xs px-2.5 py-0.5 rounded-md font-medium"
-                        style={{ backgroundColor: colors.bg, color: colors.text }}
-                      >
-                        {skill.skill_needed}
-                      </span>
-                    )
-                  })}
-                  {project.level && (() => {
-                    const colors = LEVEL_COLORS[project.level] ?? {
-                      bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
-                    }
-                    return (
-                      <span
-                        className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"
-                        style={{ backgroundColor: colors.bg, color: colors.text }}
-                      >
-                        {project.level}
-                      </span>
-                    )
-                  })()}
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+      <ProjectSection
+        title="Projects joined"
+        count={joinedProjects.length}
+        projects={joinedProjects}
+        showOwner
+        emptyMessage="You haven't joined any projects yet."
+      />
 
-        {/* Section 2 — Projets rejoints */}
-        <h2 className="text-base font-semibold mb-4" style={{ color: '#94A3B8' }}>
-          Projects joined
-          <span
-            className="ml-2 text-xs px-2 py-0.5 rounded-md"
-            style={{ backgroundColor: '#0C1120', color: '#475569' }}
-          >
-            {joinedProjects.length}
-          </span>
-        </h2>
-
-        {joinedProjects.length === 0 ? (
-          <div
-            className="rounded-2xl p-8 text-center"
-            style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-          >
-            <p className="text-sm" style={{ color: '#475569' }}>
-              You haven't joined any projects yet.
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {joinedProjects.map(project => (
-              <Link
-                key={project.id}
-                href={`/projects/${project.id}`}
-                className="block rounded-2xl p-5 transition-all"
-                style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = '#1E2840')}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-sm" style={{ color: '#F1F5F9' }}>
-                    {project.title}
-                  </h3>
-                  <span
-                    className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"
-                    style={{
-                      backgroundColor: project.status === 'open'
-                        ? 'rgba(16,185,129,0.14)'
-                        : 'rgba(245,158,11,0.14)',
-                      color: project.status === 'open' ? '#6EE7B7' : '#FCD34D',
-                    }}
-                  >
-                    {project.status}
-                  </span>
-                </div>
-
-                {/* Affiche le owner — utile pour les projets rejoints */}
-                {(project.profiles as any)?.name && (
-                  <p className="text-xs mb-2" style={{ color: '#475569' }}>
-                    by {(project.profiles as any).name}
-                  </p>
-                )}
-
-                <p className="text-xs leading-relaxed line-clamp-2 mb-3" style={{ color: '#64748B' }}>
-                  {project.problem}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {project.project_skills?.map(skill => {
-                    const colors = SKILL_COLORS[skill.skill_needed] ?? {
-                      bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
-                    }
-                    return (
-                      <span
-                        key={skill.skill_needed}
-                        className="text-xs px-2.5 py-0.5 rounded-md font-medium"
-                        style={{ backgroundColor: colors.bg, color: colors.text }}
-                      >
-                        {skill.skill_needed}
-                      </span>
-                    )
-                  })}
-                  {project.level && (() => {
-                    const colors = LEVEL_COLORS[project.level] ?? {
-                      bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
-                    }
-                    return (
-                      <span
-                        className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"
-                        style={{ backgroundColor: colors.bg, color: colors.text }}
-                      >
-                        {project.level}
-                      </span>
-                    )
-                  })()}
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-
-        {/* Section 3 — Projets suivis */}
-        <h2 className="text-base font-semibold mb-4 mt-6" style={{ color: '#94A3B8' }}>
-          Projects followed
-          <span
-            className="ml-2 text-xs px-2 py-0.5 rounded-md"
-            style={{ backgroundColor: '#0C1120', color: '#475569' }}
-          >
-            {followedProjects.length}
-          </span>
-        </h2>
-
-        {followedProjects.length === 0 ? (
-          <div
-            className="rounded-2xl p-8 text-center"
-            style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-          >
-            <p className="text-sm" style={{ color: '#475569' }}>
-              You're not following any projects yet.
-            </p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {followedProjects.map(project => (
-              <Link
-                key={project.id}
-                href={`/projects/${project.id}`}
-                className="block rounded-2xl p-5 transition-all"
-                style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = '#1E2840')}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold text-sm" style={{ color: '#F1F5F9' }}>
-                    {project.title}
-                  </h3>
-                  <span
-                    className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"
-                    style={{
-                      backgroundColor: project.status === 'open'
-                        ? 'rgba(16,185,129,0.14)'
-                        : 'rgba(245,158,11,0.14)',
-                      color: project.status === 'open' ? '#6EE7B7' : '#FCD34D',
-                    }}
-                  >
-                    {project.status}
-                  </span>
-                </div>
-
-                {/* Owner du projet */}
-                {(project.profiles as any)?.name && (
-                  <p className="text-xs mb-2" style={{ color: '#475569' }}>
-                    by {(project.profiles as any).name}
-                  </p>
-                )}
-
-                <p
-                  className="text-xs leading-relaxed line-clamp-2 mb-3"
-                  style={{ color: '#64748B' }}
-                >
-                  {project.problem}
-                </p>
-
-                <div className="flex flex-wrap gap-2">
-                  {project.project_skills?.map(skill => {
-                    const colors = SKILL_COLORS[skill.skill_needed] ?? {
-                      bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
-                    }
-                    return (
-                      <span
-                        key={skill.skill_needed}
-                        className="text-xs px-2.5 py-0.5 rounded-md font-medium"
-                        style={{ backgroundColor: colors.bg, color: colors.text }}
-                      >
-                        {skill.skill_needed}
-                      </span>
-                    )
-                  })}
-                  {project.level && (() => {
-                    const colors = LEVEL_COLORS[project.level] ?? {
-                      bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
-                    }
-                    return (
-                      <span
-                        className="text-xs px-2.5 py-0.5 rounded-md font-medium capitalize"
-                        style={{ backgroundColor: colors.bg, color: colors.text }}
-                      >
-                        {project.level}
-                      </span>
-                    )
-                  })()}
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-
-      </div>
+      <ProjectSection
+        title="Projects followed"
+        count={followedProjects.length}
+        projects={followedProjects}
+        showOwner
+        emptyMessage="You're not following any projects yet."
+      />
 
     </main>
   )

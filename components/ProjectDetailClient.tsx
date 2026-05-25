@@ -1,33 +1,32 @@
 // components/ProjectDetailClient.tsx
-// Affiche le détail complet d'un projet
-// Gère : milestones, team, contact, rating, "I'm interested"
-// 'use client' car on utilise useState pour les interactions
+// Orchestrates the full project detail page.
+// Delegates rendering to: ProjectHeader, ProjectMilestones (inline), ProjectSidebar (inline).
+// Handles all state and data mutations.
 'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
-import { Project, Milestone, ProjectUpdate } from '@/types'
-import RatingModal from '@/components/RatingModal'
+import { Project, Milestone, ProjectUpdate, ProjectMessage, ProjectComment } from '@/types'
+import { CONTACT_TYPES } from '@/lib/constants'
+import { colors, radius, fontSize, styles } from '@/lib/design-tokens'
+import Link from 'next/link'
+
+import BackButton from '@/components/BackButton'
+import ProjectHeader from '@/components/ProjectHeader'
 import ProjectUpdates from '@/components/ProjectUpdates'
-import InterestModal from './InterestModal'
-
-// On importe les couleurs et constantes depuis lib/constants.ts
-// pour garder la cohérence visuelle dans toute l'app
-import { SKILL_COLORS, LEVEL_COLORS, CONTACT_TYPES ,SKILLS, DURATIONS, LEVELS } from '@/lib/constants'
-
 import ProjectChat from '@/components/ProjectChat'
-import { ProjectMessage } from '@/types'
-
+import ProjectComments from '@/components/ProjectComments'
+import RatingModal from '@/components/RatingModal'
+import InterestModal from '@/components/InterestModal'
 import CompletionModal from '@/components/CompletionModal'
 
-import ProjectComments from '@/components/ProjectComments'
-import { ProjectComment } from '@/types'
+// ─────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────
 
-// Type pour un membre du projet
 type Member = {
-  id: string           // project_member_id
+  id: string
   user_id: string
   role: string | null
   rating_required: boolean
@@ -43,7 +42,6 @@ type Member = {
   } | null
 }
 
-// Type pour une connexion existante
 type Connection = {
   id: string
   status: 'pending' | 'accepted' | 'rejected'
@@ -69,6 +67,41 @@ type Props = {
   initialComments: ProjectComment[]
 }
 
+// ─────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────
+
+function getFullName(profile: Member['profiles']) {
+  if (!profile) return 'Anonymous'
+  const full = [profile.first_name, profile.last_name].filter(Boolean).join(' ')
+  return full || profile.name || 'Anonymous'
+}
+
+function getInitials(profile: Member['profiles'] | Project['profiles']) {
+  if (!profile) return '?'
+  const first = (profile as any).first_name?.[0]
+  const last  = (profile as any).last_name?.[0]
+  if (first || last) return [first, last].filter(Boolean).join('').toUpperCase()
+  return (profile as any).name?.[0]?.toUpperCase() ?? '?'
+}
+
+const cardStyle = {
+  backgroundColor: colors.bg.elevated,
+  border: `0.5px solid ${colors.border.default}`,
+  borderRadius: radius.xxl,
+  padding: '18px',
+}
+
+const sectionTitle = {
+  fontSize: fontSize.sm,
+  fontWeight: 500,
+  color: colors.text.primary,
+  marginBottom: '14px',
+}
+
+// ─────────────────────────────────────────
+// Main component
+// ─────────────────────────────────────────
 
 export default function ProjectDetailClient({
   project,
@@ -87,9 +120,12 @@ export default function ProjectDetailClient({
   const router = useRouter()
   const supabase = createBrowserSupabaseClient()
 
-  // On stocke les données du projet en state local
-  // On utilise un type partiel pour project_skills
-  // car après édition on n'a pas encore les id générés par Supabase
+  // ── Role checks ──
+  const isOwner  = currentUserId === project.owner_id
+  const isMember = members.some(m => m.user_id === currentUserId)
+  const canSeePrivate = isOwner || isMember || isFollower
+
+  // ── Project data (local state for optimistic edits) ──
   const [projectData, setProjectData] = useState<{
     title: string
     problem: string
@@ -97,763 +133,326 @@ export default function ProjectDetailClient({
     domain: string
     duration: string
     spots: number | null
-    // On accepte soit un ProjectSkill complet soit juste skill_needed
-    project_skills: { id?: string; project_id?: string; skill_needed: string }[]
+    project_skills: { id?: string; project_id?: string; skill_needed: string }[]  // ← fields optional
   }>({
-    title: project.title,
-    problem: project.problem ?? '',
-    level: project.level ?? '',
-    domain: project.domain ?? '',
-    duration: project.duration ?? '',
-    spots: project.spots ?? null,
+    title:          project.title,
+    problem:        project.problem        ?? '',
+    level:          project.level          ?? '',
+    domain:         project.domain         ?? '',
+    duration:       project.duration       ?? '',
+    spots:          project.spots          ?? null,
     project_skills: project.project_skills ?? [],
   })
 
-  // État du bouton "I'm interested"
-  // Si une connexion existe déjà, on part en état "sent"
+  // ── Edit mode ──
+  const [editing,    setEditing]    = useState(false)
+  const [saving,     setSaving]     = useState(false)
+  const [editForm,   setEditForm]   = useState({
+    title:    project.title,
+    problem:  project.problem  ?? '',
+    level:    project.level    ?? '',
+    domain:   project.domain   ?? '',
+    duration: project.duration ?? '',
+    spots:    project.spots?.toString() ?? '',
+  })
+  const [editSkills, setEditSkills] = useState<string[]>(
+    project.project_skills?.map(s => s.skill_needed) ?? []
+  )
+
+  // ── Interest / connection ──
   const [connStatus, setConnStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>(
     existingConnection ? 'sent' : 'idle'
   )
+  const [showModal,  setShowModal]  = useState(false)
+  const [userContact, setUserContact] = useState<{ type: string | null; value: string | null }>({
+    type: null, value: null,
+  })
 
-  const [userContact, setUserContact] = useState<{
-    type: string | null
-    value: string | null
-    }>({
-      type: null,
-      value: null,
-    })
+  // ── Follow ──
+  const [isFollowing,    setIsFollowing]    = useState(initialIsFollowing)
+  const [followersCount, setFollowersCount] = useState(initialFollowersCount)
+  const [followLoading,  setFollowLoading]  = useState(false)
 
-  // État du modal "I'm interested"
-  const [showModal, setShowModal] = useState(false)
-  
-  // Etat du modal de confirmation de complétion du projet
-  const [showCompletionModal, setShowCompletionModal] = useState(false)
-  const [completing, setCompleting] = useState(false)
-
-  // État des milestones — stocké localement pour éviter un refetch
-  // à chaque modification
-  const [milestones, setMilestones] = useState<Milestone[]>(initialMilestones)
-
-  // Champ de saisie pour ajouter un nouveau milestone
-  const [newMilestone, setNewMilestone] = useState('')
+  // ── Milestones ──
+  const [milestones,     setMilestones]     = useState<Milestone[]>(initialMilestones)
+  const [newMilestone,   setNewMilestone]   = useState('')
   const [addingMilestone, setAddingMilestone] = useState(false)
 
-  // Contrôle l'affichage du modal de rating
+  // ── Rating ──
   const [showRatingModal, setShowRatingModal] = useState(false)
-
-  // true si l'utilisateur courant doit encore noter ses collaborateurs
-  const [ratingRequired, setRatingRequired] = useState(
+  const [ratingRequired,  setRatingRequired]  = useState(
     members.some(m => m.user_id === currentUserId && m.rating_required)
   )
 
-  // L'utilisateur est-il le owner du projet ?
-  const isOwner = currentUserId === project.owner_id
+  // ── Completion ──
+  const [showCompletionModal, setShowCompletionModal] = useState(false)
+  const [completing,          setCompleting]          = useState(false)
 
-  // L'utilisateur est-il déjà membre du projet ?
-  const isMember = members.some(m => m.user_id === currentUserId)
-
-  // Un utilisateur peut voir les sections privées s'il est :
-  // owner, membre actif, ou follower
-  const canSeePrivate = isOwner || isMember || isFollower
-
-  // Progression des milestones en pourcentage
   const progress = milestones.length > 0
-    ? Math.round(
-        (milestones.filter(m => m.completed).length / milestones.length) * 100
-      )
+    ? Math.round((milestones.filter(m => m.completed).length / milestones.length) * 100)
     : 0
-  
-  // État du bouton Follow — optimistic update
-  const [isFollowing, setIsFollowing] = useState(initialIsFollowing)
-  const [followersCount, setFollowersCount] = useState(initialFollowersCount)
-  const [followLoading, setFollowLoading] = useState(false)
 
-  // Mode édition du projet
-  const [editing, setEditing] = useState(false)
-  const [editForm, setEditForm] = useState({
-    title: project.title,
-    problem: project.problem ?? '',
-    level: project.level ?? '',
-    domain: project.domain ?? '',
-    duration: project.duration ?? '',
-    spots: project.spots?.toString() ?? '',
-  })
-  const [editSkills, setEditSkills] = useState<string[]>(
-    // On initialise avec les skills actuelles du projet
-    project.project_skills?.map(s => s.skill_needed) ?? []
-  )
-  const [saving, setSaving] = useState(false)
-
-  // On récupère le contact préféré de l'utilisateur pour pré-remplir le message du modal "I'm interested"
+  // Fetch user's preferred contact for interest modal pre-fill
   useEffect(() => {
     if (!currentUserId) return
-
     supabase
       .from('profiles')
       .select('preferred_contact_type, preferred_contact_value')
       .eq('id', currentUserId)
       .single()
       .then(({ data }) => {
-        if (data) {
-          setUserContact({
-            type: data.preferred_contact_type,
-            value: data.preferred_contact_value,
-          })
-        }
+        if (data) setUserContact({ type: data.preferred_contact_type, value: data.preferred_contact_value })
       })
   }, [currentUserId])
 
+  // ── Handlers ──
 
-  // Nom complet d'un profil — reconstruit depuis first + last name
-  function getFullName(profile: Member['profiles']) {
-    if (!profile) return 'Anonymous'
-    const full = [profile.first_name, profile.last_name].filter(Boolean).join(' ')
-    return full || profile.name || 'Anonymous'
-  }
-
-  // Initiales pour l'avatar
-  function getInitials(profile: Member['profiles'] | Project['profiles']) {
-    if (!profile) return '?'
-    // On essaie first_name/last_name d'abord, puis name
-    const first = (profile as any).first_name?.[0]
-    const last = (profile as any).last_name?.[0]
-    if (first || last) return [first, last].filter(Boolean).join('').toUpperCase()
-    return (profile as any).name?.[0]?.toUpperCase() ?? '?'
-  }
-
-  // Ouvrir le modal "I'm interested"
-  // Envoyer une demande de connexion
-  function handleInterest() {
-    // Si pas connecté → rediriger vers login
-    if (!currentUserId) {
-      router.push('/login')
-      return
-    }
-
-    setShowModal(true)
-  }
-
-  // Confirmation de la demande de connexion
   async function handleConfirmInterest(message: string) {
     setConnStatus('loading')
-
     try {
       const { error } = await supabase
         .from('connections')
-        .insert({
-          sender_id: currentUserId,
-          project_id: project.id,
-          // Message personnalisé envoyé depuis le modal
-          message,
-          status: 'pending',
-        })
-
-      if (error?.code === '23505') {
-        // Code 23505 = doublon — demande déjà envoyée
-        setConnStatus('sent')
-      } else if (error) {
-        throw error
-      } else {
-        setConnStatus('sent')
-      }
-
-      // Ferme le modal après succès
+        .insert({ sender_id: currentUserId, project_id: project.id, message, status: 'pending' })
+      if (error?.code === '23505') setConnStatus('sent')
+      else if (error) throw error
+      else setConnStatus('sent')
       setShowModal(false)
-
     } catch {
       setConnStatus('error')
     }
   }
 
-  // Suivre ou ne plus suivre un projet
-  // Optimistic update — l'UI se met à jour immédiatement
   async function handleFollow() {
-    if (!currentUserId) {
-      router.push('/login')
-      return
-    }
-
+    if (!currentUserId) { router.push('/login'); return }
     setFollowLoading(true)
-
     if (isFollowing) {
-      // Se désabonner — supprime la ligne dans project_followers
-      const { error } = await supabase
-        .from('project_followers')
-        .delete()
-        .eq('project_id', project.id)
-        .eq('user_id', currentUserId)
-
-      if (!error) {
-        setIsFollowing(false)
-        setFollowersCount(prev => Math.max(0, prev - 1))
-      }
+      const { error } = await supabase.from('project_followers').delete()
+        .eq('project_id', project.id).eq('user_id', currentUserId)
+      if (!error) { setIsFollowing(false); setFollowersCount(p => Math.max(0, p - 1)) }
     } else {
-      // Suivre — insère une ligne dans project_followers
-      const { error } = await supabase
-        .from('project_followers')
-        .insert({
-          project_id: project.id,
-          user_id: currentUserId,
-        })
-
-      if (!error) {
-        setIsFollowing(true)
-        setFollowersCount(prev => prev + 1)
-      }
+      const { error } = await supabase.from('project_followers')
+        .insert({ project_id: project.id, user_id: currentUserId })
+      if (!error) { setIsFollowing(true); setFollowersCount(p => p + 1) }
     }
-
     setFollowLoading(false)
   }
 
-  // Cocher/décocher un milestone — optimistic update
-  // On met à jour l'UI immédiatement sans attendre Supabase
   async function toggleMilestone(milestone: Milestone) {
-    setMilestones(prev =>
-      prev.map(m =>
-        m.id === milestone.id ? { ...m, completed: !m.completed } : m
-      )
-    )
-
-    await supabase
-      .from('milestones')
-      .update({ completed: !milestone.completed })
-      .eq('id', milestone.id)
+    setMilestones(prev => prev.map(m =>
+      m.id === milestone.id ? { ...m, completed: !m.completed } : m
+    ))
+    await supabase.from('milestones').update({ completed: !milestone.completed }).eq('id', milestone.id)
   }
 
-  // Ajouter un nouveau milestone
   async function handleAddMilestone() {
     if (!newMilestone.trim()) return
     setAddingMilestone(true)
-
     const { data, error } = await supabase
       .from('milestones')
-      .insert({
-        project_id: project.id,
-        title: newMilestone.trim(),
-        // Position = après le dernier milestone existant
-        position: milestones.length,
-      })
-      .select()
-      .single()
-
-    if (!error && data) {
-      // On ajoute le nouveau milestone à la liste locale
-      setMilestones(prev => [...prev, data])
-      setNewMilestone('')
-    }
-
+      .insert({ project_id: project.id, title: newMilestone.trim(), position: milestones.length })
+      .select().single()
+    if (!error && data) { setMilestones(prev => [...prev, data]); setNewMilestone('') }
     setAddingMilestone(false)
   }
 
-  // Supprimer un milestone — optimistic update
   async function handleDeleteMilestone(id: string) {
     setMilestones(prev => prev.filter(m => m.id !== id))
     await supabase.from('milestones').delete().eq('id', id)
   }
 
-  // Marquer le projet comme completed
-  // isPublic = true par défaut (build in public)
-  // Le owner peut opt-out via le modal
   async function handleMarkCompleted(isPublic: boolean) {
     setCompleting(true)
-
-    // Étape 1 — Update le status et la visibilité
-    await supabase
-      .from('projects')
-      .update({
-        status: 'completed',
-        is_public: isPublic,
-      })
-      .eq('id', project.id)
-
-    // Étape 2 — rating_required pour tous les membres
-    await supabase
-      .from('project_members')
-      .update({ rating_required: true })
-      .eq('project_id', project.id)
-
+    await supabase.from('projects').update({ status: 'completed', is_public: isPublic }).eq('id', project.id)
+    await supabase.from('project_members').update({ rating_required: true }).eq('project_id', project.id)
     setCompleting(false)
     setShowCompletionModal(false)
-
-    // Recharge la page pour refléter le nouveau status
     router.refresh()
   }
 
-  // Fonction de suppression du projet
   async function handleDeleteProject() {
-    // Confirmation avant suppression — évite les suppressions accidentelles
-    const confirmed = window.confirm(
-      'Are you sure you want to delete this project? This action cannot be undone.'
-    )
+    const confirmed = window.confirm('Are you sure you want to delete this project? This action cannot be undone.')
     if (!confirmed) return
-
-    const { error } = await supabase
-      .from('projects')
-      .delete()
-      .eq('id', project.id)
-
-    if (!error) {
-      // On redirige vers le feed après suppression
-      router.push('/')
-    }
+    const { error } = await supabase.from('projects').delete().eq('id', project.id)
+    if (!error) router.push('/')
   }
 
-  // Sauvegarde les modifications du projet
   async function handleSaveEdit() {
-  setSaving(true)
-
-  // Étape 1 — Mettre à jour les champs du projet
-  const { error: projectError } = await supabase
-    .from('projects')
-    .update({
-      title: editForm.title,
-      problem: editForm.problem,
-      // On s'assure que le level est en minuscules
-      // pour respecter la contrainte SQL
-      level: editForm.level.toLowerCase(),
-      domain: editForm.domain,
+    setSaving(true)
+    const { error } = await supabase.from('projects').update({
+      title:    editForm.title,
+      problem:  editForm.problem,
+      level:    editForm.level.toLowerCase(),
+      domain:   editForm.domain,
       duration: editForm.duration || null,
-      spots: editForm.spots ? parseInt(editForm.spots) : null,
+      spots:    editForm.spots ? parseInt(editForm.spots) : null,
+    }).eq('id', project.id)
+
+    if (error) { setSaving(false); return }
+
+    await supabase.from('project_skills').delete().eq('project_id', project.id)
+    if (editSkills.length > 0) {
+      await supabase.from('project_skills').insert(
+        editSkills.map(skill => ({ project_id: project.id, skill_needed: skill }))
+      )
+    }
+
+    setProjectData({
+      title:          editForm.title,
+      problem:        editForm.problem,
+      level:          editForm.level.toLowerCase(),
+      domain:         editForm.domain,
+      duration:       editForm.duration || '',
+      spots:          editForm.spots ? parseInt(editForm.spots) : null,
+      project_skills: editSkills.map(skill => ({ skill_needed: skill })),
     })
-    .eq('id', project.id)
-
-  if (projectError) {
     setSaving(false)
-    return
+    setEditing(false)
   }
 
-  // Étape 2 — Mettre à jour les skills
-  await supabase
-    .from('project_skills')
-    .delete()
-    .eq('project_id', project.id)
-
-  if (editSkills.length > 0) {
-    await supabase
-      .from('project_skills')
-      .insert(editSkills.map(skill => ({
-        project_id: project.id,
-        skill_needed: skill,
-      })))
-  }
-
-  // Étape 3 — Mettre à jour le state local
-  // pour afficher les nouvelles données sans recharger
-  setProjectData({
-    title: editForm.title,
-    problem: editForm.problem,
-    level: editForm.level.toLowerCase(),
-    domain: editForm.domain,
-    duration: editForm.duration || '',
-    spots: editForm.spots ? parseInt(editForm.spots) : null,
-    project_skills: editSkills.map(skill => ({ skill_needed: skill })),
-  })
-
-  setSaving(false)
-  // On quitte le mode édition — les nouvelles données
-  // sont déjà dans le state local, pas besoin de recharger
-  setEditing(false)
-}
-
+  // ─────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────
 
   return (
-    <main className="max-w-4xl mx-auto px-4 py-10">
+    <main style={{ maxWidth: '1024px', margin: '0 auto', padding: '32px 16px' }}>
 
-      {/* Bouton retour vers le feed */}
-      <Link
-        href="/"
-        className="inline-flex items-center gap-2 text-sm mb-6 transition-colors px-3 py-1.5 rounded-md font-medium"
-        style={{ 
-            color: '#475569',
-            border: '1px solid #1E2840',
-         }}
+      {/* Smart back button */}
+      <BackButton />
 
-        onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.color = '#F1F5F9'
-            ;(e.currentTarget as HTMLElement).style.borderColor = '#94A3B8'
-        }}
-
-        onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.color = '#64748B'
-            ;(e.currentTarget as HTMLElement).style.borderColor = '#1E2840'
-        }}
-
-      >
-        ← Back to projects
-      </Link>
-
-      {/* Layout en deux colonnes sur desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* ── Colonne principale (2/3) ── */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
+        {/* ── Main column (2/3) ── */}
+        <div className="lg:col-span-2" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-          {/* Header du projet */}
-          <div
-            className="rounded-2xl p-6"
-            style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-          >
-            {/* Domain + status badges */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span
-                  className="text-xs px-2.5 py-1 rounded-md font-medium"
-                  style={{
-                    backgroundColor: 'rgba(13,148,136,0.14)',
-                    color: '#5EEAD4',
-                    border: '1px solid rgba(13,148,136,0.28)',
-                  }}
-                >
-                  {project.domain}
-                </span>
-                <span
-                  className="text-xs px-2.5 py-1 rounded-md font-medium capitalize"
-                  style={{
-                    backgroundColor: project.status === 'open'
-                      ? 'rgba(16,185,129,0.14)'
-                      : 'rgba(245,158,11,0.14)',
-                    color: project.status === 'open' ? '#6EE7B7' : '#FCD34D',
-                  }}
-                >
-                  {project.status}
-                </span>
-              </div>
-
-              {/* Boutons Edit / Save / Cancel — owner seulement */}
-              {isOwner && (
-                <div className="flex items-center gap-2">
-                  {editing ? (
-                    <>
-                      <button
-                        onClick={() => setEditing(false)}
-                        className="text-xs px-3 py-1.5 rounded-lg transition-colors"
-                        style={{ color: '#64748B', border: '1px solid #1E2840' }}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleSaveEdit}
-                        disabled={saving}
-                        className="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors"
-                        style={{
-                          backgroundColor: '#0D9488',
-                          color: 'white',
-                          opacity: saving ? 0.7 : 1,
-                        }}
-                      >
-                        {saving ? 'Saving...' : 'Save'}
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => setEditing(true)}
-                      className="text-xs px-3 py-1.5 rounded-lg transition-colors"
-                      style={{
-                        backgroundColor: 'rgba(13,148,136,0.14)',
-                        color: '#5EEAD4',
-                        border: '1px solid rgba(13,148,136,0.28)',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(13,148,136,0.25)')}
-                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(13,148,136,0.14)')}
-                    >
-                      Edit
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {editing ? (
-              // Mode édition — formulaire inline
-              <div className="flex flex-col gap-4">
-
-                {/* Titre */}
-                <input
-                  type="text"
-                  value={editForm.title}
-                  onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-xl text-sm outline-none font-bold"
-                  style={{
-                    backgroundColor: '#0C1120',
-                    border: '1px solid #0D9488',
-                    color: '#F1F5F9',
-                    fontSize: '1.1rem',
-                  }}
-                  onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                  onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
-                />
-
-                {/* Description */}
-                <textarea
-                  value={editForm.problem}
-                  onChange={e => setEditForm(p => ({ ...p, problem: e.target.value }))}
-                  rows={4}
-                  className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none"
-                  style={{
-                    backgroundColor: '#0C1120',
-                    border: '1px solid #1E2840',
-                    color: '#F1F5F9',
-                  }}
-                  onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                  onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
-                />
-
-                {/* Level */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-medium" style={{ color: '#64748B' }}>Level</label>
-                  <div className="flex gap-2">
-                    {LEVELS.map(l => (
-                      <button
-                        key={l}
-                        type="button"
-                        onClick={() => setEditForm(p => ({ ...p, level: l }))}
-                        className="flex-1 py-2 rounded-xl text-xs font-medium capitalize transition-all"
-                        style={{
-                          backgroundColor: editForm.level === l
-                            ? 'rgba(13,148,136,0.2)' : '#0C1120',
-                          border: editForm.level === l
-                            ? '1px solid #0D9488' : '1px solid #1E2840',
-                          color: editForm.level === l ? '#5EEAD4' : '#64748B',
-                        }}
-                      >
-                        {l}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Duration + Spots */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-medium" style={{ color: '#64748B' }}>Duration</label>
-                    <select
-                      value={editForm.duration}
-                      onChange={e => setEditForm(p => ({ ...p, duration: e.target.value }))}
-                      className="px-3 py-2 rounded-lg text-xs outline-none"
-                      style={{
-                        backgroundColor: '#0C1120',
-                        border: '1px solid #1E2840',
-                        color: '#F1F5F9',
-                      }}
-                    >
-                      <option value="">No duration</option>
-                      {DURATIONS.map(d => (
-                        <option key={d} value={d} style={{ backgroundColor: '#161B28' }}>{d}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-medium" style={{ color: '#64748B' }}>Spots</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={editForm.spots}
-                      onChange={e => setEditForm(p => ({ ...p, spots: e.target.value }))}
-                      className="px-3 py-2 rounded-lg text-xs outline-none"
-                      style={{
-                        backgroundColor: '#0C1120',
-                        border: '1px solid #1E2840',
-                        color: '#F1F5F9',
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* Skills recherchées */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-medium" style={{ color: '#64748B' }}>
-                    Skills needed
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {SKILLS.map(skill => (
-                      <button
-                        key={skill}
-                        type="button"
-                        onClick={() => setEditSkills(prev =>
-                          prev.includes(skill)
-                            ? prev.filter(s => s !== skill)
-                            : [...prev, skill]
-                        )}
-                        className="px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
-                        style={{
-                          backgroundColor: editSkills.includes(skill)
-                            ? 'rgba(13,148,136,0.2)' : '#0C1120',
-                          border: editSkills.includes(skill)
-                            ? '1px solid #0D9488' : '1px solid #1E2840',
-                          color: editSkills.includes(skill) ? '#5EEAD4' : '#64748B',
-                        }}
-                      >
-                        {skill}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-            ) : (
-              // Mode affichage normal
-              <>
-                <h1 className="text-2xl font-bold mb-4" style={{ color: '#F1F5F9' }}>
-                  {projectData.title}
-                </h1>
-                <p className="text-sm leading-relaxed mb-4 break-words overflow-hidden" style={{ color: '#94A3B8' }}>
-                  {projectData.problem}
-                </p>
-
-                {/* Skills + niveau */}
-                <div className="flex flex-wrap gap-2">
-                  {projectData.project_skills?.map(skill => {
-                    const colors = SKILL_COLORS[skill.skill_needed] ?? {
-                      bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
-                    }
-                    return (
-                      <span
-                        key={skill.skill_needed}
-                        className="text-xs px-2.5 py-1 rounded-md font-medium"
-                        style={{ backgroundColor: colors.bg, color: colors.text }}
-                      >
-                        {skill.skill_needed}
-                      </span>
-                    )
-                  })}
-                  {projectData.level && (() => {
-                    const colors = LEVEL_COLORS[project.level] ?? {
-                      bg: 'rgba(255,255,255,0.07)', text: '#CBD5E1'
-                    }
-                    return (
-                      <span
-                        className="text-xs px-2.5 py-1 rounded-md font-medium capitalize"
-                        style={{ backgroundColor: colors.bg, color: colors.text }}
-                      >
-                        {projectData.level}
-                      </span>
-                    )
-                  })()}
-                </div>
-              </>
+          {/* Project header — title, badges, edit */}
+          <ProjectHeader
+            project={project}
+            projectData={projectData}
+            isOwner={isOwner}
+            editing={editing}
+            saving={saving}
+            editForm={editForm}
+            editSkills={editSkills}
+            onEdit={() => setEditing(true)}
+            onCancel={() => setEditing(false)}
+            onSave={handleSaveEdit}
+            onEditFormChange={(field, value) => setEditForm(p => ({ ...p, [field]: value }))}
+            onEditSkillToggle={skill => setEditSkills(prev =>
+              prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
             )}
-          </div>
+          />
 
-          {/* Section Milestones */}
-          <div
-            className="rounded-2xl p-6"
-            style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-          >
-            {/* Header milestones */}
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-sm" style={{ color: '#F1F5F9' }}>
-                Milestones
-              </h2>
-              <span className="text-xs" style={{ color: '#475569' }}>
+          {/* Milestones */}
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <h2 style={sectionTitle}>Milestones</h2>
+              <span style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
                 {milestones.filter(m => m.completed).length}/{milestones.length} completed
               </span>
             </div>
 
-            {/* Barre de progression — visible seulement si au moins 1 milestone */}
+            {/* Progress bar */}
             {milestones.length > 0 && (
-              <div
-                className="w-full h-1.5 rounded-full mb-4"
-                style={{ backgroundColor: '#1E2840' }}
-              >
-                <div
-                  className="h-1.5 rounded-full transition-all duration-500"
-                  style={{ width: `${progress}%`, backgroundColor: '#0D9488' }}
-                />
+              <div style={{ width: '100%', height: '3px', borderRadius: radius.full, backgroundColor: colors.bg.hover, marginBottom: '12px' }}>
+                <div style={{ width: `${progress}%`, height: '3px', borderRadius: radius.full, backgroundColor: colors.accent.teal, transition: 'width 0.4s ease' }} />
               </div>
             )}
 
-            {/* Liste des milestones */}
-            <div className="flex flex-col gap-2 mb-4">
-              {milestones.length === 0 && (
-                <p className="text-xs text-center py-4" style={{ color: '#475569' }}>
-                  No milestones yet.
-                  {isOwner && ' Add your first one below.'}
-                </p>
-              )}
-
-              {milestones.map(milestone => (
-                <div
-                  key={milestone.id}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl group"
-                  style={{ backgroundColor: '#0C1120' }}
-                >
-                  {/* Checkbox — cliquable seulement par le owner */}
-                  <button
-                    onClick={() => isOwner && toggleMilestone(milestone)}
-                    className="flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-all"
-                    style={{
-                      backgroundColor: milestone.completed ? '#0D9488' : 'transparent',
-                      borderColor: milestone.completed ? '#0D9488' : '#1E2840',
-                      cursor: isOwner ? 'pointer' : 'default',
-                    }}
-                  >
-                    {/* Icône check quand complété */}
-                    {milestone.completed && (
-                      <svg className="w-2.5 h-2.5 text-white" fill="none"
-                        viewBox="0 0 24 24" stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round"
-                          strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </button>
-
-                  {/* Titre du milestone — barré si complété */}
-                  <span
-                    className="text-sm flex-1"
-                    style={{
-                      color: milestone.completed ? '#475569' : '#94A3B8',
-                      textDecoration: milestone.completed ? 'line-through' : 'none',
-                    }}
-                  >
-                    {milestone.title}
-                  </span>
-
-                  {/* Bouton supprimer — visible au hover, seulement pour le owner */}
-                  {isOwner && (
-                    <button
-                      onClick={() => handleDeleteMilestone(milestone.id)}
-                      className="opacity-0 group-hover:opacity-100 text-xs transition-opacity"
-                      style={{ color: '#475569' }}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Formulaire ajout milestone — seulement pour le owner */}
+            {/* Milestone list */}
             {project.show_milestones || canSeePrivate ? (
               <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '12px' }}>
+                  {milestones.length === 0 && (
+                    <p style={{ fontSize: fontSize.xs, color: colors.text.muted, textAlign: 'center', padding: '16px 0' }}>
+                      No milestones yet.{isOwner && ' Add your first one below.'}
+                    </p>
+                  )}
+                  {milestones.map(milestone => (
+                    <div
+                      key={milestone.id}
+                      className="group"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '8px 10px',
+                        borderRadius: radius.lg,
+                        backgroundColor: colors.bg.surface,
+                      }}
+                    >
+                      {/* Checkbox */}
+                      <button
+                        onClick={() => isOwner && toggleMilestone(milestone)}
+                        style={{
+                          width: '14px', height: '14px',
+                          borderRadius: '3px',
+                          border: `1px solid ${milestone.completed ? colors.accent.teal : colors.border.default}`,
+                          backgroundColor: milestone.completed ? colors.accent.teal : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0,
+                          cursor: isOwner ? 'pointer' : 'default',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {milestone.completed && (
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                            <path d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+
+                      {/* Title */}
+                      <span style={{
+                        fontSize: fontSize.sm,
+                        flex: 1,
+                        color: milestone.completed ? colors.text.muted : colors.text.secondary,
+                        textDecoration: milestone.completed ? 'line-through' : 'none',
+                      }}>
+                        {milestone.title}
+                      </span>
+
+                      {/* Delete — owner only, on hover */}
+                      {isOwner && (
+                        <button
+                          onClick={() => handleDeleteMilestone(milestone.id)}
+                          className="opacity-0 group-hover:opacity-100"
+                          style={{ fontSize: fontSize.xs, color: colors.text.muted, background: 'none', border: 'none', cursor: 'pointer' }}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add milestone input — owner only */}
                 {isOwner && (
-                  <div className="flex gap-2">
+                  <div style={{ display: 'flex', gap: '8px' }}>
                     <input
                       type="text"
                       placeholder="Add a milestone..."
                       value={newMilestone}
                       onChange={e => setNewMilestone(e.target.value)}
-                      // Enter pour ajouter rapidement sans cliquer le bouton
                       onKeyDown={e => e.key === 'Enter' && handleAddMilestone()}
-                      className="flex-1 px-3 py-2 rounded-xl text-sm outline-none"
                       style={{
-                        backgroundColor: '#0C1120',
-                        border: '1px solid #1E2840',
-                        color: '#F1F5F9',
+                        flex: 1,
+                        backgroundColor: colors.bg.surface,
+                        border: `0.5px solid ${colors.border.default}`,
+                        borderRadius: radius.lg,
+                        color: colors.text.primary,
+                        fontSize: fontSize.sm,
+                        padding: '7px 10px',
+                        outline: 'none',
+                        fontFamily: 'inherit',
                       }}
-                      onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-                      onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
+                      onFocus={e => (e.currentTarget.style.borderColor = colors.accent.teal)}
+                      onBlur={e => (e.currentTarget.style.borderColor = colors.border.default)}
                     />
                     <button
                       onClick={handleAddMilestone}
                       disabled={addingMilestone || !newMilestone.trim()}
-                      className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
                       style={{
-                        backgroundColor: 'rgba(13,148,136,0.14)',
-                        color: '#5EEAD4',
-                        border: '1px solid rgba(13,148,136,0.28)',
-                        // Opacité réduite si champ vide ou en cours d'ajout
+                        ...styles.btnTeal,
                         opacity: !newMilestone.trim() ? 0.5 : 1,
                       }}
                     >
@@ -863,361 +462,370 @@ export default function ProjectDetailClient({
                 )}
               </>
             ) : (
-              <div className="py-4 text-center">
-                <p className="text-xs" style={{ color: '#475569' }}>
-                  🔒 Milestones are private. Follow to see progress.
-                </p>
-              </div>
+              <p style={{ fontSize: fontSize.xs, color: colors.text.muted, textAlign: 'center', padding: '12px 0' }}>
+                🔒 Milestones are private. Follow to see progress.
+              </p>
             )}
 
-            {/* Espace entre Milestones et Build Log */}
-            <div className="mt-2" />
+            {/* Build Log */}
+            <div style={{ marginTop: '16px' }}>
+              {project.show_build_log || canSeePrivate ? (
+                <ProjectUpdates
+                  projectId={project.id}
+                  updates={updates}
+                  currentUserId={currentUserId}
+                  canPost={isOwner || isMember}
+                />
+              ) : (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '16px', 
+                  backgroundColor: colors.bg.elevated, 
+                  border: `0.5px solid ${colors.border.default}`,
+                  borderRadius: radius.xl }}>
+                  <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>🔒 Build Log is private. Follow to see updates.</p>
+                </div>
+              )}
+            </div>
 
-            {/* Section Build Log - updates du projet
-                Visible par tous si show_build_log = true
-                Sinon visible seulement par membres + followers */}
-            {project.show_build_log || canSeePrivate ? (
-              <ProjectUpdates
-                projectId={project.id}
-                updates={updates}
-                currentUserId={currentUserId}
-                canPost={isOwner || isMember}
-              />
-            ) : (
-              <div
-                className="rounded-2xl p-6 text-center"
-                style={{ backgroundColor: '#0C1120', border: '1px solid #1E2840' }}
-              >
-                <p className="text-xs mb-2" style={{ color: '#475569' }}>
-                  🔒 Build Log is private
-                </p>
-                <p className="text-xs" style={{ color: '#475569' }}>
-                  Follow this project to see updates.
-                </p>
-              </div>
-            )}
-
-            {/* Espace entre Build Log et Team Chat */}
-            <div className="mt-2" />
-
-            {/* Team Chat
-              Visible par tous si show_Team_chat = true
-              Sinon visible seulement par membres + followers */}
-            {project.show_chat || canSeePrivate ? (
-              <ProjectChat
-                projectId={project.id}
-                initialMessages={initialMessages}
-                currentUserId={currentUserId}
-                canChat={isOwner || isMember}
-              />
-            ) : (
-              <div
-                className="rounded-2xl p-6 text-center"
-                style={{ backgroundColor: '#0C1120', border: '1px solid #1E2840' }}
-              >
-                <p className="text-xs mb-2" style={{ color: '#475569' }}>
-                  🔒 Team Chat is private
-                </p>
-                <p className="text-xs" style={{ color: '#475569' }}>
-                  Follow this project to see the conversation.
-                </p>
-              </div>
-            )}
-
+            {/* Team Chat */}
+            <div style={{ marginTop: '16px' }}>
+              {project.show_chat || canSeePrivate ? (
+                <ProjectChat
+                  projectId={project.id}
+                  initialMessages={initialMessages}
+                  currentUserId={currentUserId}
+                  canChat={isOwner || isMember}
+                />
+              ) : (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '16px', 
+                  backgroundColor: colors.bg.elevated, 
+                  borderRadius: radius.xl, 
+                  border: `0.5px solid ${colors.border.default}` }}>
+                  <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>🔒 Team Chat is private. Follow to see the conversation.</p>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Section Community Feedback
-            Visible par tous, commentable par n'importe quel builder connecté */}
+          {/* Community feedback */}
           <ProjectComments
             projectId={project.id}
             initialComments={initialComments}
             currentUserId={currentUserId}
           />
-          
         </div>
 
+        {/* ── Sidebar (1/3) ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-        {/* ── Colonne latérale (1/3) ── */}
-        <div className="flex flex-col gap-6">
-
-          {/* Card Owner */}
-          <div
-            className="rounded-2xl p-5"
-            style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-          >
-            <h2 className="font-semibold text-sm mb-4" style={{ color: '#F1F5F9' }}>
-              Posted by
-            </h2>
-
-            <div className="flex items-center gap-3 mb-3">
-              {/* Avatar du owner */}
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg, #0D9488, #0EA5E9)' }}
-              >
+          {/* Owner card */}
+          <div style={cardStyle}>
+            <h2 style={sectionTitle}>Posted by</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+              <div style={{
+                width: '36px', height: '36px',
+                borderRadius: radius.lg,
+                backgroundColor: colors.accent.teal,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: fontSize.xs, fontWeight: 500, color: '#fff', flexShrink: 0,
+              }}>
                 {getInitials(project.profiles)}
               </div>
               <div>
                 <Link
                   href={`/profile/${project.profiles?.id}`}
-                  className="text-sm font-medium hover:underline"
-                  style={{ color: '#F1F5F9' }}
+                  style={{ fontSize: fontSize.sm, fontWeight: 500, color: colors.text.primary, textDecoration: 'none' }}
+                  onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                  onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
                 >
                   {getFullName(project.profiles as any)}
                 </Link>
-                <p className="text-xs" style={{ color: '#475569' }}>
+                <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
                   {project.profiles?.country ?? ''} · ⭐{' '}
-                  {project.profiles?.avg_rating
-                    ? project.profiles.avg_rating.toFixed(1)
-                    : 'New'
-                  }
+                  {project.profiles?.avg_rating ? project.profiles.avg_rating.toFixed(1) : 'New'}
                 </p>
               </div>
             </div>
-
-            {/* Lien de contact préféré du owner
-                On utilise CONTACT_TYPES depuis constants.ts */}
             {project.profiles?.preferred_contact_type &&
               CONTACT_TYPES[project.profiles.preferred_contact_type] && (
               <a
                 href={project.profiles.preferred_contact_value ?? '#'}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl w-full transition-opacity hover:opacity-80"
                 style={{
-                  backgroundColor: '#0C1120',
-                  border: '1px solid #1E2840',
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  fontSize: fontSize.xs, padding: '7px 10px',
+                  borderRadius: radius.lg, width: '100%',
+                  backgroundColor: colors.bg.surface,
+                  border: `0.5px solid ${colors.border.default}`,
                   color: CONTACT_TYPES[project.profiles.preferred_contact_type].color,
+                  textDecoration: 'none',
+                  transition: 'opacity 0.15s',
                 }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
               >
                 <span>{CONTACT_TYPES[project.profiles.preferred_contact_type].icon}</span>
-                <span>
-                  Contact via {CONTACT_TYPES[project.profiles.preferred_contact_type].label}
-                </span>
+                <span>Contact via {CONTACT_TYPES[project.profiles.preferred_contact_type].label}</span>
               </a>
             )}
           </div>
 
-          {/* Card Team */}
+          {/* Team card */}
           {project.show_team || canSeePrivate ? (
-            <div
-              className="rounded-2xl p-5"
-              style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-            >
-              <div
-                className="rounded-2xl p-5"
-                style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-              >
-                <h2 className="font-semibold text-sm mb-4" style={{ color: '#F1F5F9' }}>
-                  Team · {members.length} member{members.length !== 1 ? 's' : ''}
-                </h2>
-
-                {members.length === 0 ? (
-                  <p className="text-xs" style={{ color: '#475569' }}>
-                    No members yet. Be the first to join!
-                  </p>
-                ) : (
-                  <div className="flex flex-col gap-4">
-                    {members.map(member => {
-                      // On cherche le message de la demande acceptée pour ce membre
-                      const connectionMessage = acceptedConnections.find(
-                        c => c.sender_id === member.user_id
-                      )?.message
-
-                      return (
-                        <div key={member.id}>
-                          <div className="flex items-center gap-3 mb-2">
-                            {/* Avatar du membre */}
-                            <div
-                              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                              style={{ background: 'linear-gradient(135deg, #0D9488, #0EA5E9)' }}
-                            >
-                              {getInitials(member.profiles)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              {/* Nom cliquable vers le profil public */}
-                              <Link
-                                href={`/profile/${member.profiles?.id}`}
-                                className="text-sm font-medium hover:underline truncate block"
-                                style={{ color: '#F1F5F9' }}
-                              >
-                                {getFullName(member.profiles)}
-                              </Link>
-                              {/* Contact préféré */}
-                              {member.profiles?.preferred_contact_type &&
-                                CONTACT_TYPES[member.profiles.preferred_contact_type] && (
-                                <a
-                                href={member.profiles.preferred_contact_value ?? '#'}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs hover:opacity-80 transition-opacity"
-                                  style={{
-                                    color: CONTACT_TYPES[member.profiles.preferred_contact_type].color,
-                                  }}
-                                >
-                                  {CONTACT_TYPES[member.profiles.preferred_contact_type].icon}{' '}
-                                  {CONTACT_TYPES[member.profiles.preferred_contact_type].label}
-                                </a>
-                              )}
-                            </div>
+            <div style={cardStyle}>
+              <h2 style={sectionTitle}>
+                Team · {members.length} {members.length === 1 ? 'member' : 'members'}
+              </h2>
+              {members.length === 0 ? (
+                <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>No members yet. Be the first to join!</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {members.map(member => {
+                    const connectionMessage = acceptedConnections.find(c => c.sender_id === member.user_id)?.message
+                    return (
+                      <div key={member.id}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <div style={{
+                            width: '28px', height: '28px',
+                            borderRadius: radius.lg,
+                            backgroundColor: colors.accent.teal,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: fontSize.xs, fontWeight: 500, color: '#fff', flexShrink: 0,
+                          }}>
+                            {getInitials(member.profiles)}
                           </div>
-
-                          {/* Message de la demande — visible seulement si acceptée
-                              Aide le owner à se souvenir pourquoi ce membre a rejoint */}
-                          {connectionMessage && (
-                            <p
-                              className="text-xs leading-relaxed px-3 py-2 rounded-lg italic"
-                              style={{
-                                color: '#64748B',
-                                backgroundColor: '#0C1120',
-                                border: '1px solid #1E2840',
-                                marginLeft: '44px', // aligne sous l'avatar
-                              }}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <Link
+                              href={`/profile/${member.profiles?.id}`}
+                              style={{ fontSize: fontSize.sm, fontWeight: 500, color: colors.text.primary, textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                              onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                              onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
                             >
-                              "{connectionMessage}"
-                            </p>
-                          )}
+                              {getFullName(member.profiles)}
+                            </Link>
+                            {member.profiles?.preferred_contact_type &&
+                              CONTACT_TYPES[member.profiles.preferred_contact_type] && (
+                              <a
+                                href={member.profiles.preferred_contact_value ?? '#'}
+                                target="_blank" rel="noopener noreferrer"
+                                style={{ fontSize: fontSize.xs, color: CONTACT_TYPES[member.profiles.preferred_contact_type].color, textDecoration: 'none' }}
+                              >
+                                {CONTACT_TYPES[member.profiles.preferred_contact_type].icon}{' '}
+                                {CONTACT_TYPES[member.profiles.preferred_contact_type].label}
+                              </a>
+                            )}
+                          </div>
                         </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-
+                        {connectionMessage && (
+                          <p style={{
+                            fontSize: fontSize.xs, lineHeight: 1.5,
+                            padding: '6px 10px', borderRadius: radius.lg,
+                            fontStyle: 'italic',
+                            color: colors.text.muted,
+                            backgroundColor: colors.bg.surface,
+                            border: `0.5px solid ${colors.border.default}`,
+                            marginLeft: '36px',
+                          }}>
+                            "{connectionMessage}"
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           ) : (
-            <div
-              className="rounded-2xl p-5 text-center"
-              style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-            >
-              <p className="text-xs mb-1" style={{ color: '#475569' }}>
-                🔒 Team is private
-              </p>
-              <p className="text-xs" style={{ color: '#475569' }}>
-                Follow to see who's building this.
+            <div style={{ ...cardStyle, textAlign: 'center' }}>
+              <p style={{ fontSize: fontSize.xs, color: colors.text.muted, marginBottom: '4px' }}>🔒 Team is private</p>
+              <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>Follow to see who's building this.</p>
+            </div>
+          )}
+
+          {/* Details card */}
+          <div style={cardStyle}>
+            <h2 style={sectionTitle}>Details</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {project.duration && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: fontSize.xs, color: colors.text.muted }}>
+                  <span>⏱</span>
+                  <span>Duration: <span style={{ color: colors.text.secondary }}>{project.duration}</span></span>
+                </div>
+              )}
+              {project.spots && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: fontSize.xs, color: colors.text.muted }}>
+                  <span>👥</span>
+                  <span>Spots: <span style={{ color: colors.text.secondary }}>{project.spots}</span></span>
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: fontSize.xs, color: colors.text.muted }}>
+                <span>📅</span>
+                <span>
+                  Posted: <span style={{ color: colors.text.secondary }}>
+                    {new Date(project.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: fontSize.xs, color: colors.text.muted }}>
+                <span>👁</span>
+                <span style={{ color: colors.text.secondary }}>
+                  {followersCount} {followersCount === 1 ? 'follower' : 'followers'}
+                </span>
+              </div>
+
+              {/* Website + GitHub links */}
+              {(project.website_url || project.github_url) && (
+                <div style={{ paddingTop: '8px', borderTop: `0.5px solid ${colors.border.default}`, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {project.website_url && (
+                    <a
+                      href={project.website_url}
+                      target="_blank" rel="noopener noreferrer"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        fontSize: fontSize.xs,
+                        color: colors.accent.tealText,
+                        textDecoration: 'none',
+                        padding: '5px 8px',
+                        borderRadius: radius.md,
+                        backgroundColor: colors.accent.tealDim,
+                        border: `0.5px solid ${colors.accent.tealBorder}`,
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity = '0.8')}
+                      onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                    >
+                      🌐 View demo
+                    </a>
+                  )}
+                  {project.github_url && (
+                    <a
+                      href={project.github_url}
+                      target="_blank" rel="noopener noreferrer"
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        fontSize: fontSize.xs,
+                        color: colors.text.secondary,
+                        textDecoration: 'none',
+                        padding: '5px 8px',
+                        borderRadius: radius.md,
+                        backgroundColor: colors.bg.surface,
+                        border: `0.5px solid ${colors.border.default}`,
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.borderColor = colors.border.hover)}
+                      onMouseLeave={e => (e.currentTarget.style.borderColor = colors.border.default)}
+                    >
+                      ⌥ GitHub repository
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Privacy settings — owner only */}
+          {isOwner && (
+            <div style={cardStyle}>
+              <h2 style={sectionTitle}>Privacy</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {[
+                  { key: 'show_milestones', label: 'Milestones' },
+                  { key: 'show_build_log',  label: 'Build Log' },
+                  { key: 'show_chat',       label: 'Team Chat' },
+                  { key: 'show_team',       label: 'Team members' },
+                ].map(({ key, label }) => {
+                  const isPublic = (project as any)[key]
+                  return (
+                    <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: fontSize.xs, color: colors.text.secondary }}>{label}</span>
+                      <button
+                        onClick={async () => {
+                          await supabase.from('projects').update({ [key]: !isPublic }).eq('id', project.id)
+                          router.refresh()
+                        }}
+                        style={{
+                          fontSize: fontSize.xs,
+                          padding: '3px 8px',
+                          borderRadius: radius.md,
+                          cursor: 'pointer',
+                          backgroundColor: isPublic ? colors.status.successDim : colors.bg.hover,
+                          color:           isPublic ? colors.status.success    : colors.text.muted,
+                          border:          isPublic ? `0.5px solid rgba(16,185,129,0.25)` : `0.5px solid ${colors.border.default}`,
+                        }}
+                      >
+                        {isPublic ? 'Public' : 'Private'}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+              <p style={{ fontSize: fontSize.xs, color: colors.text.muted, marginTop: '10px' }}>
+                Private sections are visible to members and followers only.
               </p>
             </div>
           )}
 
-          {/* Card Details du projet */}
-          <div
-            className="rounded-2xl p-5"
-            style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-          >
-            <h2 className="font-semibold text-sm mb-4" style={{ color: '#F1F5F9' }}>
-              Details
-            </h2>
-            <div className="flex flex-col gap-3">
+          {/* Action buttons */}
 
-              {/* Durée estimée */}
-              {project.duration && (
-                <div className="flex items-center gap-2 text-xs" style={{ color: '#64748B' }}>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Duration:{' '}
-                  <span style={{ color: '#94A3B8' }}>{project.duration}</span>
-                </div>
-              )}
-
-              {/* Nombre de spots */}
-              {project.spots && (
-                <div className="flex items-center gap-2 text-xs" style={{ color: '#64748B' }}>
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Spots:{' '}
-                  <span style={{ color: '#94A3B8' }}>{project.spots}</span>
-                </div>
-              )}
-
-              {/* Date de création */}
-              <div className="flex items-center gap-2 text-xs" style={{ color: '#64748B' }}>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                Posted:{' '}
-                <span style={{ color: '#94A3B8' }}>
-                  {new Date(project.created_at).toLocaleDateString('en-US', {
-                    month: 'short', day: 'numeric', year: 'numeric'
-                  })}
-                </span>
-              </div>
-
-              {/* Nombre de followers */}
-              <div className="flex items-center gap-2 text-xs" style={{ color: '#64748B' }}>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                <span style={{ color: '#94A3B8' }}>
-                  {followersCount} {followersCount === 1 ? 'follower' : 'followers'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Actions ── */}
-
-          {/* Bouton Mark as completed — owner seulement, projet encore ouvert */}
+          {/* Mark as completed — owner, open projects only */}
           {isOwner && project.status === 'open' && (
             <button
               onClick={() => setShowCompletionModal(true)}
-              className="w-full py-3 rounded-xl font-medium text-sm transition-all"
               style={{
-                backgroundColor: 'rgba(99,102,241,0.14)',
-                color: '#A5B4FC',
-                border: '1px solid rgba(99,102,241,0.28)',
+                ...styles.btnIndigo,
+                width: '100%',
+                padding: '10px',
+                fontSize: fontSize.sm,
               }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(99,102,241,0.25)')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(99,102,241,0.14)')}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(99,102,241,0.2)')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = colors.accent.indigoDim)}
             >
               ✓ Mark as completed
             </button>
           )}
 
-          {/* Bouton Delete project — owner seulement */}
+          {/* Delete project — owner only */}
           {isOwner && (
             <button
               onClick={handleDeleteProject}
-              className="w-full py-3 rounded-xl font-medium text-sm transition-all"
               style={{
-                backgroundColor: 'rgba(239,68,68,0.1)',
-                color: '#FCA5A5',
-                border: '1px solid rgba(239,68,68,0.28)',
+                width: '100%', padding: '10px',
+                fontSize: fontSize.sm, fontWeight: 500,
+                borderRadius: radius.lg, cursor: 'pointer',
+                backgroundColor: colors.status.dangerDim,
+                color: colors.status.danger,
+                border: `0.5px solid rgba(239,68,68,0.25)`,
+                transition: 'background 0.15s',
               }}
               onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.2)')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.1)')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = colors.status.dangerDim)}
             >
-              🗑 Delete project
+              Delete project
             </button>
           )}
 
-          {/* Bannière de rating — visible pour les membres
-              qui doivent encore noter leurs collaborateurs */}
+          {/* Rating banner */}
           {ratingRequired && !showRatingModal && (
-            <div
-              className="w-full p-4 rounded-xl"
-              style={{
-                backgroundColor: 'rgba(245,158,11,0.1)',
-                border: '1px solid rgba(245,158,11,0.3)',
-              }}
-            >
-              <p className="text-xs mb-3" style={{ color: '#FCD34D' }}>
-                ⭐ This project is completed. Please rate your collaborators.
+            <div style={{
+              padding: '14px',
+              borderRadius: radius.xl,
+              backgroundColor: colors.status.warningDim,
+              border: `0.5px solid rgba(245,158,11,0.25)`,
+            }}>
+              <p style={{ fontSize: fontSize.xs, color: colors.status.warning, marginBottom: '10px' }}>
+                ⭐ Project completed. Please rate your collaborators.
               </p>
               <button
                 onClick={() => setShowRatingModal(true)}
-                className="w-full py-2 rounded-lg text-xs font-medium transition-all"
                 style={{
+                  width: '100%', padding: '7px',
+                  fontSize: fontSize.xs, fontWeight: 500,
+                  borderRadius: radius.lg, cursor: 'pointer',
                   backgroundColor: 'rgba(245,158,11,0.2)',
-                  color: '#FCD34D',
-                  border: '1px solid rgba(245,158,11,0.3)',
+                  color: colors.status.warning,
+                  border: `0.5px solid rgba(245,158,11,0.25)`,
                 }}
               >
                 Rate collaborators →
@@ -1225,179 +833,99 @@ export default function ProjectDetailClient({
             </div>
           )}
 
-          {/* Privacy settings — owner seulement */}
-          {isOwner && (
-            <div
-              className="rounded-2xl p-5"
-              style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-            >
-              <h2 className="font-semibold text-sm mb-4" style={{ color: '#F1F5F9' }}>
-                Privacy
-              </h2>
-              <div className="flex flex-col gap-3">
-                {[
-                  { key: 'show_milestones', label: 'Milestones' },
-                  { key: 'show_build_log', label: 'Build Log' },
-                  { key: 'show_chat', label: 'Team Chat' },
-                  { key: 'show_team', label: 'Team members' },
-                ].map(({ key, label }) => (
-                  <div key={key} className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: '#94A3B8' }}>{label}</span>
-                    <button
-                      onClick={async () => {
-                        // Toggle la valeur dans Supabase
-                        const currentValue = (project as any)[key]
-                        await supabase
-                          .from('projects')
-                          .update({ [key]: !currentValue })
-                          .eq('id', project.id)
-                        // Recharge la page pour refléter le changement
-                        router.refresh()
-                      }}
-                      className="text-xs px-2.5 py-1 rounded-lg transition-all"
-                      style={{
-                        backgroundColor: (project as any)[key]
-                          ? 'rgba(16,185,129,0.14)'
-                          : 'rgba(255,255,255,0.05)',
-                        color: (project as any)[key] ? '#6EE7B7' : '#64748B',
-                        border: (project as any)[key]
-                          ? '1px solid rgba(16,185,129,0.28)'
-                          : '1px solid #1E2840',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#0D9488')}
-                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'rgba(16,185,129,0.14)')}
-                    >
-                      {(project as any)[key] ? 'Public' : 'Private'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs mt-3" style={{ color: '#475569' }}>
-                Private sections are visible to members and followers only.
-              </p>
-            </div>
-          )}
-
-          {/* Bouton Follow — visible pour tous sauf le owner et les membres
-              Les membres n'ont pas besoin de suivre — ils sont déjà dans le projet */}
+          {/* Follow button — non-owner, non-member */}
           {!isOwner && !isMember && (
             <button
               onClick={handleFollow}
               disabled={followLoading}
-              className="w-full py-3 rounded-xl font-medium text-sm transition-all"
               style={{
-                backgroundColor: isFollowing
-                  ? 'rgba(99,102,241,0.14)'
-                  : 'rgba(255,255,255,0.05)',
-                color: isFollowing ? '#A5B4FC' : '#94A3B8',
-                border: isFollowing
-                  ? '1px solid rgba(99,102,241,0.28)'
-                  : '1px solid #1E2840',
+                width: '100%', padding: '10px',
+                fontSize: fontSize.sm, fontWeight: 500,
+                borderRadius: radius.lg, cursor: followLoading ? 'not-allowed' : 'pointer',
                 opacity: followLoading ? 0.7 : 1,
-                cursor: followLoading ? 'not-allowed' : 'pointer',
+                backgroundColor: isFollowing ? colors.accent.indigoDim : 'transparent',
+                color:           isFollowing ? colors.accent.indigoText : colors.text.muted,
+                border:          isFollowing ? `0.5px solid ${colors.accent.indigoBorder}` : `0.5px solid ${colors.border.default}`,
+                transition: 'all 0.15s',
               }}
               onMouseEnter={e => {
-                if (!followLoading) {
-                  (e.currentTarget as HTMLElement).style.borderColor = '#475569'
-                }
+                if (!followLoading) (e.currentTarget as HTMLElement).style.borderColor = colors.border.hover
               }}
               onMouseLeave={e => {
                 (e.currentTarget as HTMLElement).style.borderColor = isFollowing
-                  ? 'rgba(99,102,241,0.28)'
-                  : '#1E2840'
+                  ? colors.accent.indigoBorder
+                  : colors.border.default
               }}
             >
-              {followLoading
-                ? '...'
-                : isFollowing
-                ? '✓ Following'
-                : '+ Follow this project'
-              }
+              {followLoading ? '...' : isFollowing ? '✓ Following' : '+ Follow this project'}
             </button>
           )}
 
-          {/* Bouton "I'm interested" — caché si owner ou déjà membre */}
+          {/* I'm interested — non-owner, non-member */}
           {!isOwner && !isMember && (
             <button
-              onClick={handleInterest}
+              onClick={() => {
+                if (!currentUserId) { router.push('/login'); return }
+                setShowModal(true)
+              }}
               disabled={connStatus === 'loading' || connStatus === 'sent'}
-              className="w-full py-3 rounded-xl font-medium text-sm transition-all"
               style={{
-                backgroundColor: connStatus === 'sent'
-                  ? 'rgba(16,185,129,0.14)'
-                  : '#0D9488',
-                color: connStatus === 'sent' ? '#6EE7B7' : 'white',
-                border: connStatus === 'sent'
-                  ? '1px solid rgba(16,185,129,0.28)'
-                  : 'none',
-                opacity: connStatus === 'loading' ? 0.7 : 1,
+                width: '100%', padding: '10px',
+                fontSize: fontSize.sm, fontWeight: 500,
+                borderRadius: radius.lg,
                 cursor: connStatus === 'sent' ? 'default' : 'pointer',
+                opacity: connStatus === 'loading' ? 0.7 : 1,
+                backgroundColor: connStatus === 'sent' ? colors.status.successDim : colors.accent.teal,
+                color:           connStatus === 'sent' ? colors.status.success    : '#fff',
+                border:          connStatus === 'sent' ? `0.5px solid rgba(16,185,129,0.25)` : 'none',
+                transition: 'all 0.15s',
               }}
             >
               {connStatus === 'loading' && 'Sending...'}
-              {connStatus === 'sent' && '✓ Request sent'}
-              {connStatus === 'error' && 'Try again'}
-              {connStatus === 'idle' && "I'm interested →"}
+              {connStatus === 'sent'    && '✓ Request sent'}
+              {connStatus === 'error'   && 'Try again'}
+              {connStatus === 'idle'    && "I'm interested →"}
             </button>
           )}
 
-          {/* Badge si déjà membre de l'équipe */}
+          {/* Already a member badge */}
           {isMember && !isOwner && (
-            <div
-              className="w-full py-3 rounded-xl text-center text-sm font-medium"
-              style={{
-                backgroundColor: 'rgba(99,102,241,0.14)',
-                color: '#A5B4FC',
-                border: '1px solid rgba(99,102,241,0.28)',
-              }}
-            >
+            <div style={{
+              width: '100%', padding: '10px',
+              textAlign: 'center',
+              fontSize: fontSize.sm, fontWeight: 500,
+              borderRadius: radius.lg,
+              backgroundColor: colors.accent.indigoDim,
+              color: colors.accent.indigoText,
+              border: `0.5px solid ${colors.accent.indigoBorder}`,
+            }}>
               ✓ You're on this team
             </div>
           )}
         </div>
       </div>
 
-      {/* Modal de rating — affiché par dessus tout le contenu
-          On exclut l'utilisateur courant de la liste à noter
-          car on ne se note pas soi-même */}
+      {/* Modals */}
       {showRatingModal && currentUserId && (
         <RatingModal
           projectId={project.id}
           members={members.filter(m => m.user_id !== currentUserId)}
           currentUserId={currentUserId}
-          onComplete={() => {
-            // Cache le modal et la bannière après soumission
-            setShowRatingModal(false)
-            setRatingRequired(false)
-          }}
+          onComplete={() => { setShowRatingModal(false); setRatingRequired(false) }}
         />
       )}
 
-      {/* Modal d'intérêt — affiché au-dessus de la page */}
       {showModal && (
         <InterestModal
           projectTitle={project.title}
-
-          // Type de contact préféré du owner
           preferredContactType={userContact.type}
-
-          // Valeur du contact préféré du owner
           preferredContactValue={userContact.value}
-
-          // Confirmation de la demande
           onConfirm={handleConfirmInterest}
-
-          // Fermeture du modal
           onCancel={() => setShowModal(false)}
-
-          // Loading pendant l'envoi
           loading={connStatus === 'loading'}
-
-
         />
       )}
-      
-      {/* Modal de confirmation de complétion du projet */}
+
       {showCompletionModal && (
         <CompletionModal
           projectTitle={project.title}
@@ -1406,7 +934,6 @@ export default function ProjectDetailClient({
           loading={completing}
         />
       )}
-
     </main>
   )
 }

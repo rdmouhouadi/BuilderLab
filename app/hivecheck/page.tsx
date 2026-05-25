@@ -1,17 +1,15 @@
-// app/archive/page.tsx
-// Page publique des projets complétés
-// Accessible à tous — pas de protection par proxy
-// C'est le "hall of fame" de BuilderLab — ce qui a été shipper
+// app/hivecheck/page.tsx
+// Public leaderboard of completed and public projects.
+// Future: sorted by HiveCheck peer review score.
+// Accessible to all — no auth required.
 import { createClient } from '@/lib/supabase'
 import { Project } from '@/types'
-import ArchiveClient from '@/components/ArchiveClient'
+import HiveCheckClient from '@/components/HiveCheckClient'
 import PageTransition from '@/components/PageTransition'
 
-export default async function ArchivePage() {
+export default async function HiveCheckPage() {
   const supabase = await createClient()
 
-  // On fetch tous les projets complétés et publics
-  // avec leurs jointures habituelles
   const { data: projects } = await supabase
     .from('projects')
     .select(`
@@ -26,7 +24,7 @@ export default async function ArchivePage() {
 
   return (
     <PageTransition>
-      <ArchiveClient projects={(projects as Project[]) ?? []} />
+      <HiveCheckClient projects={(projects as Project[]) ?? []} />
     </PageTransition>
   )
 }

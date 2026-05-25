@@ -1,6 +1,6 @@
 // components/ProjectChat.tsx
-// Group chat du projet avec polling toutes les 5 secondes
-// Accessible uniquement aux membres et au owner
+// Group chat with 5-second polling.
+// Readable by all, writable by members and owner only.
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
@@ -8,13 +8,40 @@ import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import { ProjectMessage } from '@/types'
 import { getTimeLabel } from '@/lib/timeLabel'
 import Link from 'next/link'
+import { colors, radius, fontSize, styles } from '@/lib/design-tokens'
+
+// ─────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────
 
 type Props = {
   projectId: string
   initialMessages: ProjectMessage[]
   currentUserId: string | null
-  canChat: boolean  // true si owner ou membre actif
+  canChat: boolean // True if owner or active member
 }
+
+// ─────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────
+
+function getFullName(profile: ProjectMessage['profiles']) {
+  if (!profile) return 'Anonymous'
+  const full = [profile.first_name, profile.last_name].filter(Boolean).join(' ')
+  return full || profile.name || 'Anonymous'
+}
+
+function getInitials(profile: ProjectMessage['profiles']) {
+  if (!profile) return '?'
+  const first = profile.first_name?.[0]
+  const last  = profile.last_name?.[0]
+  if (first || last) return [first, last].filter(Boolean).join('').toUpperCase()
+  return profile.name?.[0]?.toUpperCase() ?? '?'
+}
+
+// ─────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────
 
 export default function ProjectChat({
   projectId,
@@ -24,35 +51,14 @@ export default function ProjectChat({
 }: Props) {
   const supabase = createBrowserSupabaseClient()
 
-  // Messages stockés en state local
   const [messages, setMessages] = useState<ProjectMessage[]>(initialMessages)
-  const [content, setContent] = useState('')
-  const [sending, setSending] = useState(false)
+  const [content,  setContent]  = useState('')
+  const [sending,  setSending]  = useState(false)
 
-  // Ref vers le bas du chat pour auto-scroll
-  const bottomRef = useRef<HTMLDivElement>(null)
-
-  // Ne scroller vers le bas que si un nouveau message est arrivé
+  const bottomRef   = useRef<HTMLDivElement>(null)
   const prevCountRef = useRef(initialMessages.length)
 
-  // Nom complet depuis un profil
-  function getFullName(profile: ProjectMessage['profiles']) {
-    if (!profile) return 'Anonymous'
-    const full = [profile.first_name, profile.last_name]
-      .filter(Boolean).join(' ')
-    return full || profile.name || 'Anonymous'
-  }
-
-  // Initiales pour l'avatar
-  function getInitials(profile: ProjectMessage['profiles']) {
-    if (!profile) return '?'
-    const first = profile.first_name?.[0]
-    const last = profile.last_name?.[0]
-    if (first || last) return [first, last].filter(Boolean).join('').toUpperCase()
-    return profile.name?.[0]?.toUpperCase() ?? '?'
-  }
-
-  // Polling — fetch les nouveaux messages toutes les 5 secondes
+  // Poll for new messages every 5 seconds
   useEffect(() => {
     const interval = setInterval(async () => {
       const { data } = await supabase
@@ -61,41 +67,32 @@ export default function ProjectChat({
         .eq('project_id', projectId)
         .order('created_at', { ascending: true })
         .limit(50)
-
       if (data) setMessages(data)
     }, 5000)
 
-    // Nettoyage — on arrête le polling quand le composant est démonté
     return () => clearInterval(interval)
   }, [projectId])
 
-  // Auto-scroll vers le bas quand de nouveaux messages arrivent
+  // Auto-scroll only when new messages arrive — not on every poll
   useEffect(() => {
-    // On scroll seulement si le nombre de messages a augmenté
-    // pas à chaque polling
     if (messages.length > prevCountRef.current) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
       prevCountRef.current = messages.length
     }
   }, [messages])
 
-  // Envoyer un message
+  // Send a message — optimistic append
   async function handleSend() {
     if (!content.trim() || !currentUserId) return
     setSending(true)
 
     const { data, error } = await supabase
       .from('project_messages')
-      .insert({
-        project_id: projectId,
-        author_id: currentUserId,
-        content: content.trim(),
-      })
+      .insert({ project_id: projectId, author_id: currentUserId, content: content.trim() })
       .select('*, profiles(id, name, first_name, last_name)')
       .single()
 
     if (!error && data) {
-      // Optimistic update — on ajoute le message immédiatement
       setMessages(prev => [...prev, data])
       setContent('')
     }
@@ -103,50 +100,78 @@ export default function ProjectChat({
     setSending(false)
   }
 
-  // Supprimer un message
+  // Delete a message — optimistic remove
   async function handleDelete(id: string) {
     setMessages(prev => prev.filter(m => m.id !== id))
     await supabase.from('project_messages').delete().eq('id', id)
   }
 
+  // ─────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────
+
   return (
-    <div
-      className="rounded-2xl overflow-hidden"
-      style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
-    >
+    <div style={{
+      backgroundColor: colors.bg.surface,
+      border: `0.5px solid ${colors.border.default}`,
+      borderRadius: radius.xl,
+      overflow: 'hidden',
+    }}>
+
       {/* Header */}
-      <div
-        className="flex items-center justify-between px-5 py-4"
-        style={{ borderBottom: '1px solid #1E2840' }}
-      >
-        <h2 className="font-semibold text-sm" style={{ color: '#F1F5F9' }}>
-          Team Chat
-          <span
-            className="ml-2 text-xs px-2 py-0.5 rounded-md"
-            style={{ backgroundColor: '#0C1120', color: '#475569' }}
-          >
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '10px 14px',
+        borderBottom: `0.5px solid ${colors.border.default}`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <h2 style={{ fontSize: fontSize.sm, fontWeight: 500, color: colors.text.primary }}>
+            Team Chat
+          </h2>
+          <span style={{
+            fontSize: fontSize.xs,
+            padding: '1px 6px',
+            borderRadius: radius.md,
+            backgroundColor: colors.bg.hover,
+            color: colors.text.muted,
+            border: `0.5px solid ${colors.border.default}`,
+          }}>
             {messages.length}
           </span>
-        </h2>
-        {/* Indicateur de polling */}
-        <div className="flex items-center gap-1.5 text-xs" style={{ color: '#475569' }}>
-          <span
-            className="w-1.5 h-1.5 rounded-full"
-            style={{ backgroundColor: '#0D9488' }}
-          />
+        </div>
+
+        {/* Live polling indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: fontSize.xs, color: colors.text.muted }}>
+          <span style={{
+            width: '5px', height: '5px',
+            borderRadius: radius.full,
+            backgroundColor: colors.accent.teal,
+            display: 'inline-block',
+          }} />
           Live
         </div>
       </div>
 
-      {/* Zone des messages */}
-      <div
-        className="flex flex-col gap-4 p-5 overflow-y-auto"
-        style={{ maxHeight: '400px', minHeight: '200px' }}
-      >
+      {/* Messages area */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '14px',
+        padding: '14px',
+        maxHeight: '360px',
+        minHeight: '160px',
+        overflowY: 'auto',
+      }}>
         {messages.length === 0 ? (
-          <p className="text-xs text-center py-8" style={{ color: '#475569' }}>
-            No messages yet.
-            {canChat && ' Start the conversation!'}
+          <p style={{
+            fontSize: fontSize.xs,
+            color: colors.text.muted,
+            textAlign: 'center',
+            padding: '24px 0',
+          }}>
+            No messages yet.{canChat && ' Start the conversation!'}
           </p>
         ) : (
           messages.map(message => {
@@ -155,52 +180,83 @@ export default function ProjectChat({
             return (
               <div
                 key={message.id}
-                className={`flex gap-3 group ${isMe ? 'flex-row-reverse' : ''}`}
+                className="group"
+                style={{
+                  display: 'flex',
+                  gap: '8px',
+                  flexDirection: isMe ? 'row-reverse' : 'row',
+                }}
               >
-                {/* Avatar */}
+                {/* Avatar — links to public profile */}
                 <Link href={`/profile/${message.profiles?.id}`}>
-                  <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 mt-0.5"
-                    style={{ background: 'linear-gradient(135deg, #0D9488, #0EA5E9)' }}
-                  >
+                  <div style={{
+                    width: '24px', height: '24px',
+                    borderRadius: radius.lg,
+                    backgroundColor: colors.accent.teal,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: fontSize.xs,
+                    fontWeight: 500,
+                    color: '#fff',
+                    flexShrink: 0,
+                    marginTop: '2px',
+                    textDecoration: 'none',
+                  }}>
                     {getInitials(message.profiles)}
                   </div>
                 </Link>
 
-                <div className={`flex flex-col gap-1 max-w-xs ${isMe ? 'items-end' : 'items-start'}`}>
-                  {/* Nom + timestamp */}
-                  <div className={`flex items-center gap-2 ${isMe ? 'flex-row-reverse' : ''}`}>
-                    <span className="text-xs font-medium" style={{ color: '#94A3B8' }}>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '3px',
+                  alignItems: isMe ? 'flex-end' : 'flex-start',
+                  maxWidth: '240px',
+                }}>
+                  {/* Name + timestamp */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    flexDirection: isMe ? 'row-reverse' : 'row',
+                  }}>
+                    <span style={{ fontSize: fontSize.xs, fontWeight: 500, color: colors.text.secondary }}>
                       {isMe ? 'You' : getFullName(message.profiles)}
                     </span>
-                    <span className="text-xs" style={{ color: '#475569' }}>
+                    <span style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
                       {getTimeLabel(message.created_at)}
                     </span>
                   </div>
 
-                  {/* Contenu du message */}
-                  <div
-                    className="px-3 py-2 rounded-xl text-sm leading-relaxed break-words"
-                    style={{
-                      backgroundColor: isMe
-                        ? 'rgba(13,148,136,0.2)'
-                        : '#0C1120',
-                      color: isMe ? '#5EEAD4' : '#94A3B8',
-                      border: isMe
-                        ? '1px solid rgba(13,148,136,0.3)'
-                        : '1px solid #1E2840',
-                      maxWidth: '240px',
-                    }}
-                  >
+                  {/* Message bubble */}
+                  <div style={{
+                    padding: '7px 10px',
+                    borderRadius: radius.xl,
+                    fontSize: fontSize.sm,
+                    lineHeight: 1.5,
+                    wordBreak: 'break-word',
+                    // My messages: teal tint — others: neutral surface
+                    backgroundColor: isMe ? colors.accent.tealDim  : colors.bg.elevated,
+                    color:           isMe ? colors.accent.tealText : colors.text.secondary,
+                    border:          isMe
+                      ? `0.5px solid ${colors.accent.tealBorder}`
+                      : `0.5px solid ${colors.border.default}`,
+                  }}>
                     {message.content}
                   </div>
 
-                  {/* Bouton supprimer — visible au hover, seulement pour l'auteur */}
+                  {/* Delete — author only, visible on hover */}
                   {isMe && (
                     <button
                       onClick={() => handleDelete(message.id)}
-                      className="text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{ color: '#475569' }}
+                      className="opacity-0 group-hover:opacity-100"
+                      style={{
+                        fontSize: fontSize.xs,
+                        color: colors.text.muted,
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'opacity 0.15s',
+                      }}
                     >
                       Delete
                     </button>
@@ -210,60 +266,67 @@ export default function ProjectChat({
             )
           })
         )}
-        {/* Ancre pour auto-scroll */}
+
+        {/* Scroll anchor */}
         <div ref={bottomRef} />
       </div>
 
-      {/* Zone de saisie — seulement pour les membres et le owner */}
+      {/* Input area */}
       {canChat ? (
-        <div
-          className="flex gap-2 px-4 py-3"
-          style={{ borderTop: '1px solid #1E2840' }}
-        >
+        <div style={{
+          display: 'flex',
+          gap: '8px',
+          padding: '10px 14px',
+          borderTop: `0.5px solid ${colors.border.default}`,
+        }}>
           <input
             type="text"
             placeholder="Send a message..."
             value={content}
             onChange={e => setContent(e.target.value)}
-            // Enter pour envoyer
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault()
                 handleSend()
               }
             }}
-            className="flex-1 px-3 py-2 rounded-xl text-sm outline-none"
             style={{
-              backgroundColor: '#0C1120',
-              border: '1px solid #1E2840',
-              color: '#F1F5F9',
+              flex: 1,
+              backgroundColor: colors.bg.elevated,
+              border: `0.5px solid ${colors.border.default}`,
+              borderRadius: radius.lg,
+              color: colors.text.primary,
+              fontSize: fontSize.sm,
+              padding: '7px 10px',
+              outline: 'none',
+              fontFamily: 'inherit',
             }}
-            onFocus={e => (e.currentTarget.style.borderColor = '#0D9488')}
-            onBlur={e => (e.currentTarget.style.borderColor = '#1E2840')}
+            onFocus={e => (e.currentTarget.style.borderColor = colors.accent.teal)}
+            onBlur={e => (e.currentTarget.style.borderColor = colors.border.default)}
           />
           <button
             onClick={handleSend}
             disabled={sending || !content.trim()}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition-all flex-shrink-0"
             style={{
-              backgroundColor: '#0D9488',
-              color: 'white',
+              ...styles.btnPrimary,
+              padding: '7px 14px',
+              fontSize: fontSize.sm,
               opacity: !content.trim() ? 0.5 : 1,
               cursor: !content.trim() ? 'not-allowed' : 'pointer',
+              flexShrink: 0,
             }}
           >
             {sending ? '...' : 'Send'}
           </button>
         </div>
       ) : (
-        // Message pour les visiteurs non membres
-        <div
-          className="px-5 py-3 text-xs text-center"
-          style={{
-            borderTop: '1px solid #1E2840',
-            color: '#475569',
-          }}
-        >
+        <div style={{
+          padding: '10px 14px',
+          borderTop: `0.5px solid ${colors.border.default}`,
+          fontSize: fontSize.xs,
+          color: colors.text.muted,
+          textAlign: 'center',
+        }}>
           Join the team to participate in the chat.
         </div>
       )}
