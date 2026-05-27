@@ -95,7 +95,7 @@ Seeing how another builder received tough feedback and improved their project is
 
 ---
 
-## Current Status — v0.4.0
+## Current Status — v0.5.0
 
 | Feature | Status |
 |---|---|
@@ -129,27 +129,11 @@ Seeing how another builder received tough feedback and improved their project is
 | Email notifications (interest received + request accepted) | ✅ Live |
 | Animated navbar with Framer Motion sliding capsule | ✅ Live |
 | Smooth page transitions | ✅ Live |
-| Separate dev / production databases | ✅ Live |
+| HiveOS - Task Management | ✅ Live |
 
 ---
 
 ## Roadmap
-
-### V0.5.0 — HiveOS 🧠
-*A minimal shared workspace for project teams.*
-
-Once teams form on BuilderLab, they need a lightweight place to coordinate without switching to external tools. HiveOS is that workspace, built natively so everything stays in one place.
-
-Teams that choose to build in public can optionally share their meeting notes, weekly digests, and task boards with the community — turning their process into a learning resource.
-
-- [ ] Shared task board (To Do / In Progress / Done) per project
-- [ ] Team meeting notes — shared, timestamped, editable by all members
-- [ ] Milestone tracker (integrated with existing milestone system)
-- [ ] Weekly digest — auto-generated summary of what the team accomplished
-- [ ] Project completion report — exportable summary for portfolios and CVs
-- [ ] Per-note public toggle
-
-> **Why this matters:** Teams that stay organized ship. HiveOS removes the friction of "which tool do we use?" so builders can focus on building.
 
 ### V0.6.0 — HiveCheck ⭐
 *Helping builders validate their work and grow through peer feedback.*

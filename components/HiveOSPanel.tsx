@@ -534,6 +534,8 @@ export default function HiveOSPanel({
         type,
         content,
       })
+
+      router.refresh()
     }
   }
 
