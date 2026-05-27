@@ -25,7 +25,7 @@ Nowadays, breaking into tech requires real projects — not tutorials, not toy a
 
 BuilderLab is for **anyone who learns by building**: university students, bootcamp graduates, self-taught developers, career switchers, and online learners. If you are building skills and want to ship something real alongside people who are doing the same — this is your platform.
 
-**A builder is not defined by where they studied. They are defined by what they ship.**
+**builders are not defined by where they studied. They are defined by what they ship.**
 
 **A typical use case:**
 - A self-taught Data Science builder posts: *"I'd like to work on a concrete project in healthcare"*
