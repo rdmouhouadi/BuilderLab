@@ -42,8 +42,8 @@ BuilderLab is for **anyone who learns by building**: university students, bootca
 BuilderLab is more than a project matching platform. It is being built as an end-to-end ecosystem for builders:
 
 ```
-Find your team        →     Validate your project     →     Build together
-(BuilderLab Core)                (HiveCheck)                   (HiveOS)
+Find your team        →       Build together  →   Validate your project
+(BuilderLab Core)                (HiveOS)              (HiveCheck)
 ```
 
 Each layer builds on the previous one, serving the same community of builders at every stage of their journey.
@@ -135,7 +135,23 @@ Seeing how another builder received tough feedback and improved their project is
 
 ## Roadmap
 
-### V0.5.0 — HiveCheck ⭐
+### V0.5.0 — HiveOS 🧠
+*A minimal shared workspace for project teams.*
+
+Once teams form on BuilderLab, they need a lightweight place to coordinate without switching to external tools. HiveOS is that workspace, built natively so everything stays in one place.
+
+Teams that choose to build in public can optionally share their meeting notes, weekly digests, and task boards with the community — turning their process into a learning resource.
+
+- [ ] Shared task board (To Do / In Progress / Done) per project
+- [ ] Team meeting notes — shared, timestamped, editable by all members
+- [ ] Milestone tracker (integrated with existing milestone system)
+- [ ] Weekly digest — auto-generated summary of what the team accomplished
+- [ ] Project completion report — exportable summary for portfolios and CVs
+- [ ] Per-note public toggle
+
+> **Why this matters:** Teams that stay organized ship. HiveOS removes the friction of "which tool do we use?" so builders can focus on building.
+
+### V0.6.0 — HiveCheck ⭐
 *Helping builders validate their work and grow through peer feedback.*
 
 Builders submit their projects for structured peer review. The community rates projects on technical depth, problem clarity, and real-world relevance. A curated leaderboard surfaces the strongest projects by domain.
@@ -152,22 +168,6 @@ Public feedback threads mean anyone can read the reviews a project received — 
 - [ ] Public feedback threads — opt-in per project
 
 > **Why this matters:** A project that has been reviewed and ranked by peers is far more credible in a portfolio than one that has not. HiveCheck turns BuilderLab into a quality signal, not just a matching platform.
-
-### V0.6.0 — HiveOS 🧠
-*A minimal shared workspace for project teams.*
-
-Once teams form on BuilderLab, they need a lightweight place to coordinate without switching to external tools. HiveOS is that workspace, built natively so everything stays in one place.
-
-Teams that choose to build in public can optionally share their meeting notes, weekly digests, and task boards with the community — turning their process into a learning resource.
-
-- [ ] Shared task board (To Do / In Progress / Done) per project
-- [ ] Team meeting notes — shared, timestamped, editable by all members
-- [ ] Milestone tracker (integrated with existing milestone system)
-- [ ] Weekly digest — auto-generated summary of what the team accomplished
-- [ ] Project completion report — exportable summary for portfolios and CVs
-- [ ] Per-note public toggle
-
-> **Why this matters:** Teams that stay organized ship. HiveOS removes the friction of "which tool do we use?" so builders can focus on building.
 
 ---
 

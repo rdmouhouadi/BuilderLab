@@ -1,14 +1,12 @@
 // app/projects/[id]/page.tsx
-// Page détaillée d'un projet
-// [id] est un paramètre dynamique — chaque projet a sa propre URL
-// Ex: /projects/123e4567-e89b-12d3-a456-426614174000
+// Dynamic project detail page — fetches all project data server-side.
+// [id] is a dynamic URL parameter — each project has its own URL.
 import { createClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import ProjectDetailClient from '@/components/ProjectDetailClient'
 import PageTransition from '@/components/PageTransition'
 
 type Props = {
-  // Next.js passe automatiquement les paramètres de l'URL
   params: Promise<{ id: string }>
 }
 
@@ -16,16 +14,15 @@ export default async function ProjectDetailPage({ params }: Props) {
   const { id } = await params
   const supabase = await createClient()
 
-  // Utilisateur connecté — peut être null
   const { data: { user } } = await supabase.auth.getUser()
 
-  // On fetch le projet avec toutes ses relations
+  // Project with owner profile and skills
   const { data: project, error } = await supabase
     .from('projects')
     .select(`
       *,
       profiles!projects_owner_id_fkey(
-        id, name, country, bio, avg_rating,
+        id, name, first_name, last_name, country, bio, avg_rating,
         preferred_contact_type, preferred_contact_value
       ),
       project_skills(skill_needed)
@@ -33,31 +30,29 @@ export default async function ProjectDetailPage({ params }: Props) {
     .eq('id', id)
     .single()
 
-  // Projet introuvable → page 404
   if (error || !project) redirect('/')
 
-  // On fetch les membres acceptés avec leur message de demande initial
+  // Active members with profiles + HiveOS fields
   const { data: members } = await supabase
     .from('project_members')
     .select(`
       *,
       profiles(
-        id, name, country, avg_rating,
+        id, name, first_name, last_name, country, avg_rating,
         preferred_contact_type, preferred_contact_value
       )
     `)
     .eq('project_id', id)
     .eq('status', 'active')
 
-  //On fetch séparément les messages des connexcions acceptées --- new
-  // pour les afficher dans la section "Team" du projet
+  // Accepted connection messages — shown in team section
   const { data: acceptedConnections } = await supabase
     .from('connections')
     .select('sender_id, message')
     .eq('project_id', id)
     .eq('status', 'accepted')
 
-  // On fetch les 50 derniers messages du group chat du projet
+  // Last 50 group chat messages
   const { data: messages } = await supabase
     .from('project_messages')
     .select('*, profiles(id, name, first_name, last_name)')
@@ -65,21 +60,31 @@ export default async function ProjectDetailPage({ params }: Props) {
     .order('created_at', { ascending: true })
     .limit(50)
 
-  // On fetch les milestones du projet
+  // Milestones ordered by position
   const { data: milestones } = await supabase
     .from('milestones')
     .select('*')
     .eq('project_id', id)
     .order('position', { ascending: true })
 
-  // On fetch les updates du projet — les plus récentes en premier
+  // Build log updates — most recent first
   const { data: updates } = await supabase
     .from('project_updates')
     .select('*, profiles(id, name, first_name, last_name, avg_rating)')
     .eq('project_id', id)
     .order('created_at', { ascending: false })
 
-  // On vérifie si l'utilisateur a déjà envoyé une demande
+  // HiveOS tasks — ordered by position within each status
+  const { data: tasks } = await supabase
+    .from('tasks')
+    .select(`
+      *,
+      assignee:profiles!tasks_assignee_id_fkey(id, name, first_name, last_name)
+    `)
+    .eq('project_id', id)
+    .order('position', { ascending: true })
+
+  // Existing connection request from current user
   let existingConnection = null
   if (user) {
     const { data } = await supabase
@@ -91,13 +96,13 @@ export default async function ProjectDetailPage({ params }: Props) {
     existingConnection = data
   }
 
-  // Nombre de followers du projet
+  // Follower count
   const { count: followersCount } = await supabase
     .from('project_followers')
     .select('*', { count: 'exact', head: true })
     .eq('project_id', id)
 
-  // Est-ce que l'utilisateur connecté suit déjà ce projet ?
+  // Is the current user already following?
   let isFollowing = false
   if (user) {
     const { data: followData } = await supabase
@@ -109,12 +114,26 @@ export default async function ProjectDetailPage({ params }: Props) {
     isFollowing = !!followData
   }
 
-  // Commentaires du projet
+  // Community feedback comments
   const { data: comments } = await supabase
     .from('project_comments')
     .select('*, profiles(id, name, first_name, last_name, avg_rating)')
     .eq('project_id', id)
     .order('created_at', { ascending: false })
+
+  // Check if current user was previously removed from this project
+  let removedReason: string | null = null
+  if (user) {
+    const { data: leftMember } = await supabase
+      .from('project_members')
+      .select('leave_reason, status')
+      .eq('project_id', id)
+      .eq('user_id', user.id)
+      .eq('status', 'left')
+      .single()
+
+    removedReason = leftMember?.leave_reason ?? null
+  }
 
   return (
     <PageTransition>
@@ -131,6 +150,8 @@ export default async function ProjectDetailPage({ params }: Props) {
         isFollowing={isFollowing}
         isFollower={isFollowing}
         initialComments={comments ?? []}
+        initialTasks={tasks ?? []}
+        removedReason={removedReason}
       />
     </PageTransition>
   )
