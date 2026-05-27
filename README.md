@@ -169,57 +169,6 @@ Teams that choose to build in public can optionally share their meeting notes, w
 
 > **Why this matters:** Teams that stay organized ship. HiveOS removes the friction of "which tool do we use?" so builders can focus on building.
 
-### V0.7.0 — BuilderLab Pro 💎
-*For builders who want more visibility and a stronger signal.*
-
-| Feature | Free | Pro |
-|---|---|---|
-| Project posting & team matching | ✅ | ✅ |
-| HiveCheck peer reviews & leaderboard | ✅ | ✅ |
-| HiveOS team workspace | ✅ | ✅ |
-| Custom public project page (shareable outside BuilderLab) | ❌ | ✅ |
-| Portfolio embed (personal site or LinkedIn) | ❌ | ✅ |
-| Feedback analytics (how your scores compare by domain) | ❌ | ✅ |
-| Full build-in-public archive (beautifully formatted journey) | ❌ | ✅ |
-| Priority listing in the feed | ❌ | ✅ |
-
-### V1.0.0 — 🐝 Rebranding to ***B.hive***
-
-*When the product is complete and the community is established, BuilderLab becomes ***B.hive***.*
-
-The rebrand is a deliberate launch moment — not just a name change, but a public statement that the platform has matured.
-
-**What changes:**
-- **Name**: BuilderLab → ***B.hive***
-- **Tagline**: → **"Where builders swarm."**
-- **Domain**: → **bhive.io** (or equivalent)
-- **Visual identity**: hexagonal motifs, amber + teal palette
-- **Logo**: hexagonal bee-inspired mark
-- **In-app vocabulary** fully adopted across all UI copy
-
-**Vocabulary update:**
-
-| Current | *B.hive* |
-|---|---|
-| Project | Build |
-| Project feed | The Hive |
-| Team | Colony |
-| Express interest | Join the swarm |
-| Top-rated builder | Queen Bee 🐝 |
-| HiveCheck | HiveCheck (unchanged) |
-| HiveOS | HiveOS (unchanged) |
-| Weekly digest | Hive Report |
-| Going public | Flying from the hive |
-
-**Why wait for V1.0.0?**
-Beta testers know BuilderLab. Rebranding mid-beta creates confusion. The rename becomes a public launch moment worth celebrating — a signal to the community that something real has been built.
-
-### Future
-- [ ] University email verification
-- [ ] Mobile app (React Native)
-- [ ] Recruiter portal — access to top-rated projects and builder profiles (B2B monetization)
-- [ ] Learning path integration (Coursera, freeCodeCamp, etc.)
-
 ---
 
 ## Quickstart
