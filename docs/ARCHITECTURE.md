@@ -44,7 +44,7 @@
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                         Browser                              │
-│   React Client Components (forms, modals, filters, chat)    │
+│   React Client Components (forms, modals, filters, chat)     │
 └─────────────────────────┬────────────────────────────────────┘
                           │ HTTP / RSC Payload
 ┌─────────────────────────▼────────────────────────────────────┐
@@ -53,16 +53,16 @@
 │   ├── (marketing)/ — public marketing pages                  │
 │   ├── (app)/       — authenticated app pages                 │
 │   ├── API Routes   — email notifications + contact form      │
-│   └── Proxy        — route protection (proxy.ts)            │
+│   └── Proxy        — route protection (proxy.ts)             │
 └─────────────────────────┬────────────────────────────────────┘
                           │
               ┌───────────┴───────────┐
               │                       │
 ┌─────────────▼──────────┐  ┌────────▼────────┐
-│       Supabase          │  │     Resend      │
-│  PostgreSQL + Auth      │  │  Email service  │
-│  RLS + Triggers         │  │                 │
-└─────────────────────────┘  └─────────────────┘
+│       Supabase         │  │     Resend      │
+│  PostgreSQL + Auth     │  │  Email service  │
+│  RLS + Triggers        │  │                 │
+└────────────────────────┘  └─────────────────┘
 ```
 
 ---

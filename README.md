@@ -133,7 +133,7 @@ Seeing how another builder received tough feedback and improved their project is
 | Smooth page transitions | ✅ Live |
 | HiveOS Task Management | ✅ Live |
 
-### Marketing site (feat/landing-page)
+### Marketing site
 | Feature | Status |
 |---|---|
 | Landing page `/` — hero, problem, how it works, ecosystem, build in public, CTA | ✅ Built |
