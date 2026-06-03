@@ -96,7 +96,7 @@ Seeing how another builder received tough feedback and improved their project is
 
 ---
 
-## Current Status — v0.5.0 + marketing site (in progress)
+## Current Status — v0.5.0 + marketing site (V0.6.0 - in progress)
 
 ### App
 | Feature | Status |
@@ -149,7 +149,7 @@ Seeing how another builder received tough feedback and improved their project is
 
 ## Roadmap
 
-### V0.6.0 — HiveCheck ⭐
+### V0.7.0 — HiveCheck ⭐
 *Helping builders validate their work and grow through peer feedback.*
 
 Builders submit their projects for structured peer review. The community rates projects on technical depth, problem clarity, and real-world relevance. A curated leaderboard surfaces the strongest projects by domain.
