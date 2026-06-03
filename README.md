@@ -3,8 +3,8 @@
 > *"For anyone who learns by building."*
 
 [![License: Source Available](https://img.shields.io/badge/License-Source%20Available-orange.svg)]()
-[![Version](https://img.shields.io/badge/version-0.4.0-teal.svg)]()
-[![Built with Next.js](https://img.shields.io/badge/Built%20with-Next.js-black.svg)](https://nextjs.org)
+[![Version](https://img.shields.io/badge/version-0.5.0-teal.svg)]()
+[![Built with Next.js](https://img.shields.io/badge/Built%20with-Next.js%2016-black.svg)](https://nextjs.org)
 [![Powered by Supabase](https://img.shields.io/badge/Powered%20by-Supabase-green.svg)](https://supabase.com)
 
 ---
@@ -65,8 +65,8 @@ Seeing how another builder received tough feedback and improved their project is
 ```
 ┌─────────────────────────────────────────────────────┐
 │                     Frontend                        │
-│         Next.js 14 (App Router) + TypeScript        │
-│         Tailwind CSS + Framer Motion + Resend       │
+│         Next.js 16 (App Router) + TypeScript        │
+│         Tailwind CSS v4 + Framer Motion + Resend    │
 └─────────────────────┬───────────────────────────────┘
                       │
                       │ Supabase Client (@supabase/ssr)
@@ -88,15 +88,17 @@ Seeing how another builder received tough feedback and improved their project is
 ```
 
 **Key architectural decisions:**
+- **Route groups** — `(marketing)/` and `(app)/` give each surface its own layout without affecting URLs
 - **Server Components by default** — data fetching server-side for performance and SEO
 - **Client Components only when needed** — interactive UI (forms, filters, modals)
 - **Supabase RLS** — security enforced at the database level
-- **Centralized constants** — all skills, domains, colors defined once in `lib/constants.ts`
+- **Centralized design tokens** — all colors, spacing, typography defined once in `lib/design-tokens.ts`
 
 ---
 
-## Current Status — v0.5.0
+## Current Status — v0.5.0 + marketing site (in progress)
 
+### App
 | Feature | Status |
 |---|---|
 | User authentication (sign up, sign in, sign out) | ✅ Live |
@@ -104,7 +106,7 @@ Seeing how another builder received tough feedback and improved their project is
 | Public profile pages `/profile/[id]` | ✅ Live |
 | Post a project (title, problem, skills, level, duration, spots) | ✅ Live |
 | Edit and delete a project | ✅ Live |
-| Project feed with search and filters | ✅ Live |
+| Project feed with search and filters (`/feed`) | ✅ Live |
 | Feed filters out owned and joined projects | ✅ Live |
 | Project detail page | ✅ Live |
 | Express interest with personalized message + contact pre-fill | ✅ Live |
@@ -120,7 +122,7 @@ Seeing how another builder received tough feedback and improved their project is
 | Follow system (cards + project detail) | ✅ Live |
 | "Projects I follow" section in profile | ✅ Live |
 | Per-section privacy settings (Build Log, Chat, Milestones, Team) | ✅ Live |
-| Project archive `/archive` | ✅ Live |
+| Project archive / HiveCheck leaderboard | ✅ Live |
 | Completion modal (opt-out, public by default) | ✅ Live |
 | Community feedback section on project pages | ✅ Live |
 | Team contact links (Discord, WhatsApp, Slack, etc.) | ✅ Live |
@@ -129,7 +131,19 @@ Seeing how another builder received tough feedback and improved their project is
 | Email notifications (interest received + request accepted) | ✅ Live |
 | Animated navbar with Framer Motion sliding capsule | ✅ Live |
 | Smooth page transitions | ✅ Live |
-| HiveOS - Task Management | ✅ Live |
+| HiveOS Task Management | ✅ Live |
+
+### Marketing site (feat/landing-page)
+| Feature | Status |
+|---|---|
+| Landing page `/` — hero, problem, how it works, ecosystem, build in public, CTA | ✅ Built |
+| Vision page `/vision` — mission, pillars, roadmap timeline | ✅ Built |
+| Docs `/docs/[slug]` — 10 articles, sidebar, prev/next routing | ✅ Built |
+| Contact `/contact` — subject chips, conditional role field, success state | ✅ Built |
+| Contact form API `POST /api/contact` → Resend | ✅ Built |
+| Marketing navbar (links + Sign in/Sign up + mobile hamburger) | ✅ Built |
+| Footer (4-col, responsive) | ✅ Built |
+| Scroll-reveal animations (`prefers-reduced-motion` safe) | ✅ Built |
 
 ---
 
@@ -224,55 +238,80 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 builderlab/
 │
 ├── app/
-│   ├── page.tsx                        # Home — project feed
-│   ├── login/page.tsx                  # Authentication
-│   ├── post/page.tsx                   # Post a new project
-│   ├── archive/page.tsx               # Completed projects archive
-│   ├── notifications/page.tsx          # All notifications
-│   ├── profile/
-│   │   ├── page.tsx                    # Own profile (edit)
-│   │   └── [id]/page.tsx              # Public profile (read-only)
-│   ├── connections/page.tsx            # Connection requests
-│   ├── projects/[id]/page.tsx         # Project detail
-│   ├── auth/callback/route.ts          # Supabase auth callback
+│   ├── layout.tsx                       # Root shell — html/body/fonts/globals.css
+│   ├── globals.css                      # Tailwind v4 + CSS variables
+│   │
+│   ├── (marketing)/                     # Marketing site — no app Navbar
+│   │   ├── layout.tsx                   # Sora font + MktNavbar + Footer + ambients
+│   │   ├── page.tsx                     # / — Landing page
+│   │   ├── vision/page.tsx              # /vision
+│   │   ├── docs/[[...slug]]/page.tsx    # /docs — /docs/[article-slug]
+│   │   └── contact/page.tsx             # /contact (Client Component)
+│   │
+│   ├── (app)/                           # App — has Navbar
+│   │   ├── layout.tsx                   # Wraps children with Navbar
+│   │   ├── feed/page.tsx                # /feed — Project feed (Server)
+│   │   ├── login/page.tsx               # /login — Auth (Client)
+│   │   ├── post/page.tsx                # /post — Post project (Client)
+│   │   ├── profile/
+│   │   │   ├── page.tsx                 # /profile — Own profile (Server)
+│   │   │   └── [id]/page.tsx           # /profile/[id] — Public profile (Server)
+│   │   ├── connections/page.tsx         # /connections
+│   │   ├── projects/[id]/page.tsx      # /projects/:id — Detail
+│   │   ├── notifications/page.tsx       # /notifications
+│   │   └── hivecheck/page.tsx           # /hivecheck
+│   │
+│   ├── auth/callback/route.ts           # Supabase auth callback
 │   └── api/
+│       ├── contact/route.ts             # POST — contact form → Resend
 │       └── notify/
-│           ├── interest/route.ts       # Email + notif: new interest
-│           └── accepted/route.ts       # Email + notif: request accepted
+│           ├── interest/route.ts        # POST — email: new interest
+│           └── accepted/route.ts        # POST — email: request accepted
 │
 ├── components/
-│   ├── Navbar.tsx                      # Navbar with notifications bell
+│   ├── marketing/
+│   │   ├── MktNavbar.tsx                # Marketing nav (Vision/Docs/Contact + auth)
+│   │   ├── Footer.tsx                   # 4-column footer
+│   │   ├── ScrollReveal.tsx             # IntersectionObserver fade-in
+│   │   └── Eyebrow.tsx                  # Teal pill label with dot
+│   ├── Navbar.tsx                       # App navbar with notifications bell
 │   ├── Feed.tsx
 │   ├── ProjectCard.tsx
 │   ├── ProjectDetailClient.tsx
-│   ├── ProjectUpdates.tsx              # Build Log
-│   ├── ProjectChat.tsx                 # Group chat
-│   ├── ProjectComments.tsx             # Community feedback
+│   ├── ProjectUpdates.tsx               # Build Log
+│   ├── ProjectChat.tsx                  # Group chat
+│   ├── ProjectComments.tsx              # Community feedback
 │   ├── ProfileClient.tsx
 │   ├── ConnectionsClient.tsx
 │   ├── NotificationsClient.tsx
-│   ├── ArchiveClient.tsx
+│   ├── HiveCheckClient.tsx
 │   ├── InterestModal.tsx
-│   ├── CompletionModal.tsx             # Celebratory completion modal
+│   ├── LeaveProjectModal.tsx
+│   ├── CompletionModal.tsx
 │   ├── RatingModal.tsx
 │   ├── BackButton.tsx
 │   └── PageTransition.tsx
 │
 ├── lib/
-│   ├── supabase.ts                     # Server client
-│   ├── supabase-browser.ts             # Browser client
-│   ├── supabase-admin.ts               # Admin client (service_role)
-│   ├── email.ts                        # Resend email functions
-│   ├── constants.ts                    # Skills, domains, colors
-│   └── timeLabel.ts                    # Relative timestamps
+│   ├── design-tokens.ts                 # Single source of truth for all design values
+│   ├── docs-content.ts                  # Docs article registry (10 articles)
+│   ├── supabase.ts                      # Server client
+│   ├── supabase-browser.ts              # Browser client
+│   ├── supabase-admin.ts                # Admin client (service_role)
+│   ├── email.ts                         # Resend email functions
+│   ├── constants.ts                     # Skills, domains, contact types
+│   └── timeLabel.ts                     # Relative timestamps
 │
 ├── types/index.ts
-├── proxy.ts                            # Route protection
+├── proxy.ts                             # Route protection (middleware)
+├── public/images/                       # Hero screenshots for landing page
 │
 └── docs/
     ├── ARCHITECTURE.md
     ├── DATABASE.md
-    └── CHANGELOG.md
+    ├── CHANGELOG.md
+    └── Product_Specs/
+        └── design_handoff_builderlab_site/  # Marketing site design reference
 ```
 
 ---
@@ -322,6 +361,6 @@ See the [LICENSE](./LICENSE) file for details.
     <a href="https://builderlab-tau.vercel.app">Live App</a> ·
     <a href="./docs/ARCHITECTURE.md">Architecture</a> ·
     <a href="./docs/DATABASE.md">Database</a> ·
-    <a href="./CHANGELOG.md">Changelog</a>
+    <a href="./docs/CHANGELOG.md">Changelog</a>
   </p>
 </div>

@@ -1,33 +1,54 @@
 // lib/design-tokens.ts
-// Single source of truth for all design tokens.
+// Single source of truth for all design tokens — app AND marketing site.
 // Every component imports from here — no hardcoded hex values elsewhere.
 
 export const colors = {
   bg: {
-    base:     '#0A0A0B',  // page background
-    surface:  '#111113',  // navbar, panels
-    elevated: '#18181B',  // cards, dropdowns
-    hover:    '#1E1E22',  // hover states
+    base:       '#0A0A0B',   // app page background
+    surface:    '#111113',   // app navbar, panels
+    elevated:   '#18181B',   // app cards, dropdowns
+    hover:      '#1E1E22',   // app hover states
+    // marketing backgrounds (slightly warmer near-black)
+    mkt:        '#0a0d11',   // --bg  : marketing page background
+    mkt2:       '#0c1016',   // --bg-2: strip, footer, card gradient end
+    mktSurface: '#12181f',   // --surface: marketing cards
+    surface2:   '#161d27',   // --surface-2: elevated marketing surfaces
+    surface3:   '#1b232e',   // --surface-3: deepest marketing surface
   },
   border: {
     default: 'rgba(255,255,255,0.06)',
     hover:   'rgba(255,255,255,0.12)',
     active:  'rgba(255,255,255,0.18)',
+    mkt:     'rgba(255,255,255,0.07)',   // --border
+    mkt2:    'rgba(255,255,255,0.11)',   // --border-2
+    accent:  'rgba(45,212,191,0.28)',    // --border-accent  teal callout border
   },
   text: {
-    primary:   '#FAFAFA',
-    secondary: '#A1A1AA',
-    muted:     '#52525B',
+    primary:   '#FAFAFA',   // app primary text
+    secondary: '#A1A1AA',   // app secondary text
+    muted:     '#52525B',   // app muted text
+    // marketing text scale
+    base:  '#eef2f6',   // --text      marketing primary
+    soft:  '#c2cbd5',   // --text-soft slightly dimmer
+    muted2: '#8a94a0',  // --text-muted marketing muted (≈ app secondary)
+    dim:   '#5c6773',   // --text-dim  labels, eyebrows, timestamps
   },
   accent: {
-    teal:         '#0D9488',
+    teal:         '#0D9488',              // app teal (= --accent-deep)
     tealDim:      'rgba(13,148,136,0.12)',
     tealBorder:   'rgba(13,148,136,0.25)',
-    tealText:     '#2DD4BF',
+    tealText:     '#2DD4BF',              // app teal text (= --accent-2)
+    // marketing accent scale
+    base:         '#14b8a6',              // --accent      primary teal (buttons)
+    deep:         '#0d9488',              // --accent-deep button gradient base
+    bright:       '#2dd4bf',             // --accent-2    highlight text, icons
+    ink:          '#04201d',             // --accent-ink  text on teal fills
+    glowRgb:      '20 184 166',          // for rgba() gradient usage
     indigo:       '#6366F1',
     indigoDim:    'rgba(99,102,241,0.12)',
     indigoBorder: 'rgba(99,102,241,0.25)',
     indigoText:   '#A5B4FC',
+    indigoBright: '#818cf8',             // --indigo-bright links, tags
   },
   status: {
     danger:      '#EF4444',
@@ -39,6 +60,7 @@ export const colors = {
   },
 } as const
 
+// ─── App UI radii (small, pixel-precise) ────────────────────────────────────
 export const radius = {
   sm:   '4px',
   md:   '6px',
@@ -48,6 +70,16 @@ export const radius = {
   full: '9999px',
 } as const
 
+// ─── Marketing site radii (larger, rounder) ─────────────────────────────────
+export const radiusMkt = {
+  xs: '6px',   // --r-xs  chips, tags
+  sm: '8px',   // --r-sm  buttons, inputs, cards
+  md: '12px',  // --r-md  section cards
+  lg: '16px',  // --r-lg  ecosystem cards, bip-banner
+  xl: '22px',  // --r-xl  CTA box, large containers
+} as const
+
+// ─── App UI font sizes ───────────────────────────────────────────────────────
 export const fontSize = {
   xs:   '10px',
   sm:   '11px',
@@ -58,7 +90,57 @@ export const fontSize = {
   xxl:  '22px',
 } as const
 
-// Pre-built style objects reused across components
+// ─── Marketing typography sizes ──────────────────────────────────────────────
+export const fontSizeMkt = {
+  eyebrow: '12px',    // pill labels, mono eyebrows
+  nav:     '14px',    // nav links, footer links, body text
+  body:    '16px',    // default marketing body
+  bodyMd:  '15px',    // section card body text
+  bodyLg:  '18px',    // section subtitles
+  lead:    '19px',    // hero sub
+  h4:      '17px',    // step cards
+  h3:      '23px',    // ecosystem card names
+  h2sm:    'clamp(26px, 3vw, 36px)',
+  h2:      'clamp(30px, 4vw, 44px)',
+  h2lg:    'clamp(32px, 4.4vw, 52px)',
+  pageHero:'clamp(36px, 5vw, 58px)',
+  hero:    'clamp(40px, 5.4vw, 68px)',
+} as const
+
+// ─── Font families ────────────────────────────────────────────────────────────
+export const fontFamily = {
+  head: '"Sora", "Inter", system-ui, sans-serif',
+  body: '"Inter", system-ui, -apple-system, sans-serif',
+  mono: '"Geist Mono", "JetBrains Mono", ui-monospace, monospace',
+} as const
+
+// ─── Shadows ─────────────────────────────────────────────────────────────────
+export const shadows = {
+  card:     '0 1px 0 rgba(255,255,255,0.04) inset, 0 18px 50px -28px rgba(0,0,0,0.8)',
+  heroShot: '0 40px 90px -40px rgba(0,0,0,0.95), 0 2px 0 rgba(255,255,255,0.05) inset',
+  btnPrimary: '0 8px 22px -10px rgba(20,184,166,0.85)',
+  btnPrimaryHover: '0 10px 28px -8px rgba(20,184,166,1)',
+  logoMark: '0 4px 14px -4px rgba(20,184,166,0.7)',
+} as const
+
+// ─── Layout constants ─────────────────────────────────────────────────────────
+export const layout = {
+  maxWidth:     '1200px',
+  wrapPadding:  '32px',
+  wrapPaddingSm:'20px',
+  sectionPad:   '96px 0',
+  sectionPadSm: '64px 0',
+  navHeight:    '64px',
+} as const
+
+// ─── Responsive breakpoints ───────────────────────────────────────────────────
+export const breakpoints = {
+  md:  '980px',  // hero/grid collapse to single column
+  nav: '880px',  // hide nav links, 2-col footer, drop section pad
+  sm:  '560px',  // small hero media adjustments
+} as const
+
+// ─── Pre-built style objects reused across components ─────────────────────────
 export const styles = {
   // Surface card — elevated bg + default border
   card: {

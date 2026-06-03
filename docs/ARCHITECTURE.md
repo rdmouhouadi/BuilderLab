@@ -9,15 +9,16 @@
 1. [Tech Stack](#1-tech-stack)
 2. [High-Level Architecture](#2-high-level-architecture)
 3. [Next.js App Router Structure](#3-nextjs-app-router-structure)
-4. [Server vs Client Components](#4-server-vs-client-components)
-5. [Supabase Integration](#5-supabase-integration)
-6. [Authentication Flow](#6-authentication-flow)
-7. [Route Protection](#7-route-protection)
-8. [Email Notifications](#8-email-notifications)
-9. [Data Flow](#9-data-flow)
-10. [Component Design Patterns](#10-component-design-patterns)
-11. [Constants & Theming](#11-constants--theming)
-12. [Deployment](#12-deployment)
+4. [Marketing Site vs App Site](#4-marketing-site-vs-app-site)
+5. [Server vs Client Components](#5-server-vs-client-components)
+6. [Supabase Integration](#6-supabase-integration)
+7. [Authentication Flow](#7-authentication-flow)
+8. [Route Protection](#8-route-protection)
+9. [Email & Contact API](#9-email--contact-api)
+10. [Data Flow](#10-data-flow)
+11. [Component Design Patterns](#11-component-design-patterns)
+12. [Design Tokens](#12-design-tokens)
+13. [Deployment](#13-deployment)
 
 ---
 
@@ -25,13 +26,15 @@
 
 | Layer | Technology | Reason |
 |---|---|---|
-| Framework | Next.js 14 (App Router) | Server Components, file-based routing, edge-ready |
+| Framework | Next.js 16.2.4 (App Router) | Server Components, file-based routing, route groups, edge-ready |
 | Language | TypeScript | Type safety, catches bugs early |
-| Styling | Tailwind CSS + inline styles | Utility-first, no CSS files to maintain |
+| Styling | Tailwind CSS v4 + inline styles | Utility-first, no CSS files to maintain |
+| Fonts | next/font/google — Inter + Sora | App uses Inter; marketing headings use Sora |
 | Animations | Framer Motion | Page transitions and navbar capsule |
+| Scroll reveal | Custom IntersectionObserver | `ScrollReveal` component, gated by `prefers-reduced-motion` |
 | Database | Supabase (PostgreSQL) | Realtime, Auth, RLS — all in one |
 | Auth | Supabase Auth (JWT) | Email/password, cookie-based sessions |
-| Email | Resend | Simple transactional emails, Next.js-friendly |
+| Email | Resend | Transactional emails + contact form submissions |
 | Deployment | Vercel | Zero-config Next.js deployment |
 
 ---
@@ -47,9 +50,10 @@
 ┌─────────────────────────▼────────────────────────────────────┐
 │                      Vercel Edge                             │
 │   Next.js App Router                                         │
-│   ├── Server Components  → fetch data, render HTML           │
-│   ├── API Routes         → email notifications               │
-│   └── Proxy             → route protection                   │
+│   ├── (marketing)/ — public marketing pages                  │
+│   ├── (app)/       — authenticated app pages                 │
+│   ├── API Routes   — email notifications + contact form      │
+│   └── Proxy        — route protection (proxy.ts)            │
 └─────────────────────────┬────────────────────────────────────┘
                           │
               ┌───────────┴───────────┐
@@ -67,25 +71,66 @@
 
 ```
 app/
-├── layout.tsx                          # Root layout — Navbar, global styles
-├── page.tsx                            # / — Project feed (Server Component)
-├── login/page.tsx                      # /login — Auth (Client Component)
-├── post/page.tsx                       # /post — Post project (Client)
-├── profile/
-│   ├── page.tsx                        # /profile — Own profile (Server)
-│   └── [id]/page.tsx                  # /profile/[id] — Public profile (Server)
-├── connections/page.tsx                # /connections — Requests (Server)
-├── projects/[id]/page.tsx             # /projects/:id — Detail (Server)
-├── auth/callback/route.ts              # Supabase auth callback
+├── layout.tsx                           # Root shell — html/body/fonts/globals.css only
+├── globals.css                          # Tailwind v4 + CSS variables
+│
+├── (marketing)/                         # Marketing site — public, no app Navbar
+│   ├── layout.tsx                       # Marketing layout: Sora font + MktNavbar + Footer + ambients
+│   ├── page.tsx                         # / — Landing page
+│   ├── vision/page.tsx                  # /vision
+│   ├── docs/[[...slug]]/page.tsx        # /docs — /docs/[article-slug]
+│   └── contact/page.tsx                 # /contact (Client Component)
+│
+├── (app)/                               # App — authenticated experience
+│   ├── layout.tsx                       # App layout: wraps with Navbar
+│   ├── feed/page.tsx                    # /feed — Project feed (Server Component)
+│   ├── login/page.tsx                   # /login — Auth (Client Component)
+│   ├── post/page.tsx                    # /post — Post project (Client)
+│   ├── profile/
+│   │   ├── page.tsx                     # /profile — Own profile (Server)
+│   │   └── [id]/page.tsx               # /profile/[id] — Public profile (Server)
+│   ├── connections/page.tsx             # /connections — Requests (Server)
+│   ├── projects/[id]/page.tsx          # /projects/:id — Detail (Server)
+│   ├── notifications/page.tsx           # /notifications
+│   └── hivecheck/page.tsx              # /hivecheck — Peer review
+│
+├── auth/callback/route.ts               # Supabase auth callback (no layout needed)
 └── api/
+    ├── contact/route.ts                 # POST — contact form → Resend
     └── notify/
-        ├── interest/route.ts           # POST — email on new interest
-        └── accepted/route.ts           # POST — email on request accepted
+        ├── interest/route.ts            # POST — email on new interest
+        └── accepted/route.ts            # POST — email on request accepted
 ```
 
 ---
 
-## 4. Server vs Client Components
+## 4. Marketing Site vs App Site
+
+The codebase serves two distinct surfaces under one Next.js app, separated by **route groups**:
+
+| Surface | Route group | Layout | Navbar | Auth required |
+|---|---|---|---|---|
+| Marketing site | `(marketing)` | Sora + MktNavbar + Footer | Marketing nav (Vision/Docs/Contact + Sign in/Sign up) | No |
+| App | `(app)` | Inter + App Navbar | App nav (Projects/HiveCheck/Connections) | Some pages |
+
+### Why route groups?
+
+Route groups (`(folder)` syntax) allow different layouts for different sections without affecting URLs. `(marketing)` and `(app)` are invisible in URLs — `/feed`, `/vision`, `/docs` all work as expected.
+
+The root `app/layout.tsx` is a minimal shell (html/body/fonts only). Each group adds its own chrome.
+
+### Key URL changes (v0.6.0)
+
+| Before | After | Reason |
+|---|---|---|
+| `/` | `/feed` | `/` is now the marketing landing page |
+| n/a | `/vision` | New marketing page |
+| n/a | `/docs/[slug]` | New docs with real routes |
+| n/a | `/contact` | New contact form |
+
+---
+
+## 5. Server vs Client Components
 
 ```
 Default → Server Component
@@ -93,20 +138,23 @@ Exception → Client Component (only when needed)
 ```
 
 ### Server Components — used for:
-- Fetching data from Supabase
+- Fetching data from Supabase (feed, profiles, project detail)
+- Static marketing pages (`/`, `/vision`, `/docs/[slug]`)
 - Pages that need SEO
-- No browser APIs needed
 
 ### Client Components — used for:
 - Forms and user input (`'use client'`)
-- useState, useEffect, useRouter
+- `useState`, `useEffect`, `useRouter`
 - Framer Motion animations
-- Supabase real-time subscriptions (V0.3.0)
+- Supabase real-time subscriptions
+- Contact form (`/contact`)
+- Marketing Navbar (hamburger menu state)
+- `ScrollReveal` (IntersectionObserver)
 
 ### The pattern: Server fetches, Client displays
 
 ```
-app/page.tsx (Server)
+app/(app)/feed/page.tsx (Server)
     │ fetches projects from Supabase
     ▼
 components/Feed.tsx (Client)
@@ -121,7 +169,7 @@ components/InterestModal.tsx (Client)
 
 ---
 
-## 5. Supabase Integration
+## 6. Supabase Integration
 
 Three separate Supabase clients:
 
@@ -131,79 +179,76 @@ Three separate Supabase clients:
 | Browser | `lib/supabase-browser.ts` | Client Components, auth state |
 | Admin | `lib/supabase-admin.ts` | API routes only (service_role key) |
 
-The admin client uses the `service_role` key — **never exposed to the browser**.
-It is only used in API routes to access `auth.admin.getUserById()`.
+The admin client uses the `service_role` key — **never exposed to the browser**. It is only used in API routes to access `auth.admin.getUserById()`.
 
 ---
 
-## 6. Authentication Flow
+## 7. Authentication Flow
 
 ```
 Sign Up:
 User fills form → Supabase sends confirmation email
 → User clicks link → /auth/callback exchanges code for session
 → Trigger creates profile in profiles table
-→ Redirect to feed
+→ Redirect to /feed
 
 Sign In:
 User fills form → Supabase validates → session stored in cookies
-→ Redirect to feed
+→ Redirect to /feed
 ```
 
-Sessions are stored in **HTTP-only cookies** managed by Supabase.
-The proxy refreshes the session token on every request.
+Sessions are stored in **HTTP-only cookies** managed by Supabase. The proxy refreshes the session token on every request.
 
 ---
 
-## 7. Route Protection
+## 8. Route Protection
 
 `proxy.ts` intercepts every request:
 
 ```
 Request arrives
     │
-    ├── Protected route? (/post, /profile, /connections)
+    ├── Protected route? (/post, /profile, /connections, /notifications)
     │       ├── Not authenticated → redirect to /login
     │       └── Authenticated → allow
     │
-    └── /login + authenticated → redirect to /
+    └── /login + authenticated → redirect to /feed
 ```
+
+Marketing pages (`/`, `/vision`, `/docs`, `/contact`) are **public** and require no authentication.
 
 ---
 
-## 8. Email Notifications *(added in V0.2.0)*
+## 9. Email & Contact API
 
-Two API routes handle email notifications via Resend:
+### Existing notification routes
 
-### POST /api/notify/interest
-Called after a connection request is inserted.
-Sends an email to the project owner with the sender's message.
+| Route | Trigger | Recipient |
+|---|---|---|
+| `POST /api/notify/interest` | New connection request | Project owner |
+| `POST /api/notify/accepted` | Connection accepted | Request sender |
 
-```
-ProjectCard → insert connection → fetch /api/notify/interest
-    → supabaseAdmin.auth.admin.getUserById(owner_id)
-    → resend.emails.send() to owner
-```
+These are fire-and-forget — clients call them with `.catch(console.error)` so a failed email never blocks the user action.
 
-### POST /api/notify/accepted
-Called after a connection is updated to `accepted`.
-Sends an email to the sender.
+### Contact form route (added v0.6.0)
 
 ```
-ConnectionsClient → update connection → fetch /api/notify/accepted
-    → supabaseAdmin.auth.admin.getUserById(sender_id)
-    → resend.emails.send() to sender
+Contact form (/contact)
+    │ POST /api/contact
+    ▼
+api/contact/route.ts
+    │ validates required fields (name, email, message)
+    │ builds HTML email with subject label + optional role
+    ▼
+Resend → richiedieuveil@gmail.com
+    │ replyTo set to submitter's email
 ```
 
-**Important:** Email calls use `fetch(...).catch(console.error)` — they never block the UI. If an email fails, the user action still succeeds.
-
-**Environment variables required:**
-- `RESEND_API_KEY` — server-side only, no `NEXT_PUBLIC_` prefix
-- `SUPABASE_SERVICE_ROLE_KEY` — server-side only, never expose to browser
+**Environment variable required:** `RESEND_API_KEY`
 
 ---
 
-## 9. Data Flow
+## 10. Data Flow
 
 ### Reading (Server Component)
 ```
@@ -235,44 +280,59 @@ Client writes to DB
 
 ---
 
-## 10. Component Design Patterns
+## 11. Component Design Patterns
 
 ### Pattern 1 — Server Page + Client Component
-All main pages fetch server-side and pass data to a client component.
+All main app pages fetch server-side and pass data to a client component.
 
 ### Pattern 2 — Optimistic Updates
 UI updates immediately before the database confirms. Used in milestones, project updates, and connections.
 
-### Pattern 3 — Centralized Constants
-All skills, domains, colors, contact types defined once in `lib/constants.ts`.
+### Pattern 3 — Centralized Design Tokens
+All colors, spacing, typography, radii, and shadows defined once in `lib/design-tokens.ts`. No hardcoded hex values in component files.
 
 ### Pattern 4 — Non-blocking side effects
-Email notifications and analytics calls use `.catch(console.error)` to never block user actions.
+Email notifications use `.catch(console.error)` to never block user actions.
 
 ### Pattern 5 — Modal outside Link
 `InterestModal` is rendered outside the `<Link>` wrapper in `ProjectCard` to prevent click propagation causing navigation.
 
----
-
-## 11. Constants & Theming
-
-### Color Palette
-
-| Name | Hex | Usage |
-|---|---|---|
-| Background primary | `#0F1117` | Page background |
-| Background secondary | `#161B28` | Cards, panels |
-| Background tertiary | `#0C1120` | Inputs |
-| Border | `#1E2840` | Card borders |
-| Text primary | `#F1F5F9` | Headings |
-| Text secondary | `#94A3B8` | Labels |
-| Text muted | `#475569` | Metadata |
-| Accent teal | `#0D9488` | Primary actions |
-| Accent teal light | `#5EEAD4` | Active text |
+### Pattern 6 — Route group layouts
+Marketing and app surfaces share one Next.js app but have separate root-level layouts via route groups. No conditional rendering needed in the root layout.
 
 ---
 
-## 12. Deployment
+## 12. Design Tokens
+
+All design values live in `lib/design-tokens.ts` — the single source of truth for both the app and the marketing site.
+
+### App tokens (existing)
+| Export | Contents |
+|---|---|
+| `colors` | bg (base/surface/elevated/hover), border, text, accent (teal+indigo), status |
+| `radius` | sm (4px) → full (9999px) — app UI radii |
+| `fontSize` | xs (10px) → xxl (22px) — app UI text sizes |
+| `styles` | Pre-built style objects: card, tag, btnPrimary, btnTeal, btnIndigo, btnGhost, avatar |
+
+### Marketing tokens (added v0.6.0)
+| Export | Contents |
+|---|---|
+| `colors.bg.mkt*` | `mkt` `mkt2` `mktSurface` `surface2` `surface3` — slightly warmer near-blacks |
+| `colors.text.soft/dim` | `soft` (#c2cbd5) and `dim` (#5c6773) — two extra text levels |
+| `colors.accent.bright/base/ink` | Primary teal (#14b8a6), deep (#0d9488), text-on-teal (#04201d) |
+| `colors.border.accent` | Teal callout border rgba(45,212,191,0.28) |
+| `radiusMkt` | xs (6px) → xl (22px) — larger, rounder marketing radii |
+| `fontSizeMkt` | eyebrow → hero — named marketing type sizes including clamp() values |
+| `fontFamily` | head (Sora), body (Inter), mono (Geist Mono / JetBrains Mono) |
+| `shadows` | card, heroShot, btnPrimary, btnPrimaryHover, logoMark |
+| `layout` | maxWidth (1200px), wrapPadding (32px/20px), sectionPad, navHeight (64px) |
+| `breakpoints` | md (980px), nav (880px), sm (560px) |
+
+**Rule:** Component files never contain literal hex codes, px values, or font names. All values come from these tokens.
+
+---
+
+## 13. Deployment
 
 ### Pipeline
 ```
@@ -295,4 +355,4 @@ Push to main → Vercel detects → Next.js build → Deploy to edge
 
 ---
 
-*Last updated: BuilderLab v0.2.0*
+*Last updated: BuilderLab v0.6.0-dev (feat/landing-page)*

@@ -300,7 +300,7 @@ export default function Feed({ projects, currentUserId: initialUserId }: Props) 
       {/* Page header */}
       <div style={{ marginBottom: '24px' }}>
         <p style={{ fontSize: fontSize.sm, color: colors.accent.tealText, marginBottom: '6px' }}>
-          ↗ {projects.length} available {projects.length === 0 || projects.length === 1 ? 'project' : 'projects'}
+          ↗ {projects.length} {projects.length === 0 || projects.length === 1 ? 'project' : 'projects'} available
         </p>
         <h1 style={{
           fontSize: fontSize.xxl,

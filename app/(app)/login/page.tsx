@@ -44,7 +44,7 @@ export default function LoginPage() {
         if (event === 'SIGNED_IN' && session) {
           // router.push ne suffit pas ici car le Server Component
           // doit aussi être notifié — on force un rechargement complet
-          window.location.href = '/'
+          window.location.href = '/feed'
         }
       }
     )

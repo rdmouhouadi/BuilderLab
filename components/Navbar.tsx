@@ -37,7 +37,7 @@ type UserProfile = {
 // ─────────────────────────────────────────
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/',            label: 'Projects',    icon: Layers },
+  { href: '/feed',        label: 'Projects',    icon: Layers },
   { href: '/hivecheck',   label: 'HiveCheck',   icon: Star,  isHiveCheck: true },
   { href: '/connections', label: 'Connections', icon: Users, requiresAuth: true },
 ]

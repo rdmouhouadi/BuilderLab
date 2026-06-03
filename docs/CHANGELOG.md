@@ -9,6 +9,29 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] — V0.6.0
 
+### Added - 2026-06-03
+
+#### Marketing Site (feat/landing-page)
+- **Landing page `/`** — Full marketing home page: hero with two overlapping product screenshots (overlap layout), value strip, Problem/How it works/Ecosystem/Build in public sections, and a final CTA box.
+- **Vision page `/vision`** — Mission statement, three-pillar section, build-in-public banner with principles, roadmap timeline, CTA.
+- **Docs pages `/docs/[slug]`** — Real routes (not show/hide JS) with sticky sidebar (4 groups, 10 articles), prev/next navigation, breadcrumb, and scoped article typography.
+- **Contact page `/contact`** — Client-side form with three subject chips (Suggestion / Bug report / Join the journey), conditional role `<select>` (shown on "Join the journey"), per-field required validation, and a subject-specific success state.
+- **`/api/contact` route** — Resend API endpoint that emails `richiedieuveil@gmail.com` with the submitted form data.
+- **Marketing Navbar** — Sticky blurred nav with logo, Vision/Docs/Contact links, Sign in / Sign up buttons. Hamburger menu below 880px.
+- **Footer** — 4-column grid (brand + 3 link columns) with version badge. Collapses to 2 columns below 880px.
+- **`ScrollReveal` component** — `IntersectionObserver`-based fade/translate-up animation gated behind `prefers-reduced-motion: no-preference`.
+- **`Eyebrow` component** — Teal pill label with glowing dot.
+- **`lib/docs-content.ts`** — Full docs content registry: `DOC_GROUPS`, `getArticle(slug)`, `getDefaultSlug()`, all 10 articles as HTML strings.
+- **`lib/design-tokens.ts` extended** — Added `radiusMkt`, `fontSizeMkt`, `fontFamily`, `shadows`, `layout`, `breakpoints`, and new marketing-specific color values (`colors.bg.mkt*`, `colors.text.soft/dim`, `colors.accent.bright/base/ink/indigoBright`, `colors.border.accent`) without breaking existing app tokens.
+- **`public/images/`** — Hero screenshots (`shot-projects.png`, `shot-login.png`) copied from design handoff.
+
+#### Route Architecture Refactor
+- **Route groups** — App now uses two route groups: `app/(marketing)/` (marketing layout) and `app/(app)/` (app layout with Navbar).
+- **Root layout stripped** — `app/layout.tsx` is now a minimal shell (html/body/fonts/globals.css only, no Navbar).
+- **Project feed moved** — `app/page.tsx` → `app/(app)/feed/page.tsx`; URL is now `/feed`.
+- **All other app pages** moved into `app/(app)/` — URLs unchanged.
+- **Proxy fix** — Authenticated `/login` users now redirect to `/feed` instead of `/`.
+
 ### Planned
 - HiveCheck — structured peer review system
 - Project submission for review (GitHub link, demo, description)

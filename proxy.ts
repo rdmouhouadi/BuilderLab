@@ -57,7 +57,7 @@ export async function proxy(request: NextRequest) {
   // Si l'utilisateur est connecté et essaie d'aller sur /login
   // on le redirige vers le feed — pas besoin de se reconnecter
   if (request.nextUrl.pathname === '/login' && user) {
-    return NextResponse.redirect(new URL('/', request.url))
+    return NextResponse.redirect(new URL('/feed', request.url))
   }
 
   return supabaseResponse
