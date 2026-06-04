@@ -1,16 +1,15 @@
 // components/Navbar.tsx
-// Main navigation bar — sticky, responsive.
-// Broken into sub-components for maintainability:
-//   NavLogo, NavCapsule, NavNotifications, NavMobileMenu
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
 import { Layers, Users, Star, Bell } from 'lucide-react'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
-import { colors, radius, fontSize, styles } from '@/lib/design-tokens'
+import {
+  colors, radius, radiusMkt, fontSize, fontSizeMkt, styles,
+  shadows, fontFamily, layout,
+} from '@/lib/design-tokens'
 import type { User } from '@supabase/supabase-js'
 import type { Notification } from '@/types'
 import { getTimeLabel } from '@/lib/timeLabel'
@@ -48,23 +47,28 @@ const NAV_ITEMS: NavItem[] = [
 
 function NavLogo() {
   return (
-    <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-      {/* Hexagon logo mark — B.hive ready */}
-      <div style={{
-        width: '20px', height: '20px',
-        borderRadius: radius.md,
-        backgroundColor: colors.accent.teal,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-          <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5" />
-        </svg>
-      </div>
+    <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
       <span style={{
-        fontSize: fontSize.md,
-        fontWeight: 500,
-        color: colors.text.primary,
-        letterSpacing: '-0.01em',
+        width: '28px', height: '28px',
+        borderRadius: '8px',
+        background: `linear-gradient(150deg, ${colors.accent.bright}, ${colors.accent.deep})`,
+        boxShadow: shadows.logoMark,
+        display: 'grid', placeItems: 'center',
+        flexShrink: 0,
+      }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z"
+            stroke={colors.accent.ink} strokeWidth="1.7" strokeLinejoin="round"
+            fill="rgba(4,32,29,0.18)" />
+          <path d="M12 7.2L7 10v4l5 2.8 5-2.8v-4l-5-2.8z" fill={colors.accent.ink} />
+        </svg>
+      </span>
+      <span style={{
+        fontFamily: fontFamily.head,
+        fontWeight: 700,
+        fontSize: '17px',
+        letterSpacing: '-0.02em',
+        color: colors.text.base,
       }}>
         BuilderLab
       </span>
@@ -73,29 +77,20 @@ function NavLogo() {
 }
 
 // ─────────────────────────────────────────
-// Sub-component: NavCapsule
+// Sub-component: NavLinks (flat, no capsule)
 // ─────────────────────────────────────────
 
-type NavCapsuleProps = {
+type NavLinksProps = {
   user: User | null
   pendingCount: number
 }
 
-function NavCapsule({ user, pendingCount }: NavCapsuleProps) {
+function NavLinks({ user, pendingCount }: NavLinksProps) {
   const pathname = usePathname()
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '2px',
-      backgroundColor: colors.bg.elevated,
-      border: `0.5px solid ${colors.border.default}`,
-      borderRadius: radius.xl,
-      padding: '3px',
-    }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
       {NAV_ITEMS.map(item => {
-        // Hide auth-required tabs for unauthenticated users
         if (item.requiresAuth && !user) return null
 
         const isActive = pathname === item.href
@@ -106,52 +101,36 @@ function NavCapsule({ user, pendingCount }: NavCapsuleProps) {
             key={item.href}
             href={item.href}
             style={{
-              position: 'relative',
               display: 'flex',
               alignItems: 'center',
               gap: '5px',
-              padding: '5px 14px',
-              borderRadius: radius.lg,
-              fontSize: fontSize.base,
+              padding: '7px 13px',
+              borderRadius: radiusMkt.sm,
+              fontSize: fontSizeMkt.nav,
+              fontWeight: 500,
               textDecoration: 'none',
               color: isActive
-                ? isHive ? colors.accent.indigoText : colors.text.primary
-                : colors.text.muted,
-              transition: 'color 0.15s',
-              zIndex: 1,
+                ? isHive ? colors.accent.indigoText : colors.text.base
+                : colors.text.muted2,
+              backgroundColor: isActive ? colors.bg.elevated : 'transparent',
+              transition: 'color 0.15s, background 0.15s',
             }}
             onMouseEnter={e => {
               if (!isActive) {
-                (e.currentTarget as HTMLElement).style.color = colors.text.secondary
-                ;(e.currentTarget as HTMLElement).style.backgroundColor = colors.bg.hover
+                (e.currentTarget as HTMLElement).style.color = colors.text.base
+                ;(e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.04)'
               }
             }}
             onMouseLeave={e => {
               if (!isActive) {
-                (e.currentTarget as HTMLElement).style.color = colors.text.muted
+                (e.currentTarget as HTMLElement).style.color = colors.text.muted2
                 ;(e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'
               }
             }}
           >
-            {/* Animated active capsule */}
-            {isActive && (
-              <motion.span
-                layoutId="nav-active"
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  borderRadius: radius.lg,
-                  backgroundColor: colors.bg.hover,
-                  zIndex: -1,
-                }}
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              />
-            )}
-
             <item.icon size={13} />
             <span>{item.label}</span>
 
-            {/* HiveCheck beta badge */}
             {isHive && (
               <span style={{
                 fontSize: '9px',
@@ -165,7 +144,6 @@ function NavCapsule({ user, pendingCount }: NavCapsuleProps) {
               </span>
             )}
 
-            {/* Pending connections dot */}
             {item.href === '/connections' && pendingCount > 0 && (
               <span style={{
                 display: 'flex',
@@ -211,35 +189,34 @@ function NavNotifications({ notifications, unreadCount, onOpen, isOpen, notifRef
 
   return (
     <div style={{ position: 'relative' }} ref={notifRef}>
-      {/* Bell button */}
       <button
         aria-label="Notifications"
         onClick={onOpen}
         style={{
-          width: '30px', height: '30px',
-          borderRadius: radius.lg,
+          width: '34px', height: '34px',
+          borderRadius: radiusMkt.sm,
           backgroundColor: 'transparent',
-          border: `0.5px solid ${isOpen ? colors.border.hover : colors.border.default}`,
+          border: `1px solid ${isOpen ? colors.border.mkt2 : colors.border.mkt}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           cursor: 'pointer',
-          color: isOpen ? colors.text.secondary : colors.text.muted,
+          color: isOpen ? colors.text.soft : colors.text.muted2,
           position: 'relative',
           transition: 'all 0.15s',
         }}
         onMouseEnter={e => {
-          (e.currentTarget as HTMLElement).style.borderColor = colors.border.hover
-          ;(e.currentTarget as HTMLElement).style.color = colors.text.secondary
+          (e.currentTarget as HTMLElement).style.borderColor = colors.border.mkt2
+          ;(e.currentTarget as HTMLElement).style.color = colors.text.soft
         }}
         onMouseLeave={e => {
-          (e.currentTarget as HTMLElement).style.borderColor = isOpen ? colors.border.hover : colors.border.default
-          ;(e.currentTarget as HTMLElement).style.color = isOpen ? colors.text.secondary : colors.text.muted
+          (e.currentTarget as HTMLElement).style.borderColor = isOpen ? colors.border.mkt2 : colors.border.mkt
+          ;(e.currentTarget as HTMLElement).style.color = isOpen ? colors.text.soft : colors.text.muted2
         }}
       >
-        <Bell size={14} />
+        <Bell size={15} />
         {unreadCount > 0 && (
           <span style={{
             position: 'absolute',
-            top: '4px', right: '4px',
+            top: '5px', right: '5px',
             width: '5px', height: '5px',
             borderRadius: radius.full,
             backgroundColor: colors.status.danger,
@@ -248,7 +225,6 @@ function NavNotifications({ notifications, unreadCount, onOpen, isOpen, notifRef
         )}
       </button>
 
-      {/* Dropdown */}
       {isOpen && (
         <div style={{
           position: 'absolute',
@@ -256,13 +232,11 @@ function NavNotifications({ notifications, unreadCount, onOpen, isOpen, notifRef
           right: 0,
           width: '320px',
           backgroundColor: colors.bg.elevated,
-          border: `0.5px solid ${colors.border.hover}`,
-          borderRadius: radius.xxl,
+          border: `1px solid ${colors.border.mkt2}`,
+          borderRadius: radiusMkt.md,
           overflow: 'hidden',
           zIndex: 50,
-        }}
-        >
-          {/* Header */}
+        }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -280,7 +254,6 @@ function NavNotifications({ notifications, unreadCount, onOpen, isOpen, notifRef
             )}
           </div>
 
-          {/* List */}
           {notifications.length === 0 ? (
             <div style={{ padding: '32px 16px', textAlign: 'center' }}>
               <p style={{ fontSize: fontSize.sm, color: colors.text.muted }}>
@@ -291,7 +264,6 @@ function NavNotifications({ notifications, unreadCount, onOpen, isOpen, notifRef
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {notifications.map(notif => {
                 const isRead = notif.read
-
                 return (
                   <Link
                     key={notif.id}
@@ -354,7 +326,6 @@ function NavNotifications({ notifications, unreadCount, onOpen, isOpen, notifRef
             </div>
           )}
 
-          {/* Footer */}
           <Link
             href="/notifications"
             style={{
@@ -401,9 +372,10 @@ function NavMobileMenu({ user, isOpen, menuRef, onClose, onSignOut }: NavMobileM
         top: '100%',
         left: 0,
         width: '100%',
-        backgroundColor: colors.bg.surface,
-        borderBottom: `0.5px solid ${colors.border.default}`,
-        padding: '12px 16px',
+        backgroundColor: colors.bg.mktSurface,
+        borderTop: `1px solid ${colors.border.mkt}`,
+        borderBottom: `1px solid ${colors.border.mkt}`,
+        padding: '12px 20px 20px',
         display: 'flex',
         flexDirection: 'column',
         gap: '2px',
@@ -423,19 +395,21 @@ function NavMobileMenu({ user, isOpen, menuRef, onClose, onSignOut }: NavMobileM
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '8px 10px',
-              borderRadius: radius.lg,
-              fontSize: fontSize.base,
+              padding: '10px 12px',
+              borderRadius: radiusMkt.sm,
+              fontSize: fontSizeMkt.nav,
+              fontWeight: 500,
               textDecoration: 'none',
               color: isActive
-                ? item.isHiveCheck ? colors.accent.indigoText : colors.accent.tealText
-                : colors.text.muted,
-              backgroundColor: isActive ? colors.bg.hover : 'transparent',
+                ? item.isHiveCheck ? colors.accent.indigoText : colors.accent.bright
+                : colors.text.muted2,
+              backgroundColor: isActive
+                ? item.isHiveCheck
+                  ? `rgba(99,102,241,0.07)`
+                  : `rgba(${colors.accent.glowRgb},0.07)`
+                : 'transparent',
+              marginBottom: '2px',
             }}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.backgroundColor = colors.bg.hover}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.backgroundColor = isActive 
-              ? colors.bg.hover 
-              : 'transparent'}
           >
             <item.icon size={14} />
             {item.label}
@@ -443,8 +417,7 @@ function NavMobileMenu({ user, isOpen, menuRef, onClose, onSignOut }: NavMobileM
         )
       })}
 
-      {/* Divider */}
-      <div style={{ height: '0.5px', backgroundColor: colors.border.default, margin: '8px 0' }} />
+      <div style={{ height: '1px', backgroundColor: colors.border.mkt, margin: '12px 0' }} />
 
       {user ? (
         <>
@@ -452,11 +425,12 @@ function NavMobileMenu({ user, isOpen, menuRef, onClose, onSignOut }: NavMobileM
             href="/post"
             onClick={onClose}
             style={{
-              padding: '8px 10px',
-              borderRadius: radius.lg,
-              fontSize: fontSize.base,
+              padding: '10px 12px',
+              borderRadius: radiusMkt.sm,
+              fontSize: fontSizeMkt.nav,
+              fontWeight: 600,
               textDecoration: 'none',
-              color: colors.accent.tealText,
+              color: colors.accent.bright,
             }}
           >
             + Post a project
@@ -465,11 +439,11 @@ function NavMobileMenu({ user, isOpen, menuRef, onClose, onSignOut }: NavMobileM
             href="/profile"
             onClick={onClose}
             style={{
-              padding: '8px 10px',
-              borderRadius: radius.lg,
-              fontSize: fontSize.base,
+              padding: '10px 12px',
+              borderRadius: radiusMkt.sm,
+              fontSize: fontSizeMkt.nav,
               textDecoration: 'none',
-              color: colors.text.muted,
+              color: colors.text.muted2,
             }}
           >
             My profile
@@ -477,13 +451,13 @@ function NavMobileMenu({ user, isOpen, menuRef, onClose, onSignOut }: NavMobileM
           <button
             onClick={() => { onSignOut(); onClose() }}
             style={{
-              padding: '8px 10px',
-              borderRadius: radius.lg,
-              fontSize: fontSize.base,
+              padding: '10px 12px',
+              borderRadius: radiusMkt.sm,
+              fontSize: fontSizeMkt.nav,
               background: 'none',
               border: 'none',
               textAlign: 'left',
-              color: colors.text.muted,
+              color: colors.text.muted2,
               cursor: 'pointer',
             }}
           >
@@ -491,20 +465,21 @@ function NavMobileMenu({ user, isOpen, menuRef, onClose, onSignOut }: NavMobileM
           </button>
         </>
       ) : (
-        <Link
-          href="/login"
-          onClick={onClose}
-          style={{
-            padding: '8px 10px',
-            borderRadius: radius.lg,
-            fontSize: fontSize.base,
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Link href="/login" onClick={onClose} style={{
+            flex: 1,
+            textAlign: 'center',
+            padding: '10px',
+            borderRadius: radiusMkt.sm,
+            border: `1px solid ${colors.border.mkt2}`,
+            color: colors.text.soft,
+            fontSize: fontSizeMkt.nav,
+            fontWeight: 600,
             textDecoration: 'none',
-            color: colors.accent.tealText,
-          }}
-
-        >
-          Sign in
-        </Link>
+          }}>
+            Sign in
+          </Link>
+        </div>
       )}
     </div>
   )
@@ -529,14 +504,11 @@ export default function Navbar() {
   const notifRef = useRef<HTMLDivElement | null>(null)
   const mobileMenuRef = useRef<HTMLDivElement | null>(null)
 
-  // Compute initials from profile, fallback to email
   const navInitials = userProfile
     ? ([userProfile.first_name?.[0], userProfile.last_name?.[0]]
         .filter(Boolean).join('').toUpperCase()
       ) || (user?.email?.[0].toUpperCase() ?? '?')
     : (user?.email?.[0].toUpperCase() ?? '?')
-
-  // ── Data fetchers ──
 
   async function fetchPendingCount(userId: string) {
     const { data: projects } = await supabase
@@ -592,8 +564,6 @@ export default function Navbar() {
     router.push('/')
   }
 
-  // ── Auth listener ──
-
   useEffect(() => {
     async function init() {
       const { data } = await supabase.auth.getUser()
@@ -623,8 +593,6 @@ export default function Navbar() {
     return () => subscription.unsubscribe()
   }, [supabase])
 
-  // ── Close dropdowns on outside click ──
-
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
@@ -648,24 +616,29 @@ export default function Navbar() {
       top: 0,
       zIndex: 50,
       width: '100%',
-      backgroundColor: colors.bg.surface,
-      borderBottom: `0.5px solid ${colors.border.default}`,
+      backdropFilter: 'blur(14px) saturate(140%)',
+      WebkitBackdropFilter: 'blur(14px) saturate(140%)',
+      backgroundColor: 'rgba(10,13,17,0.80)',
+      borderBottom: `1px solid ${colors.border.mkt}`,
     }}>
       <div style={{
         position: 'relative',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 20px',
-        height: '44px',
+        maxWidth: layout.maxWidth,
+        margin: '0 auto',
+        padding: `0 ${layout.wrapPadding}`,
+        height: layout.navHeight,
+        gap: '24px',
       }}>
 
         {/* Left — logo */}
         <NavLogo />
 
-        {/* Center — nav tabs (desktop only) */}
+        {/* Center — nav links (desktop only) */}
         <div style={{ display: 'none' }} className="md-flex-center">
-          <NavCapsule user={user} pendingCount={pendingCount} />
+          <NavLinks user={user} pendingCount={pendingCount} />
         </div>
 
         {/* Right — actions (desktop only) */}
@@ -682,38 +655,135 @@ export default function Navbar() {
                   if (!notifOpen) markAllRead()
                 }}
               />
-              <Link href="/post" style={styles.btnPrimary}>
+              <Link
+                href="/post"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  fontFamily: fontFamily.body,
+                  fontSize: fontSizeMkt.nav,
+                  fontWeight: 600,
+                  letterSpacing: '-0.01em',
+                  padding: '9px 18px',
+                  borderRadius: radiusMkt.sm,
+                  background: `linear-gradient(180deg, ${colors.accent.bright}, ${colors.accent.deep})`,
+                  color: colors.accent.ink,
+                  border: '1px solid transparent',
+                  textDecoration: 'none',
+                  boxShadow: shadows.btnPrimary,
+                  transition: 'box-shadow 0.15s',
+                  whiteSpace: 'nowrap',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.boxShadow = shadows.btnPrimaryHover
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.boxShadow = shadows.btnPrimary
+                }}
+              >
                 + Post project
               </Link>
               <Link
                 href="/profile"
                 aria-label="My profile"
-                style={styles.avatar(28)}
+                style={styles.avatar(30)}
               >
                 {navInitials}
               </Link>
               <button
                 onClick={handleSignOut}
                 style={{
-                  ...styles.btnGhost,
-                  fontSize: fontSize.sm,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  fontFamily: fontFamily.body,
+                  fontSize: fontSizeMkt.nav,
+                  fontWeight: 600,
+                  letterSpacing: '-0.01em',
+                  padding: '9px 18px',
+                  borderRadius: radiusMkt.sm,
+                  border: `1px solid ${colors.border.mkt2}`,
+                  backgroundColor: 'transparent',
+                  color: colors.text.soft,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  transition: 'color 0.15s, border-color 0.15s, background 0.15s',
                 }}
                 onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = colors.border.hover
-                  ;(e.currentTarget as HTMLElement).style.color = colors.text.secondary
+                  (e.currentTarget as HTMLElement).style.color = colors.text.base
+                  ;(e.currentTarget as HTMLElement).style.borderColor = colors.text.dim
+                  ;(e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.03)'
                 }}
                 onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = colors.border.default
-                  ;(e.currentTarget as HTMLElement).style.color = colors.text.muted
+                  (e.currentTarget as HTMLElement).style.color = colors.text.soft
+                  ;(e.currentTarget as HTMLElement).style.borderColor = colors.border.mkt2
+                  ;(e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'
                 }}
               >
                 Log out
               </button>
             </div>
           ) : (
-            <Link href="/login" style={styles.btnPrimary}>
-              Log in
-            </Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Link
+                href="/login"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  fontFamily: fontFamily.body,
+                  fontSize: fontSizeMkt.nav,
+                  fontWeight: 600,
+                  letterSpacing: '-0.01em',
+                  padding: '9px 18px',
+                  borderRadius: radiusMkt.sm,
+                  border: `1px solid ${colors.border.mkt2}`,
+                  backgroundColor: 'transparent',
+                  color: colors.text.soft,
+                  textDecoration: 'none',
+                  transition: 'color 0.15s, border-color 0.15s, background 0.15s',
+                  whiteSpace: 'nowrap',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.color = colors.text.base
+                  ;(e.currentTarget as HTMLElement).style.borderColor = colors.text.dim
+                  ;(e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.03)'
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.color = colors.text.soft
+                  ;(e.currentTarget as HTMLElement).style.borderColor = colors.border.mkt2
+                  ;(e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'
+                }}
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/login"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  fontFamily: fontFamily.body,
+                  fontSize: fontSizeMkt.nav,
+                  fontWeight: 600,
+                  letterSpacing: '-0.01em',
+                  padding: '9px 18px',
+                  borderRadius: radiusMkt.sm,
+                  background: `linear-gradient(180deg, ${colors.accent.bright}, ${colors.accent.deep})`,
+                  color: colors.accent.ink,
+                  border: '1px solid transparent',
+                  textDecoration: 'none',
+                  boxShadow: shadows.btnPrimary,
+                  transition: 'box-shadow 0.15s',
+                  whiteSpace: 'nowrap',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.boxShadow = shadows.btnPrimaryHover
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.boxShadow = shadows.btnPrimary
+                }}
+              >
+                Sign up
+              </Link>
+            </div>
           )}
         </div>
 
@@ -722,13 +792,17 @@ export default function Navbar() {
           aria-label="Toggle menu"
           onClick={() => setMenuOpen(prev => !prev)}
           style={{
+            display: 'none',
             background: 'none',
-            border: 'none',
-            color: colors.text.muted,
+            border: `1px solid ${colors.border.mkt2}`,
+            borderRadius: radiusMkt.sm,
+            color: colors.text.muted2,
             cursor: 'pointer',
-            fontSize: '18px',
+            padding: '6px',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
-          className="md-hidden"
+          className="md-hamburger"
         >
           {menuOpen ? '✕' : '☰'}
         </button>
@@ -743,7 +817,6 @@ export default function Navbar() {
         onSignOut={handleSignOut}
       />
 
-      {/* Responsive helpers */}
       <style>{`
         @media (min-width: 768px) {
           .md-flex-center {
@@ -752,8 +825,11 @@ export default function Navbar() {
             left: 50%;
             transform: translateX(-50%);
           }
-          .md-flex-right { display: flex !important; }
-          .md-hidden { display: none !important; }
+          .md-flex-right   { display: flex !important; }
+          .md-hamburger    { display: none !important; }
+        }
+        @media (max-width: 767px) {
+          .md-hamburger    { display: flex !important; }
         }
       `}</style>
     </nav>

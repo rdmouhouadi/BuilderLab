@@ -4,51 +4,57 @@
 
 export const colors = {
   bg: {
-    base:       '#0A0A0B',   // app page background
-    surface:    '#111113',   // app navbar, panels
-    elevated:   '#18181B',   // app cards, dropdowns
-    hover:      '#1E1E22',   // app hover states
-    // marketing backgrounds (slightly warmer near-black)
-    mkt:        '#0a0d11',   // --bg  : marketing page background
-    mkt2:       '#0c1016',   // --bg-2: strip, footer, card gradient end
-    mktSurface: '#12181f',   // --surface: marketing cards
-    surface2:   '#161d27',   // --surface-2: elevated marketing surfaces
-    surface3:   '#1b232e',   // --surface-3: deepest marketing surface
+    // Unified with marketing — same warm dark palette across the whole product
+    base:       '#0a0d11',   // page background
+    surface:    '#12181f',   // navbar, panels
+    elevated:   '#161d27',   // cards, dropdowns
+    hover:      '#1b232e',   // hover states
+    // Marketing aliases (same values — kept for semantic clarity)
+    mkt:        '#0a0d11',
+    mkt2:       '#0c1016',   // strip, footer, card gradient end
+    mktSurface: '#12181f',
+    surface2:   '#161d27',
+    surface3:   '#1b232e',
   },
   border: {
-    default: 'rgba(255,255,255,0.06)',
+    default: 'rgba(255,255,255,0.07)',
     hover:   'rgba(255,255,255,0.12)',
     active:  'rgba(255,255,255,0.18)',
-    mkt:     'rgba(255,255,255,0.07)',   // --border
-    mkt2:    'rgba(255,255,255,0.11)',   // --border-2
-    accent:  'rgba(45,212,191,0.28)',    // --border-accent  teal callout border
+    mkt:     'rgba(255,255,255,0.07)',
+    mkt2:    'rgba(255,255,255,0.11)',
+    accent:  'rgba(45,212,191,0.28)',
   },
   text: {
-    primary:   '#FAFAFA',   // app primary text
-    secondary: '#A1A1AA',   // app secondary text
-    muted:     '#52525B',   // app muted text
-    // marketing text scale
-    base:  '#eef2f6',   // --text      marketing primary
-    soft:  '#c2cbd5',   // --text-soft slightly dimmer
-    muted2: '#8a94a0',  // --text-muted marketing muted (≈ app secondary)
-    dim:   '#5c6773',   // --text-dim  labels, eyebrows, timestamps
+    primary:   '#FAFAFA',
+    secondary: '#A1A1AA',
+    muted:     '#52525B',
+    // Unified text scale (used across app + marketing)
+    base:  '#eef2f6',
+    soft:  '#c2cbd5',
+    muted2: '#8a94a0',
+    dim:   '#5c6773',
   },
   accent: {
-    teal:         '#0D9488',              // app teal (= --accent-deep)
+    // ─── Teal family ──────────────────────────────────────────────────────────
+    // Canonical marketing names
+    base:         '#14b8a6',              // primary fill — buttons, badges
+    deep:         '#0d9488',              // gradient base, icon fill
+    bright:       '#2dd4bf',             // highlight text, active states
+    ink:          '#04201d',             // text on teal fills
+    glowRgb:      '20 184 166',
+    // App aliases (same values)
+    teal:         '#0d9488',              // == deep
     tealDim:      'rgba(13,148,136,0.12)',
     tealBorder:   'rgba(13,148,136,0.25)',
-    tealText:     '#2DD4BF',              // app teal text (= --accent-2)
-    // marketing accent scale
-    base:         '#14b8a6',              // --accent      primary teal (buttons)
-    deep:         '#0d9488',              // --accent-deep button gradient base
-    bright:       '#2dd4bf',             // --accent-2    highlight text, icons
-    ink:          '#04201d',             // --accent-ink  text on teal fills
-    glowRgb:      '20 184 166',          // for rgba() gradient usage
-    indigo:       '#6366F1',
+    tealText:     '#2dd4bf',              // == bright
+    // ─── Indigo family (HiveCheck) ────────────────────────────────────────────
+    indigo:       '#6366F1',              // primary indigo fill
+    indigoDeep:   '#4338CA',             // deep indigo (mirrors teal.deep)
+    indigoBright: '#818cf8',             // medium indigo — links, tags
+    indigoText:   '#A5B4FC',             // highlight indigo text
+    indigoInk:    '#1e1b4b',             // text on indigo fills (mirrors teal.ink)
     indigoDim:    'rgba(99,102,241,0.12)',
     indigoBorder: 'rgba(99,102,241,0.25)',
-    indigoText:   '#A5B4FC',
-    indigoBright: '#818cf8',             // --indigo-bright links, tags
   },
   status: {
     danger:      '#EF4444',
@@ -80,11 +86,13 @@ export const radiusMkt = {
 } as const
 
 // ─── App UI font sizes ───────────────────────────────────────────────────────
+// Scale: xs < sm < md < base < lg < xl < xxl
+// md is a dense label size (13px), slightly below base — used for compact UI text
 export const fontSize = {
-  xs:   '10px',
-  sm:   '11px',
-  base: '12px',
+  xs:   '11px',
+  sm:   '12px',
   md:   '13px',
+  base: '14px',
   lg:   '15px',
   xl:   '18px',
   xxl:  '22px',

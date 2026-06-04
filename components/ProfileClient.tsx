@@ -412,7 +412,7 @@ export default function ProfileClient({ profile, ownedProjects, joinedProjects, 
   // ─────────────────────────────────────────
 
   return (
-    <main style={{ maxWidth: '768px', margin: '0 auto', padding: '32px 16px' }}>
+    <main style={{ maxWidth: '1152px', margin: '0 auto', padding: '32px 16px' }}>
 
       {/* Profile card */}
       <div style={{

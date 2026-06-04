@@ -1,12 +1,10 @@
 // components/ConnectionsClient.tsx
-// Displays received and sent connection requests.
-// Allows the user to accept or decline pending requests.
 'use client'
 
 import { useState } from 'react'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
-import { colors, radius, fontSize, styles } from '@/lib/design-tokens'
+import { colors, radius, radiusMkt, fontSize, fontSizeMkt, layout } from '@/lib/design-tokens'
 
 // ─────────────────────────────────────────
 // Types
@@ -43,23 +41,22 @@ function getInitials(name: string | null | undefined) {
   return name.split(' ').map(w => w[0]).join('').toUpperCase()
 }
 
-// Status badge style — monochrome except for semantic meaning
 function statusStyle(status: string) {
   switch (status) {
     case 'accepted': return {
       backgroundColor: colors.status.successDim,
       color: colors.status.success,
-      border: `0.5px solid rgba(16,185,129,0.25)`,
+      border: `1px solid rgba(16,185,129,0.25)`,
     }
     case 'rejected': return {
       backgroundColor: colors.status.dangerDim,
       color: colors.status.danger,
-      border: `0.5px solid rgba(239,68,68,0.25)`,
+      border: `1px solid rgba(239,68,68,0.25)`,
     }
     default: return {
       backgroundColor: colors.status.warningDim,
       color: colors.status.warning,
-      border: `0.5px solid rgba(245,158,11,0.25)`,
+      border: `1px solid rgba(245,158,11,0.25)`,
     }
   }
 }
@@ -74,10 +71,8 @@ export default function ConnectionsClient({ received, sent }: Props) {
   const [activeTab,   setActiveTab]   = useState<'received' | 'sent'>('received')
   const [connections, setConnections] = useState(received)
 
-  // Only pending requests are shown in the received tab
   const pending = connections.filter(c => c.status === 'pending')
 
-  // Accept or decline a connection request
   async function handleAction(id: string, action: 'accepted' | 'rejected') {
     const { error } = await supabase
       .from('connections')
@@ -85,12 +80,10 @@ export default function ConnectionsClient({ received, sent }: Props) {
       .eq('id', id)
 
     if (!error) {
-      // Optimistic update — reflect the change immediately
       setConnections(prev =>
         prev.map(c => c.id === id ? { ...c, status: action } : c)
       )
 
-      // Send email notification to the sender on accept — non-blocking
       if (action === 'accepted') {
         fetch('/api/notify/accepted', {
           method: 'POST',
@@ -106,20 +99,24 @@ export default function ConnectionsClient({ received, sent }: Props) {
   // ─────────────────────────────────────────
 
   return (
-    <main style={{ maxWidth: '672px', margin: '0 auto', padding: '32px 16px' }}>
+    <main style={{
+      maxWidth: '1152px',
+      margin: '0 auto',
+      padding: `40px ${layout.wrapPadding}`,
+    }}>
 
       {/* Header */}
-      <div style={{ marginBottom: '24px' }}>
+      <div style={{ marginBottom: '28px' }}>
         <h1 style={{
-          fontSize: fontSize.xl,
-          fontWeight: 500,
-          color: colors.text.primary,
-          letterSpacing: '-0.02em',
-          marginBottom: '4px',
+          fontSize: fontSize.xxl,
+          fontWeight: 600,
+          color: colors.text.base,
+          letterSpacing: '-0.03em',
+          marginBottom: '6px',
         }}>
           Connections
         </h1>
-        <p style={{ fontSize: fontSize.sm, color: colors.text.muted }}>
+        <p style={{ fontSize: fontSize.base, color: colors.text.muted2 }}>
           Manage your collaboration requests
         </p>
       </div>
@@ -129,11 +126,11 @@ export default function ConnectionsClient({ received, sent }: Props) {
         display: 'flex',
         gap: '2px',
         padding: '3px',
-        borderRadius: radius.xl,
+        borderRadius: radiusMkt.sm,
         backgroundColor: colors.bg.elevated,
-        border: `0.5px solid ${colors.border.default}`,
+        border: `1px solid ${colors.border.mkt}`,
         width: 'fit-content',
-        marginBottom: '20px',
+        marginBottom: '24px',
       }}>
         {(['received', 'sent'] as const).map(tab => {
           const isActive = activeTab === tab
@@ -146,27 +143,26 @@ export default function ConnectionsClient({ received, sent }: Props) {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '5px 16px',
-                borderRadius: radius.lg,
-                fontSize: fontSize.sm,
+                gap: '7px',
+                padding: '6px 18px',
+                borderRadius: '6px',
+                fontSize: fontSizeMkt.nav,
                 fontWeight: isActive ? 500 : 400,
                 cursor: 'pointer',
                 transition: 'all 0.15s',
                 textTransform: 'capitalize',
-                backgroundColor: isActive ? colors.bg.hover    : 'transparent',
-                color:           isActive ? colors.text.primary : colors.text.muted,
-                border:          isActive ? `0.5px solid ${colors.border.active}` : 'none',
+                backgroundColor: isActive ? colors.bg.hover : 'transparent',
+                color:           isActive ? colors.text.base : colors.text.muted2,
+                border:          isActive ? `1px solid ${colors.border.mkt2}` : '1px solid transparent',
               }}
             >
               {tab}
-              {/* Count badge */}
               <span style={{
                 fontSize: fontSize.xs,
-                padding: '1px 5px',
+                padding: '1px 6px',
                 borderRadius: radius.sm,
                 backgroundColor: isActive ? colors.bg.elevated : colors.bg.hover,
-                color: isActive ? colors.text.secondary : colors.text.muted,
+                color: isActive ? colors.text.soft : colors.text.muted2,
               }}>
                 {count}
               </span>
@@ -175,20 +171,23 @@ export default function ConnectionsClient({ received, sent }: Props) {
         })}
       </div>
 
-      {/* Received tab */}
+      {/* ── Received tab ── */}
       {activeTab === 'received' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {pending.length === 0 ? (
             <div style={{
-              ...styles.card ?? {},
               backgroundColor: colors.bg.elevated,
-              border: `0.5px solid ${colors.border.default}`,
-              borderRadius: radius.xxl,
-              padding: '32px',
+              border: `1px solid ${colors.border.mkt}`,
+              borderRadius: radiusMkt.md,
+              padding: '48px 32px',
               textAlign: 'center',
             }}>
-              <p style={{ fontSize: fontSize.sm, color: colors.text.muted }}>
-                No pending requests.
+              <p style={{ fontSize: '20px', marginBottom: '8px' }}>👋</p>
+              <p style={{ fontSize: fontSize.base, color: colors.text.muted2 }}>
+                No pending requests
+              </p>
+              <p style={{ fontSize: fontSize.sm, color: colors.text.muted, marginTop: '4px' }}>
+                When someone wants to join your project, it'll appear here.
               </p>
             </div>
           ) : (
@@ -197,28 +196,28 @@ export default function ConnectionsClient({ received, sent }: Props) {
                 key={conn.id}
                 style={{
                   backgroundColor: colors.bg.elevated,
-                  border: `0.5px solid ${colors.border.default}`,
-                  borderRadius: radius.xxl,
-                  padding: '16px',
+                  border: `1px solid ${colors.border.mkt}`,
+                  borderRadius: radiusMkt.md,
+                  padding: '20px',
                 }}
               >
-                {/* Top row — sender info + status badge */}
+                {/* Top row — sender + project */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'flex-start',
                   justifyContent: 'space-between',
                   gap: '12px',
-                  marginBottom: '10px',
+                  marginBottom: '12px',
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {/* Avatar */}
                     <div style={{
-                      width: '34px', height: '34px',
-                      borderRadius: radius.lg,
-                      backgroundColor: colors.accent.teal,
+                      width: '38px', height: '38px',
+                      borderRadius: radiusMkt.sm,
+                      backgroundColor: colors.accent.base,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: fontSize.xs, fontWeight: 500,
-                      color: '#fff', flexShrink: 0,
+                      fontSize: fontSize.sm, fontWeight: 600,
+                      color: colors.accent.ink, flexShrink: 0,
                     }}>
                       {getInitials(conn.profiles?.name)}
                     </div>
@@ -227,18 +226,18 @@ export default function ConnectionsClient({ received, sent }: Props) {
                       <Link
                         href={`/profile/${conn.profiles?.id}`}
                         style={{
-                          fontSize: fontSize.sm,
+                          fontSize: fontSize.base,
                           fontWeight: 500,
-                          color: colors.text.primary,
+                          color: colors.text.base,
                           textDecoration: 'none',
                         }}
-                        onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
-                        onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+                        onMouseEnter={e => (e.currentTarget.style.color = colors.accent.bright)}
+                        onMouseLeave={e => (e.currentTarget.style.color = colors.text.base)}
                       >
                         {conn.profiles?.name ?? 'Anonymous'}
                       </Link>
-                      <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
-                        {conn.profiles?.country ?? ''} · ⭐{' '}
+                      <p style={{ fontSize: fontSize.sm, color: colors.text.muted2, marginTop: '2px' }}>
+                        {conn.profiles?.country ?? '—'} · ⭐{' '}
                         {conn.profiles?.avg_rating
                           ? conn.profiles.avg_rating.toFixed(1)
                           : 'New'
@@ -251,7 +250,7 @@ export default function ConnectionsClient({ received, sent }: Props) {
                   <span style={{
                     ...statusStyle('pending'),
                     fontSize: fontSize.xs,
-                    padding: '2px 8px',
+                    padding: '3px 9px',
                     borderRadius: radius.md,
                     flexShrink: 0,
                   }}>
@@ -260,46 +259,55 @@ export default function ConnectionsClient({ received, sent }: Props) {
                 </div>
 
                 {/* Project name */}
-                <p style={{ fontSize: fontSize.xs, color: colors.text.muted, marginBottom: '8px' }}>
-                  Interested in:{' '}
-                  <span style={{ color: colors.text.secondary }}>
+                <p style={{
+                  fontSize: fontSize.sm,
+                  color: colors.text.muted2,
+                  marginBottom: conn.message ? '10px' : '14px',
+                }}>
+                  Interested in{' '}
+                  <Link
+                    href={`/projects/${conn.projects?.id}`}
+                    style={{ color: colors.text.base, textDecoration: 'none', fontWeight: 500 }}
+                    onMouseEnter={e => (e.currentTarget.style.color = colors.accent.bright)}
+                    onMouseLeave={e => (e.currentTarget.style.color = colors.text.base)}
+                  >
                     {conn.projects?.title ?? 'Unknown project'}
-                  </span>
+                  </Link>
                 </p>
 
                 {/* Message */}
                 {conn.message && (
                   <p style={{
-                    fontSize: fontSize.xs,
-                    lineHeight: 1.6,
-                    padding: '8px 10px',
-                    borderRadius: radius.lg,
+                    fontSize: fontSize.sm,
+                    lineHeight: 1.65,
+                    padding: '10px 14px',
+                    borderRadius: radiusMkt.sm,
                     fontStyle: 'italic',
-                    color: colors.text.muted,
+                    color: colors.text.soft,
                     backgroundColor: colors.bg.surface,
-                    border: `0.5px solid ${colors.border.default}`,
-                    marginBottom: '12px',
+                    border: `1px solid ${colors.border.mkt}`,
+                    marginBottom: '14px',
                   }}>
                     "{conn.message}"
                   </p>
                 )}
 
-                {/* Accept / Decline buttons */}
-                <div style={{ display: 'flex', gap: '6px' }}>
+                {/* Accept / Decline */}
+                <div style={{ display: 'flex', gap: '8px' }}>
                   <button
                     onClick={() => handleAction(conn.id, 'accepted')}
                     style={{
-                      fontSize: fontSize.xs,
+                      fontSize: fontSizeMkt.nav,
                       fontWeight: 500,
-                      padding: '5px 12px',
-                      borderRadius: radius.lg,
+                      padding: '7px 16px',
+                      borderRadius: radiusMkt.sm,
                       cursor: 'pointer',
                       backgroundColor: colors.status.successDim,
                       color: colors.status.success,
-                      border: `0.5px solid rgba(16,185,129,0.25)`,
+                      border: `1px solid rgba(16,185,129,0.25)`,
                       transition: 'background 0.15s',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(16,185,129,0.2)')}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(16,185,129,0.22)')}
                     onMouseLeave={e => (e.currentTarget.style.backgroundColor = colors.status.successDim)}
                   >
                     ✓ Accept
@@ -307,14 +315,14 @@ export default function ConnectionsClient({ received, sent }: Props) {
                   <button
                     onClick={() => handleAction(conn.id, 'rejected')}
                     style={{
-                      fontSize: fontSize.xs,
-                      fontWeight: 500,
-                      padding: '5px 12px',
-                      borderRadius: radius.lg,
+                      fontSize: fontSizeMkt.nav,
+                      fontWeight: 400,
+                      padding: '7px 16px',
+                      borderRadius: radiusMkt.sm,
                       cursor: 'pointer',
                       backgroundColor: 'transparent',
-                      color: colors.text.muted,
-                      border: `0.5px solid ${colors.border.default}`,
+                      color: colors.text.muted2,
+                      border: `1px solid ${colors.border.mkt}`,
                       transition: 'all 0.15s',
                     }}
                     onMouseEnter={e => {
@@ -324,8 +332,8 @@ export default function ConnectionsClient({ received, sent }: Props) {
                     }}
                     onMouseLeave={e => {
                       (e.currentTarget.style.backgroundColor = 'transparent')
-                      ;(e.currentTarget.style.color = colors.text.muted)
-                      ;(e.currentTarget.style.borderColor = colors.border.default)
+                      ;(e.currentTarget.style.color = colors.text.muted2)
+                      ;(e.currentTarget.style.borderColor = colors.border.mkt)
                     }}
                   >
                     Decline
@@ -337,19 +345,23 @@ export default function ConnectionsClient({ received, sent }: Props) {
         </div>
       )}
 
-      {/* Sent tab */}
+      {/* ── Sent tab ── */}
       {activeTab === 'sent' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {sent.length === 0 ? (
             <div style={{
               backgroundColor: colors.bg.elevated,
-              border: `0.5px solid ${colors.border.default}`,
-              borderRadius: radius.xxl,
-              padding: '32px',
+              border: `1px solid ${colors.border.mkt}`,
+              borderRadius: radiusMkt.md,
+              padding: '48px 32px',
               textAlign: 'center',
             }}>
-              <p style={{ fontSize: fontSize.sm, color: colors.text.muted }}>
-                You haven't sent any requests yet.
+              <p style={{ fontSize: '20px', marginBottom: '8px' }}>🚀</p>
+              <p style={{ fontSize: fontSize.base, color: colors.text.muted2 }}>
+                No requests sent yet
+              </p>
+              <p style={{ fontSize: fontSize.sm, color: colors.text.muted, marginTop: '4px' }}>
+                Browse projects and send your first collaboration request.
               </p>
             </div>
           ) : (
@@ -360,33 +372,40 @@ export default function ConnectionsClient({ received, sent }: Props) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
+                  gap: '12px',
                   backgroundColor: colors.bg.elevated,
-                  border: `0.5px solid ${colors.border.default}`,
-                  borderRadius: radius.xxl,
-                  padding: '14px 16px',
+                  border: `1px solid ${colors.border.mkt}`,
+                  borderRadius: radiusMkt.md,
+                  padding: '16px 20px',
                 }}
               >
                 <div>
-                  <p style={{
-                    fontSize: fontSize.sm,
-                    fontWeight: 500,
-                    color: colors.text.primary,
-                    marginBottom: '3px',
-                  }}>
+                  <Link
+                    href={`/projects/${conn.projects?.id}`}
+                    style={{
+                      fontSize: fontSize.base,
+                      fontWeight: 500,
+                      color: colors.text.base,
+                      textDecoration: 'none',
+                      display: 'block',
+                      marginBottom: '4px',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.color = colors.accent.bright)}
+                    onMouseLeave={e => (e.currentTarget.style.color = colors.text.base)}
+                  >
                     {conn.projects?.title ?? 'Unknown project'}
-                  </p>
-                  <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
+                  </Link>
+                  <p style={{ fontSize: fontSize.sm, color: colors.text.muted2 }}>
                     Sent {new Date(conn.created_at).toLocaleDateString('en-US', {
                       month: 'short', day: 'numeric', year: 'numeric',
                     })}
                   </p>
                 </div>
 
-                {/* Status badge */}
                 <span style={{
                   ...statusStyle(conn.status),
                   fontSize: fontSize.xs,
-                  padding: '2px 8px',
+                  padding: '3px 9px',
                   borderRadius: radius.md,
                   textTransform: 'capitalize',
                   flexShrink: 0,
