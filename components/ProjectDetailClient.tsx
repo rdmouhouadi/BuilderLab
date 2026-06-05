@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import { Project, Milestone, ProjectUpdate, ProjectMessage, ProjectComment, Task } from '@/types'
 import { CONTACT_TYPES } from '@/lib/constants'
-import { colors, radius, fontSize, styles } from '@/lib/design-tokens'
+import { colors, radius, fontSize, layout, styles  } from '@/lib/design-tokens'
 import Link from 'next/link'
 
 import BackButton from '@/components/BackButton'
@@ -380,7 +380,7 @@ export default function ProjectDetailClient({
   // ─────────────────────────────────────────
 
   return (
-    <main style={{ maxWidth: '1024px', margin: '0 auto', padding: '32px 16px' }}>
+    <main style={{ maxWidth: '1152px', margin: '0 auto', padding: `40px ${layout.wrapPadding}` }}>
 
       <BackButton />
 

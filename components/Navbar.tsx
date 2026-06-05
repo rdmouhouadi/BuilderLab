@@ -7,9 +7,10 @@ import Link from 'next/link'
 import { Layers, Users, Star, Bell } from 'lucide-react'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import {
-  colors, radius, radiusMkt, fontSize, fontSizeMkt, styles,
-  shadows, fontFamily, layout,
+  colors, radius, radiusMkt, fontSize, fontSizeMkt, fontFamily, styles,
+  shadows, layout,
 } from '@/lib/design-tokens'
+import { BuilderLabLogo } from '@/components/BuilderLabLogo'
 import type { User } from '@supabase/supabase-js'
 import type { Notification } from '@/types'
 import { getTimeLabel } from '@/lib/timeLabel'
@@ -47,31 +48,8 @@ const NAV_ITEMS: NavItem[] = [
 
 function NavLogo() {
   return (
-    <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-      <span style={{
-        width: '28px', height: '28px',
-        borderRadius: '8px',
-        background: `linear-gradient(150deg, ${colors.accent.bright}, ${colors.accent.deep})`,
-        boxShadow: shadows.logoMark,
-        display: 'grid', placeItems: 'center',
-        flexShrink: 0,
-      }}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z"
-            stroke={colors.accent.ink} strokeWidth="1.7" strokeLinejoin="round"
-            fill="rgba(4,32,29,0.18)" />
-          <path d="M12 7.2L7 10v4l5 2.8 5-2.8v-4l-5-2.8z" fill={colors.accent.ink} />
-        </svg>
-      </span>
-      <span style={{
-        fontFamily: fontFamily.head,
-        fontWeight: 700,
-        fontSize: '17px',
-        letterSpacing: '-0.02em',
-        color: colors.text.base,
-      }}>
-        BuilderLab
-      </span>
+    <Link href="/" aria-label="BuilderLab home" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+      <BuilderLabLogo markSize={28} />
     </Link>
   )
 }

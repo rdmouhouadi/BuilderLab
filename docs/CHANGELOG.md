@@ -9,6 +9,50 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] — V0.6.0
 
+### Changed - 2026-06-06
+
+#### Design system unification (`lib/design-tokens.ts`)
+- **App backgrounds unified with marketing** — `bg.base/surface/elevated/hover` now use the same warm-dark palette as the marketing site (`#0a0d11 / #12181f / #161d27 / #1b232e`). The two halves of the product now share one visual foundation.
+- **Accent section reorganized** — Teal tokens now have canonical marketing names (`base/deep/bright/ink/glowRgb`) alongside app aliases (`teal/tealText/tealDim/tealBorder`) with explicit cross-references. Indigo family expanded with `indigoDeep: '#4338CA'` and `indigoInk: '#1e1b4b'` to mirror teal's full three-level structure.
+- **Font scale fixed** — `xs: 10px → 11px`, `sm: 11px → 12px` (below-11px text removed from the product). Logical ordering (`xs < sm < md < base < lg < xl < xxl`) now documented inline.
+
+#### Navbar redesign (`components/Navbar.tsx`)
+- **Height** — 44px → 64px (matches `layout.navHeight` and marketing navbar).
+- **Background** — Opaque surface replaced by `rgba(10,13,17,0.80)` with `backdrop-filter: blur(14px) saturate(140%)`.
+- **Layout** — Full-width → `maxWidth: 1200px` centered container with `32px` horizontal padding; logo/nav/actions use `space-between` with absolute-centered nav links.
+- **Nav links** — Capsule wrapper (background + border + rounded container around all items) removed. Links are now flat, individual pill-shaped items (`radiusMkt.sm`, `fontSizeMkt.nav/14px`, `text.muted2` inactive → `text.base` active).
+- **Buttons** — "Post project" uses the teal gradient + glow shadow matching the marketing primary CTA. "Log out" / "Sign in" use the marketing ghost style (border `mkt2`, `text.soft`).
+- **Mobile menu** — Updated to match marketing hamburger menu style (warmer bg, flat link rows).
+
+#### Connections page (`components/ConnectionsClient.tsx`)
+- **Page width** — `maxWidth` 672px → 1152px (matches Feed and HiveCheck).
+- **Font sizes** — Bumped throughout: page title `xxl/22px`, subtitle `base/14px`, tab labels and sender names `base/14px`, meta text `sm/12px`, action buttons `nav/14px`.
+- **Cards** — `1px` borders using `border.mkt`, `radiusMkt.md` radii, `20px` padding, `38px` teal avatar.
+- **Tabs** — Marketing-style segmented control (`radiusMkt.sm`, `1px` border, `text.base`/`text.muted2`).
+- **Action buttons** — Larger padding (`7px 16px`), `radiusMkt.sm`, marketing ghost/semantic hover states.
+- **Links** — Project name in "Interested in" and sent items are now clickable links to the project page.
+- **Empty states** — Replaced bare text with emoji + headline + helper sub-text.
+
+#### Profile page (`components/ProfileClient.tsx`)
+- **Page width** — `maxWidth` 768px → 1152px (matches Feed and HiveCheck).
+
+### Added - 2026-06-05
+
+#### Hive Trio logo (`components/BuilderLabLogo.tsx`)
+- **`BuilderLabMark`** — Reusable SVG icon component. Color variant: three-shade teal (gradient top cell `bright→deep`, mid BL, deep BR). Mono variant: `currentColor` at 1 / 0.8 / 0.6 opacity. Polygons shifted `translate(0,7)` to visually center the mark within its viewBox (hexagons occupy y=16–70 of 100; shift puts the visual center at y=50). `useId()` scopes each gradient ID so multiple logos on one page never collide.
+- **`BuilderLabLogo`** — Horizontal lockup: mark + wordmark. Wordmark: Sora 700, `-0.03em` tracking, "Builder" in `text.base`, "Lab" in `accent.bright`. All colors routed through `design-tokens.ts` — no hardcoded hex values.
+
+#### Favicon & browser icons
+- **`public/favicon.svg`** — Hive Trio color mark available at `/favicon.svg`.
+- **`app/icon.svg`** — Same SVG placed in `app/`; Next.js 13+ auto-serves it as the browser tab favicon, replacing the Vercel default.
+- **`app/apple-icon.tsx`** — 180×180 PNG generated at request time via `ImageResponse` (Hive Trio mark as base64-encoded SVG `<img>`). Served at `/apple-touch-icon.png`.
+
+#### Logo deployed site-wide
+- **App navbar** — Hand-coded hexagon SVG placeholder replaced with `<BuilderLabLogo markSize={28} />`.
+- **Marketing navbar** — `LogoMark` inline component removed; replaced with `<BuilderLabLogo markSize={28} />`.
+- **Login page** — Green dot + plain text placeholder replaced with `<BuilderLabLogo markSize={32} />`; hardcoded background/border hex values replaced with design tokens.
+- **Root layout** (`app/layout.tsx`) — Sora loaded globally via `next/font/google` (so the wordmark renders on app routes, not only marketing); both Inter and Sora exposed as `--font-inter` / `--font-sora` CSS variables on `<html>`; metadata description updated; `icons` config added.
+
 ### Added - 2026-06-03
 
 #### Marketing Site (feat/landing-page)

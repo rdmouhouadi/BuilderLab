@@ -8,8 +8,10 @@ import dynamic from 'next/dynamic'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
 import PageTransition from '@/components/PageTransition'
+import { BuilderLabLogo } from '@/components/BuilderLabLogo'
+import { colors } from '@/lib/design-tokens'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation' // Important : next/navigation pour Next.js 13+
+import { useRouter } from 'next/navigation'
 
 // On charge le composant Auth uniquement côté navigateur
 const Auth = dynamic(
@@ -60,30 +62,21 @@ export default function LoginPage() {
     <PageTransition>
       <div
         className="min-h-screen flex items-center justify-center px-4"
-        style={{ backgroundColor: '#0F1117' }}
+        style={{ backgroundColor: colors.bg.base }}
       >
         <div
           className="w-full max-w-md p-8 rounded-2xl"
           style={{
-            backgroundColor: '#161B28',
-            border: '1px solid #1E2840'
+            backgroundColor: colors.bg.elevated,
+            border: `1px solid ${colors.border.mkt}`,
           }}
         >
-          {/* Logo et titre */}
+          {/* Logo + tagline */}
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: '#0D9488' }}
-              />
-              <span
-                className="text-xl font-semibold"
-                style={{ color: '#F1F5F9' }}
-              >
-                BuilderLab
-              </span>
+            <div className="flex items-center justify-center mb-3">
+              <BuilderLabLogo markSize={32} />
             </div>
-            <p className="text-sm" style={{ color: '#64748B' }}>
+            <p style={{ fontSize: '14px', color: colors.text.muted2 }}>
               Log in to collaborate on projects
             </p>
           </div>

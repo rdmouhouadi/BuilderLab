@@ -5,43 +5,13 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
 import { colors, radiusMkt, fontSizeMkt, fontFamily, shadows, layout } from '@/lib/design-tokens'
+import { BuilderLabLogo } from '@/components/BuilderLabLogo'
 
 const NAV_LINKS = [
   { href: '/vision',  label: 'Vision' },
   { href: '/docs',    label: 'Docs' },
   { href: '/contact', label: 'Contact' },
 ]
-
-function LogoMark() {
-  return (
-    <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-      <span style={{
-        width: '28px', height: '28px',
-        borderRadius: '8px',
-        background: `linear-gradient(150deg, ${colors.accent.bright}, ${colors.accent.deep})`,
-        boxShadow: shadows.logoMark,
-        display: 'grid', placeItems: 'center',
-        flexShrink: 0,
-      }}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z"
-            stroke={colors.accent.ink} strokeWidth="1.7" strokeLinejoin="round"
-            fill="rgba(4,32,29,0.18)" />
-          <path d="M12 7.2L7 10v4l5 2.8 5-2.8v-4l-5-2.8z" fill={colors.accent.ink} />
-        </svg>
-      </span>
-      <span style={{
-        fontFamily: fontFamily.head,
-        fontWeight: 700,
-        fontSize: '17px',
-        letterSpacing: '-0.02em',
-        color: colors.text.base,
-      }}>
-        BuilderLab
-      </span>
-    </Link>
-  )
-}
 
 export default function MktNavbar() {
   const pathname = usePathname()
@@ -70,7 +40,9 @@ export default function MktNavbar() {
         position: 'relative',
       }}>
         {/* Left: logo */}
-        <LogoMark />
+        <Link href="/" aria-label="BuilderLab home" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+          <BuilderLabLogo markSize={28} />
+        </Link>
 
         {/* Center: nav links — hidden below 880px */}
         <div className="mkt-nav-links" style={{
