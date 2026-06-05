@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { BuilderLabLogo } from '@/components/BuilderLabLogo'
 import { colors, radiusMkt, fontSizeMkt, fontFamily, layout } from '@/lib/design-tokens'
 
 const FOOTER_COLS = [
@@ -51,31 +52,9 @@ export default function Footer() {
         }}>
           {/* Brand column */}
           <div>
-            <Link href="/" style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '10px',
-              textDecoration: 'none',
-              marginBottom: '14px',
-            }}>
-              <span style={{
-                width: '24px', height: '24px',
-                borderRadius: '6px',
-                background: `linear-gradient(150deg, ${colors.accent.bright}, ${colors.accent.deep})`,
-                display: 'grid', placeItems: 'center',
-                flexShrink: 0,
-              }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 7.2L7 10v4l5 2.8 5-2.8v-4l-5-2.8z" fill={colors.accent.ink} />
-                </svg>
-              </span>
-              <span style={{
-                fontFamily: fontFamily.head,
-                fontWeight: 700,
-                fontSize: '16px',
-                letterSpacing: '-0.02em',
-                color: colors.text.base,
-              }}>BuilderLab</span>
+            {/* logo */}
+            <Link href="/" aria-label="BuilderLab home" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+              <BuilderLabLogo markSize={28} />
             </Link>
             <p style={{
               color: colors.text.muted2,

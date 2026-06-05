@@ -176,7 +176,7 @@ function Hero() {
             </p>
 
             <div style={{ display: 'flex', gap: '12px', marginTop: '34px', flexWrap: 'wrap' as const }}>
-              <BtnPrimary href="/login" lg>Start building free</BtnPrimary>
+              <BtnPrimary href="/login" lg>Start building</BtnPrimary>
               <BtnSoft href="/vision" lg>Read the vision →</BtnSoft>
             </div>
 
@@ -353,7 +353,7 @@ const PROBLEMS = [
 
 function Problem() {
   return (
-    <section style={{ padding: '96px 0', position: 'relative' }} id="problem">
+    <section style={{ padding: '65px 0', position: 'relative' }} id="problem">
       <Wrap>
         <ScrollReveal>
           <SectionHead
@@ -438,7 +438,7 @@ const STEPS = [
 
 function HowItWorks() {
   return (
-    <section style={{ padding: '24px 0 96px', position: 'relative' }} id="how">
+    <section style={{ padding: '24px 0 65px', position: 'relative' }} id="how">
       <Wrap>
         <ScrollReveal>
           <SectionHead
@@ -554,7 +554,7 @@ function badgeStyle(type: string) {
 
 function Ecosystem() {
   return (
-    <section style={{ padding: '96px 0', position: 'relative' }} id="ecosystem">
+    <section style={{ padding: '65px 0', position: 'relative' }} id="ecosystem">
       <Wrap>
         <ScrollReveal>
           <SectionHead
@@ -679,7 +679,7 @@ const BIP_ITEMS = [
 
 function BuildInPublic() {
   return (
-    <section style={{ padding: '96px 0', position: 'relative' }} id="public">
+    <section style={{ padding: '65px 0', position: 'relative' }} id="public">
       <Wrap>
         <div className="bip-grid" style={{
           display: 'grid',
@@ -748,7 +748,7 @@ function BuildInPublic() {
 
 function FinalCTA() {
   return (
-    <section style={{ padding: '96px 0' }}>
+    <section style={{ padding: '65px 0' }}>
       <Wrap>
         <ScrollReveal>
           <div style={{
@@ -787,7 +787,7 @@ function FinalCTA() {
               justifyContent: 'center',
               flexWrap: 'wrap' as const,
             }}>
-              <BtnPrimary href="/login" lg>Start building free</BtnPrimary>
+              <BtnPrimary href="/login" lg>Start building</BtnPrimary>
               <BtnSoft href="/contact" lg>Join the journey</BtnSoft>
             </div>
           </div>
