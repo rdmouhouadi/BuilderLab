@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import ConnectionsClient from '@/components/ConnectionsClient'
 import PageTransition from '@/components/PageTransition'
+import { Analytics } from "@vercel/analytics/next"
 
 export default async function ConnectionsPage() {
   const supabase = await createClient()
@@ -43,6 +44,7 @@ export default async function ConnectionsPage() {
         sent={sent ?? []}
         currentUserId={user.id}
       />
+      <Analytics />
     </PageTransition>
   )
 }

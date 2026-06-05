@@ -12,6 +12,7 @@ import { BuilderLabLogo } from '@/components/BuilderLabLogo'
 import { colors } from '@/lib/design-tokens'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Analytics } from "@vercel/analytics/next"
 
 // On charge le composant Auth uniquement côté navigateur
 const Auth = dynamic(
@@ -134,6 +135,7 @@ export default function LoginPage() {
           />
         </div>
       </div>
+      <Analytics />
     </PageTransition>
   )
 }

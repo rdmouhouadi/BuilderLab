@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase'
 import { Project } from '@/types'
 import Feed from '@/components/Feed'
 import PageTransition from '@/components/PageTransition'
+import { Analytics } from "@vercel/analytics/next"
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -51,6 +52,7 @@ export default async function HomePage() {
         projects={(projects as Project[]) ?? []}
         currentUserId={user?.id ?? null}
       />
+      <Analytics />
     </PageTransition>
   )
 }

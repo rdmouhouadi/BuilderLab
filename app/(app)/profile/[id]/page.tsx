@@ -8,6 +8,7 @@ import PageTransition from '@/components/PageTransition'
 import Link from 'next/link'
 import { SKILL_COLORS, LEVEL_COLORS, CONTACT_TYPES } from '@/lib/constants'
 import BackButton from '@/components/BackButton'
+import { Analytics } from "@vercel/analytics/next"
 
 type Props = {
   params: Promise<{ id: string }>
@@ -225,6 +226,7 @@ export default async function PublicProfilePage({ params }: Props) {
           </div>
         )}
       </main>
+      <Analytics />
     </PageTransition>
   )
 }

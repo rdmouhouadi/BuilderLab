@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation'
 import { Project } from '@/types'
 import ProfileClient from '@/components/ProfileClient'
 import PageTransition from '@/components/PageTransition'
+import { Analytics } from "@vercel/analytics/next"
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -79,6 +80,8 @@ export default async function ProfilePage() {
         followedProjects={followedProjectsList}
         email={user.email ?? ''}
       />
+      <Analytics />
+
     </PageTransition>
   )
 }

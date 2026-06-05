@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import NotificationsClient from '@/components/NotificationsClient'
 import PageTransition from '@/components/PageTransition'
+import { Analytics } from "@vercel/analytics/next"
 
 export default async function NotificationsPage() {
   const supabase = await createClient()
@@ -29,6 +30,7 @@ export default async function NotificationsPage() {
   return (
     <PageTransition>
       <NotificationsClient notifications={notifications ?? []} />
+      <Analytics />
     </PageTransition>
   )
 }

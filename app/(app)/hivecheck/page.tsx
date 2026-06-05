@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase'
 import { Project } from '@/types'
 import HiveCheckClient from '@/components/HiveCheckClient'
 import PageTransition from '@/components/PageTransition'
+import { Analytics } from "@vercel/analytics/next"
 
 export default async function HiveCheckPage() {
   const supabase = await createClient()
@@ -25,6 +26,7 @@ export default async function HiveCheckPage() {
   return (
     <PageTransition>
       <HiveCheckClient projects={(projects as Project[]) ?? []} />
+      <Analytics />
     </PageTransition>
   )
 }

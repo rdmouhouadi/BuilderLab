@@ -9,6 +9,7 @@ import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import PageTransition from '@/components/PageTransition'
 import { SKILLS, DOMAINS, LEVELS, DURATIONS } from '@/lib/constants'
 import { colors, radius, fontSize, styles } from '@/lib/design-tokens'
+import { Analytics } from "@vercel/analytics/next"
 
 // ─────────────────────────────────────────
 // Types
@@ -390,6 +391,7 @@ export default function PostProjectPage() {
 
         </form>
       </main>
+      <Analytics />
     </PageTransition>
   )
 }

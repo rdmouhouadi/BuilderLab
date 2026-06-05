@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import ProjectDetailClient from '@/components/ProjectDetailClient'
 import PageTransition from '@/components/PageTransition'
+import { Analytics } from "@vercel/analytics/next"
 
 type Props = {
   params: Promise<{ id: string }>
@@ -153,6 +154,7 @@ export default async function ProjectDetailPage({ params }: Props) {
         initialTasks={tasks ?? []}
         removedReason={removedReason}
       />
+      <Analytics />
     </PageTransition>
   )
 }

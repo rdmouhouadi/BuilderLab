@@ -7,6 +7,7 @@ import {
   colors, radiusMkt, fontSizeMkt, fontFamily, fontFamily as ff,
   shadows, layout, breakpoints,
 } from '@/lib/design-tokens'
+import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
   title: 'BuilderLab — Build real projects, with a real team',
@@ -227,7 +228,7 @@ function Hero() {
                 width={900}
                 height={600}
                 style={{ display: 'block', width: '100%', height: 'auto', marginTop: '30px' }}
-                priority={false}
+                priority
               />
             </figure>
 
@@ -809,6 +810,7 @@ export default function HomePage() {
       <Ecosystem />
       <BuildInPublic />
       <FinalCTA />
+      <Analytics />
     </>
   )
 }
