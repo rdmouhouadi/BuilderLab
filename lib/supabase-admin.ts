@@ -1,7 +1,6 @@
 // lib/supabase-admin.ts
-// Client Supabase avec la clé service_role
-// UNIQUEMENT pour les routes API côté serveur
-// Ne jamais utiliser ce client dans des composants client
+// Admin Supabase client using the service_role key — bypasses Row Level Security.
+// ONLY use this in server-side API routes, never in Client Components.
 import { createClient } from '@supabase/supabase-js'
 
 export const supabaseAdmin = createClient(

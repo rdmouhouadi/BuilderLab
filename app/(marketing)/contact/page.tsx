@@ -1,5 +1,8 @@
 'use client'
 
+// app/(marketing)/contact/page.tsx
+// Contact form for the marketing site.
+// Submits to POST /api/contact which sends an email via Resend.
 import { useState } from 'react'
 import { Lightbulb, Bug, Heart, CheckCircle } from 'lucide-react'
 import Eyebrow from '@/components/marketing/Eyebrow'

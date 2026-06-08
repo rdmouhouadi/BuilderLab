@@ -9,6 +9,42 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] — V0.6.0
 
+### Fixed — 2026-06-08
+
+#### Docs search (`components/marketing/DocsSearchBox.tsx`)
+- Search box was visual-only; now fully wired with client-side full-text search across all article titles, leads, and body content
+- ⌘K / Ctrl+K focuses the input from anywhere on the page; Esc clears and closes
+- Results show group label, article title, and a context snippet around the match
+- `getSearchIndex()` and `DocSearchItem` type added to `lib/docs-content.ts` — strips HTML tags and exposes a flat, search-ready array
+
+#### Auth pages split (`app/(app)/login/page.tsx`, `app/(app)/signup/page.tsx`)
+- "Sign in" and "Sign up" buttons both previously routed to `/login`; now `Sign in → /login`, `Sign up → /signup`
+- New `/signup` page pre-opens the Supabase Auth UI in `sign_up` view
+- Middleware now redirects authenticated users away from `/signup` as well as `/login`
+
+#### Contact email
+- Form submissions now route to `rd.mouhouadi@gmail.com` (was `richiedieuveil@gmail.com`)
+
+### Added — 2026-06-08
+
+#### Auth-aware marketing navbar (`components/marketing/MktNavbar.tsx`)
+- Detects Supabase session on mount via `getSession()`; subscribes to `onAuthStateChange` to stay in sync across tabs
+- Logged-out state: "Sign in" (→ `/login`) + "Sign up" (→ `/signup`) buttons
+- Logged-in state: "Projects" button (→ `/feed`) + circular avatar with user initials (→ `/profile`)
+- Initials derived from `profiles.first_name` / `last_name`, falling back to `profiles.name`, then email prefix
+- Both desktop and mobile hamburger menu adapt to auth state
+- Navbar renders `null` until the session check completes to prevent button flash
+
+#### Auth-aware landing page CTA (`components/marketing/PrimaryCtaButton.tsx`)
+- New `'use client'` component replacing both static "Start building → /login" buttons on the landing page
+- Shows "Start building → `/login`" for visitors, "Continue building → `/feed`" for logged-in users
+- Defaults to the logged-out label on first render (avoids layout shift for the majority of visitors)
+- Applied to both the hero CTA and the final CTA section
+
+### Improved — 2026-06-08
+- All French-language comments across 16 files translated to English
+- All modified and core lib files now carry short beginner-friendly English comments
+
 ### Changed - 2026-06-06
 
 #### Design system unification (`lib/design-tokens.ts`)

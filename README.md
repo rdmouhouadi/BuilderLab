@@ -96,7 +96,7 @@ Seeing how another builder received tough feedback and improved their project is
 
 ---
 
-## Current Status — v0.5.0 + marketing site (V0.6.0 - in progress)
+## Current Status — v0.6.0 (in progress)
 
 ### App
 | Feature | Status |
@@ -137,11 +137,14 @@ Seeing how another builder received tough feedback and improved their project is
 | Feature | Status |
 |---|---|
 | Landing page `/` — hero, problem, how it works, ecosystem, build in public, CTA | ✅ Built |
+| Auth-aware landing page CTA — "Start building" / "Continue building" | ✅ Built |
 | Vision page `/vision` — mission, pillars, roadmap timeline | ✅ Built |
 | Docs `/docs/[slug]` — 10 articles, sidebar, prev/next routing | ✅ Built |
+| Docs live search — client-side full-text search with ⌘K shortcut | ✅ Built |
 | Contact `/contact` — subject chips, conditional role field, success state | ✅ Built |
 | Contact form API `POST /api/contact` → Resend | ✅ Built |
-| Marketing navbar (links + Sign in/Sign up + mobile hamburger) | ✅ Built |
+| Auth-aware marketing navbar — Projects + avatar when logged in | ✅ Built |
+| Separate Sign in (`/login`) and Sign up (`/signup`) pages | ✅ Built |
 | Footer (4-col, responsive) | ✅ Built |
 | Scroll-reveal animations (`prefers-reduced-motion` safe) | ✅ Built |
 
@@ -251,7 +254,8 @@ builderlab/
 │   ├── (app)/                           # App — has Navbar
 │   │   ├── layout.tsx                   # Wraps children with Navbar
 │   │   ├── feed/page.tsx                # /feed — Project feed (Server)
-│   │   ├── login/page.tsx               # /login — Auth (Client)
+│   │   ├── login/page.tsx               # /login — Sign in (Client)
+│   │   ├── signup/page.tsx              # /signup — Sign up (Client)
 │   │   ├── post/page.tsx                # /post — Post project (Client)
 │   │   ├── profile/
 │   │   │   ├── page.tsx                 # /profile — Own profile (Server)
@@ -270,7 +274,9 @@ builderlab/
 │
 ├── components/
 │   ├── marketing/
-│   │   ├── MktNavbar.tsx                # Marketing nav (Vision/Docs/Contact + auth)
+│   │   ├── MktNavbar.tsx                # Auth-aware marketing nav
+│   │   ├── PrimaryCtaButton.tsx         # "Start / Continue building" CTA
+│   │   ├── DocsSearchBox.tsx            # Live docs search with ⌘K
 │   │   ├── Footer.tsx                   # 4-column footer
 │   │   ├── ScrollReveal.tsx             # IntersectionObserver fade-in
 │   │   └── Eyebrow.tsx                  # Teal pill label with dot
@@ -294,7 +300,7 @@ builderlab/
 │
 ├── lib/
 │   ├── design-tokens.ts                 # Single source of truth for all design values
-│   ├── docs-content.ts                  # Docs article registry (10 articles)
+│   ├── docs-content.ts                  # Docs article registry + search index (10 articles)
 │   ├── supabase.ts                      # Server client
 │   ├── supabase-browser.ts              # Browser client
 │   ├── supabase-admin.ts                # Admin client (service_role)

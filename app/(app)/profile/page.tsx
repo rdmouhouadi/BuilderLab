@@ -1,6 +1,6 @@
 // app/profile/page.tsx
-// Page de profil de l'utilisateur connecté
-// Server Component — on fetch les données côté serveur
+// Profile page for the currently logged-in user.
+// Server Component — data is fetched on the server and passed to a client component.
 import { createClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import { Project } from '@/types'
@@ -11,28 +11,25 @@ import { Analytics } from "@vercel/analytics/next"
 export default async function ProfilePage() {
   const supabase = await createClient()
 
-  // On récupère l'utilisateur connecté
+  // Get the logged-in user; redirect to login if not authenticated
   const { data: { user } } = await supabase.auth.getUser()
-
-  // Si pas connecté → rediriger vers login
   if (!user) redirect('/login')
 
-  // On récupère le profil complet
+  // Fetch the user's full profile row
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single()
 
-  // On récupère les projets postés par cet utilisateur
+  // Fetch projects the user owns (posted by them)
   const { data: ownedProjects } = await supabase
     .from('projects')
     .select('*, project_skills(skill_needed)')
     .eq('owner_id', user.id)
     .order('created_at', { ascending: false })
 
-  
-  // Projets où l'utilisateur est membre (pas owner)
+  // Fetch projects where the user is an active member but not the owner
   const { data: memberProjects } = await supabase
     .from('project_members')
     .select(`
@@ -44,15 +41,14 @@ export default async function ProfilePage() {
       )
     `)
     .eq('user_id', user.id)
-    .eq('status', 'active') 
+    .eq('status', 'active')
 
-
-  // On extrait les projets depuis la jointure
+  // Unwrap the join result to get a flat list of project objects
   const joinedProjects = memberProjects
     ?.map(m => m.projects)
     .filter(Boolean) ?? [] as Project[]
 
-  // Projets suivis par l'utilisateur
+  // Fetch projects the user is following (saved/bookmarked)
   const { data: followedProjects } = await supabase
     .from('project_followers')
     .select(`
@@ -65,10 +61,9 @@ export default async function ProfilePage() {
     `)
     .eq('user_id', user.id)
 
-  // On extrait les projets depuis la jointure
   const followedProjectsList = (followedProjects
     ?.map(f => f.projects)
-    .filter(Boolean) 
+    .filter(Boolean)
     .flat() ?? []) as Project[]
 
   return (
@@ -81,7 +76,6 @@ export default async function ProfilePage() {
         email={user.email ?? ''}
       />
       <Analytics />
-
     </PageTransition>
   )
 }

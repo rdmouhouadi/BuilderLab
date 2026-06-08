@@ -1,8 +1,7 @@
 // lib/constants.ts
-// Toutes les constantes partagées de l'app
-// Centralisées ici pour n'avoir qu'un seul endroit à modifier
+// Shared application constants — edit here to update values across the whole app.
 
-// ─── Skills disponibles ───────────────────────────────────────────
+// ─── Available skills ─────────────────────────────────────────────
 export const SKILLS = [
   'Software Engineer',
   'Software Developer',
@@ -18,7 +17,7 @@ export const SKILLS = [
   'Business Analyst',
 ]
 
-// ─── Domaines disponibles ─────────────────────────────────────────
+// ─── Available project domains ────────────────────────────────────
 export const DOMAINS = [
   'Education',
   'Health',
@@ -33,14 +32,14 @@ export const DOMAINS = [
   'Other',
 ]
 
-// ─── Niveaux disponibles ──────────────────────────────────────────
+// ─── Experience levels ────────────────────────────────────────────
 export const LEVELS = [
   'Beginner',
   'Intermediate',
   'Advanced',
 ]
 
-// ─── Durées disponibles ───────────────────────────────────────────
+// ─── Project durations ────────────────────────────────────────────
 export const DURATIONS = [
   '1 week',
   '2 weeks',
@@ -51,7 +50,7 @@ export const DURATIONS = [
   '1 year+',
 ]
 
-// ─── Types de contact préféré ─────────────────────────────────────
+// ─── Preferred contact channel options ───────────────────────────
 export const CONTACT_TYPES: Record<string, { label: string; icon: string; color: string }> = {
   discord:  { label: 'Discord',  icon: '🎮', color: '#5865F2' },
   whatsapp: { label: 'WhatsApp', icon: '💬', color: '#25D366' },
@@ -61,7 +60,7 @@ export const CONTACT_TYPES: Record<string, { label: string; icon: string; color:
   linkedin: { label: 'LinkedIn', icon: '💼', color: '#0A66C2' },
 }
 
-// ─── Couleurs des skills ──────────────────────────────────────────
+// ─── Skill badge colors ───────────────────────────────────────────
 export const SKILL_COLORS: Record<string, { bg: string; text: string }> = {
   'Software Engineer':        { bg: 'rgba(13,148,136,0.14)',  text: '#5EEAD4' },
   'Software Developer':       { bg: 'rgba(13,148,136,0.14)',  text: '#5EEAD4' },
@@ -76,96 +75,79 @@ export const SKILL_COLORS: Record<string, { bg: string; text: string }> = {
   'Business Analyst':         { bg: 'rgba(236,72,153,0.14)',  text: '#F9A8D4' },
 }
 
-// ─── Couleurs des niveaux ─────────────────────────────────────────
+// ─── Level badge colors ───────────────────────────────────────────
 export const LEVEL_COLORS: Record<string, { bg: string; text: string }> = {
   'Beginner':     { bg: 'rgba(16,185,129,0.14)', text: '#6EE7B7' },
   'Intermediate': { bg: 'rgba(245,158,11,0.14)', text: '#FCD34D' },
   'Advanced':     { bg: 'rgba(239,68,68,0.14)',  text: '#FCA5A5' },
 }
 
-// ─── Couleurs des domaines / visual identity ─────────────────────
-// Chaque domaine possède sa propre ambiance visuelle.
-// Utilisé pour les mini banners des cartes projet.
-//
-// Objectif :
-// - différenciation instantanée
-// - feed moins répétitif
-// - rendu plus premium
-// - architecture scalable
+// ─── Domain visual themes ─────────────────────────────────────────
+// Each domain gets its own gradient to make the project feed visually varied.
+// Used as Tailwind class strings on project card banners.
 
 export const DOMAIN_THEMES: Record<string, string> = {
 
-  // Education
   Education: `
     from-sky-500/20
     via-blue-500/10
     to-indigo-500/20
   `,
 
-  // Health
   Health: `
     from-cyan-500/20
     via-teal-500/10
     to-blue-500/20
   `,
 
-  // Agriculture / green tech
   AgriTech: `
     from-lime-500/20
     via-green-500/10
     to-emerald-500/20
   `,
 
-  // Finance / startup vibe
   Fintech: `
     from-emerald-500/20
     via-teal-500/10
     to-cyan-500/20
   `,
 
-  // Logistics / industrial vibe
   Logistics: `
     from-orange-500/20
     via-amber-500/10
     to-yellow-500/20
   `,
 
-  // Ecology / sustainability
   Environment: `
     from-green-500/20
     via-emerald-500/10
     to-teal-500/20
   `,
 
-  // Human / social vibe
   'Social Impact': `
     from-pink-500/20
     via-rose-500/10
     to-red-500/20
   `,
 
-  // Startup / commerce vibe
   'E-commerce': `
     from-violet-500/20
     via-purple-500/10
     to-fuchsia-500/20
   `,
 
-  // Cybersecurity vibe
   Security: `
     from-rose-500/20
     via-red-500/10
     to-orange-500/20
   `,
 
-  // Netflix / media vibe
   Entertainment: `
     from-fuchsia-500/20
     via-pink-500/10
     to-purple-500/20
   `,
 
-  // Fallback
   Other: `
     from-slate-500/20
     via-gray-500/10

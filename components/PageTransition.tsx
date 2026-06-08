@@ -1,6 +1,5 @@
 // components/PageTransition.tsx
-// This component wraps each page to give it a smooth entry and exit animation
-// a smooth entry and exit animation
+// Wraps a page in a Framer Motion animation so it fades in smoothly on load.
 'use client'
 
 import { motion } from 'framer-motion'
@@ -12,14 +11,13 @@ export default function PageTransition({
 }) {
   return (
     <motion.div
-      // État initial — page invisible et légèrement en bas Initial State - page invisible and slightly down
+      // Start invisible and slightly below its final position
       initial={{ opacity: 0, y: 12 }}
-      // Final State - page visible at its normal position
+      // Animate to fully visible at normal position
       animate={{ opacity: 1, y: 0 }}
-      // Exit Animation - page disappears upwards
+      // Fade out and slide up when leaving
       exit={{ opacity: 0, y: -8 }}
-      // Duration and easing of the animation
-      // ease: 'easeOut' = starts fast, slows down at the end
+      // easeOut = starts fast, slows down at the end (feels natural)
       transition={{ duration: 0.6, ease: 'easeOut' }}
     >
       {children}

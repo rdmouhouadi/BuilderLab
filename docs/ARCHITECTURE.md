@@ -84,7 +84,8 @@ app/
 ├── (app)/                               # App — authenticated experience
 │   ├── layout.tsx                       # App layout: wraps with Navbar
 │   ├── feed/page.tsx                    # /feed — Project feed (Server Component)
-│   ├── login/page.tsx                   # /login — Auth (Client Component)
+│   ├── login/page.tsx                   # /login — Sign in (Client Component)
+│   ├── signup/page.tsx                  # /signup — Sign up (Client Component)
 │   ├── post/page.tsx                    # /post — Post project (Client)
 │   ├── profile/
 │   │   ├── page.tsx                     # /profile — Own profile (Server)
@@ -110,7 +111,7 @@ The codebase serves two distinct surfaces under one Next.js app, separated by **
 
 | Surface | Route group | Layout | Navbar | Auth required |
 |---|---|---|---|---|
-| Marketing site | `(marketing)` | Sora + MktNavbar + Footer | Marketing nav (Vision/Docs/Contact + Sign in/Sign up) | No |
+| Marketing site | `(marketing)` | Sora + MktNavbar + Footer | Auth-aware: Sign in/Sign up when logged out; Projects + avatar when logged in | No |
 | App | `(app)` | Inter + App Navbar | App nav (Projects/HiveCheck/Connections) | Some pages |
 
 ### Why route groups?
@@ -185,14 +186,16 @@ The admin client uses the `service_role` key — **never exposed to the browser*
 
 ## 7. Authentication Flow
 
+Sign-in and sign-up are separate pages (`/login` and `/signup`) backed by the same Supabase Auth UI component, pre-set to the relevant view.
+
 ```
-Sign Up:
+Sign Up (/signup):
 User fills form → Supabase sends confirmation email
 → User clicks link → /auth/callback exchanges code for session
 → Trigger creates profile in profiles table
-→ Redirect to /feed
+→ Redirect to /
 
-Sign In:
+Sign In (/login):
 User fills form → Supabase validates → session stored in cookies
 → Redirect to /feed
 ```
@@ -212,7 +215,7 @@ Request arrives
     │       ├── Not authenticated → redirect to /login
     │       └── Authenticated → allow
     │
-    └── /login + authenticated → redirect to /feed
+    └── /login or /signup + authenticated → redirect to /feed
 ```
 
 Marketing pages (`/`, `/vision`, `/docs`, `/contact`) are **public** and require no authentication.
@@ -240,7 +243,7 @@ api/contact/route.ts
     │ validates required fields (name, email, message)
     │ builds HTML email with subject label + optional role
     ▼
-Resend → richiedieuveil@gmail.com
+Resend → rd.mouhouadi@gmail.com
     │ replyTo set to submitter's email
 ```
 
@@ -300,6 +303,9 @@ Email notifications use `.catch(console.error)` to never block user actions.
 ### Pattern 6 — Route group layouts
 Marketing and app surfaces share one Next.js app but have separate root-level layouts via route groups. No conditional rendering needed in the root layout.
 
+### Pattern 7 — Auth-aware client islands in Server Component pages
+When a server-rendered page needs to react to auth state (e.g. swapping a CTA label), a small `'use client'` component handles it. The rest of the page stays a Server Component. `getSession()` is called once on mount; the component defaults to the logged-out state to avoid layout shift. See `PrimaryCtaButton` and `MktNavbar`.
+
 ---
 
 ## 12. Design Tokens
@@ -355,4 +361,4 @@ Push to main → Vercel detects → Next.js build → Deploy to edge
 
 ---
 
-*Last updated: BuilderLab v0.6.0-dev (feat/landing-page)*
+*Last updated: BuilderLab v0.6.0-dev — 2026-06-08*

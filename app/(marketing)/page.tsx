@@ -3,6 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import Eyebrow from '@/components/marketing/Eyebrow'
 import ScrollReveal from '@/components/marketing/ScrollReveal'
+import PrimaryCtaButton from '@/components/marketing/PrimaryCtaButton'
 import {
   colors, radiusMkt, fontSizeMkt, fontFamily, fontFamily as ff,
   shadows, layout, breakpoints,
@@ -177,7 +178,7 @@ function Hero() {
             </p>
 
             <div style={{ display: 'flex', gap: '12px', marginTop: '34px', flexWrap: 'wrap' as const }}>
-              <BtnPrimary href="/login" lg>Start building</BtnPrimary>
+              <PrimaryCtaButton lg />
               <BtnSoft href="/vision" lg>Read the vision →</BtnSoft>
             </div>
 
@@ -788,7 +789,7 @@ function FinalCTA() {
               justifyContent: 'center',
               flexWrap: 'wrap' as const,
             }}>
-              <BtnPrimary href="/login" lg>Start building</BtnPrimary>
+              <PrimaryCtaButton lg />
               <BtnSoft href="/contact" lg>Join the journey</BtnSoft>
             </div>
           </div>

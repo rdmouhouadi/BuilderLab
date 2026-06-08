@@ -1,20 +1,17 @@
-// middleware.ts
-// Le middleware s'exécute avant chaque requête
-// C'est ici qu'on vérifie si l'utilisateur est connecté
-// et qu'on le redirige si nécessaire
+// proxy.ts (used as middleware)
+// Runs before every request to check auth state and protect routes.
 
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function proxy(request: NextRequest) {
-  // On crée une réponse qu'on pourra modifier
+  // Create a mutable response that we can attach new cookies to
   let supabaseResponse = NextResponse.next({
     request,
   })
 
-  // Client Supabase spécial pour le middleware
-  // Il a besoin de lire ET écrire les cookies
-  // pour maintenir la session utilisateur à jour
+  // Special Supabase client for middleware — must both read and write cookies
+  // so the user session stays refreshed across requests
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -24,7 +21,7 @@ export async function proxy(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          // On met à jour les cookies dans la requête ET la réponse
+          // Update cookies on both the request and the response objects
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
@@ -37,34 +34,29 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  // Récupère la session actuelle
-  // IMPORTANT : ne jamais supprimer cette ligne
-  // elle rafraîchit automatiquement le token de session
+  // IMPORTANT: do not remove this line — it also silently refreshes the session token
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Pages qui nécessitent d'être connecté
+  // Pages that require the user to be logged in
   const protectedPaths = ['/post', '/profile', '/connections', '/notifications']
   const isProtectedPath = protectedPaths.some(path =>
     request.nextUrl.pathname.startsWith(path)
   )
 
-  // Si la page est protégée et l'utilisateur n'est pas connecté
-  // on le redirige vers /login
+  // Redirect unauthenticated users away from protected pages
   if (isProtectedPath && !user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Si l'utilisateur est connecté et essaie d'aller sur /login
-  // on le redirige vers le feed — pas besoin de se reconnecter
-  if (request.nextUrl.pathname === '/login' && user) {
+  // Redirect already-authenticated users away from the login / signup pages
+  if ((request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup') && user) {
     return NextResponse.redirect(new URL('/feed', request.url))
   }
 
   return supabaseResponse
 }
 
-// On dit à Next.js sur quelles routes appliquer le middleware/proxy
-// On exclut les fichiers statiques et les images
+// Apply this middleware to all routes except static files and images
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',

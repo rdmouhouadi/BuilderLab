@@ -1,15 +1,12 @@
 // lib/supabase-browser.ts
-// Ce client est utilisé côté navigateur (Client Components)
-// On l'utilise spécifiquement pour l'authentification
-// car l'auth nécessite d'interagir avec le navigateur
-// (cookies, redirections, état de session)
+// Browser-side Supabase client — used inside Client Components.
+// Handles auth interactions that require the browser (cookies, redirects, session state).
 
 import { createBrowserClient } from '@supabase/ssr'
 
 export function createBrowserSupabaseClient() {
   return createBrowserClient(
-    // Ces variables sont accessibles côté navigateur
-    // grâce au préfixe NEXT_PUBLIC_
+    // NEXT_PUBLIC_ prefix makes these env vars available in the browser bundle
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )

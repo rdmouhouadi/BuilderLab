@@ -1,6 +1,6 @@
 // app/api/notify/interest/route.ts
-// Route API appelée quand quelqu'un clique "I'm interested"
-// Envoie un email au owner du projet
+// Called when someone clicks "I'm interested" on a project.
+// Sends an email to the project owner and creates an in-app notification for them.
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { sendInterestNotification } from '@/lib/email'
 import { NextResponse } from 'next/server'
@@ -8,9 +8,8 @@ import { NextResponse } from 'next/server'
 export async function POST(request: Request) {
   try {
     const { connectionId } = await request.json()
-    //const supabase = await createClient()
 
-    // On récupère les infos nécessaires pour l'email
+    // Fetch the connection with its related project and profile data
     const { data: connection } = await supabaseAdmin
       .from('connections')
       .select(`
@@ -30,8 +29,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Connection not found' }, { status: 404 })
     }
 
-    // On récupère l'email du owner via auth.users
-    // Supabase ne stocke pas l'email dans profiles pour des raisons de sécurité
+    // Supabase does not store emails in the profiles table for security reasons —
+    // we must fetch them through the admin auth API
     const { data: ownerAuth } = await supabaseAdmin.auth.admin.getUserById(
       connection.projects.owner_id
     )
@@ -40,12 +39,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Owner email not found' }, { status: 404 })
     }
 
-    // Nom complet du sender
+    // Build display names, falling back gracefully if fields are missing
     const senderProfile = connection.profiles
     const senderName = [senderProfile?.first_name, senderProfile?.last_name]
       .filter(Boolean).join(' ') || senderProfile?.name || 'A student'
 
-    // Nom complet du owner
     const ownerProfile = connection.projects.profiles
     const ownerName = [ownerProfile?.first_name, ownerProfile?.last_name]
       .filter(Boolean).join(' ') || ownerProfile?.name || 'there'
@@ -59,7 +57,7 @@ export async function POST(request: Request) {
       projectUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/projects/${connection.projects.id}`,
     })
 
-    // Crée une notification in-app pour le owner
+    // Also create an in-app notification so the owner sees it in the notifications panel
     await supabaseAdmin
       .from('notifications')
       .insert({

@@ -402,3 +402,35 @@ export function getArticle(slug: string): DocArticle | null {
 export function getDefaultSlug(): string {
   return ORDERED_SLUGS[0]
 }
+
+// ─── Search index ─────────────────────────────────────────────────
+
+// A lightweight record used by the client-side search component.
+// contentText is the article HTML with all tags stripped out so we
+// can do plain-text substring matching without loading a search library.
+export type DocSearchItem = {
+  slug: string
+  group: string
+  title: string
+  lead: string
+  contentText: string
+}
+
+// Strip HTML tags from a string, returning plain text only.
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim()
+}
+
+// Build and return a flat array of all articles, ready for client-side search.
+export function getSearchIndex(): DocSearchItem[] {
+  return ORDERED_SLUGS.map(slug => {
+    const art = ARTICLES[slug]
+    return {
+      slug,
+      group: art.group,
+      title: art.title,
+      lead: art.lead,
+      contentText: stripHtml(art.content),
+    }
+  })
+}

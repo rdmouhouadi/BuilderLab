@@ -1,6 +1,6 @@
 // app/api/notify/accepted/route.ts
-// Route API appelée quand une demande est acceptée
-// Envoie un email au sender
+// Called when a project owner accepts a connection request.
+// Sends an email to the applicant and creates an in-app notification for them.
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { sendAcceptedNotification } from '@/lib/email'
 import { NextResponse } from 'next/server'
@@ -8,9 +8,8 @@ import { NextResponse } from 'next/server'
 export async function POST(request: Request) {
   try {
     const { connectionId } = await request.json()
-    //const supabase = await createClient()
 
-    // On récupère les infos nécessaires
+    // Fetch the connection with its related project and profile data
     const { data: connection } = await supabaseAdmin
       .from('connections')
       .select(`
@@ -29,7 +28,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Connection not found' }, { status: 404 })
     }
 
-    // Email du sender
+    // Look up the applicant's email via Supabase Auth (not stored in profiles for security)
     const { data: senderAuth } = await supabaseAdmin.auth.admin.getUserById(
       connection.sender_id
     )
@@ -38,7 +37,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Sender email not found' }, { status: 404 })
     }
 
-    // Noms
+    // Build display names, falling back gracefully if fields are missing
     const senderProfile = connection.profiles
     const senderName = [senderProfile?.first_name, senderProfile?.last_name]
       .filter(Boolean).join(' ') || senderProfile?.name || 'there'
@@ -55,7 +54,7 @@ export async function POST(request: Request) {
       projectUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/projects/${connection.projects.id}`,
     })
 
-    // Crée une notification in-app pour le sender
+    // Also create an in-app notification so the user sees it in the notifications panel
     await supabaseAdmin
       .from('notifications')
       .insert({

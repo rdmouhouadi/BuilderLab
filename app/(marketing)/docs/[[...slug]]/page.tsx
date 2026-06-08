@@ -1,13 +1,16 @@
+// app/(marketing)/docs/[[...slug]]/page.tsx
+// Docs page — renders a single article chosen by the URL slug.
+// Uses Next.js optional catch-all routing so /docs and /docs/some-slug both work.
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Search } from 'lucide-react'
 import { getArticle, getDefaultSlug, groupFor, DOC_GROUPS } from '@/lib/docs-content'
+import DocsSearchBox from '@/components/marketing/DocsSearchBox'
 import {
   colors, radiusMkt, fontSizeMkt, fontFamily, layout, breakpoints,
 } from '@/lib/design-tokens'
 
-// Generate static routes for all articles
+// Tell Next.js to pre-render a page for every known article slug at build time
 export function generateStaticParams() {
   return DOC_GROUPS
     .flatMap(g => g.articles.map(a => ({ slug: [a.slug] })))
@@ -60,23 +63,8 @@ export default async function DocsPage(
         }}>
           {/* ── Sidebar ── */}
           <aside style={{ position: 'sticky', top: '88px' }}>
-            {/* Search box (visual-only; real search can be wired later) */}
-            <div style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '9px 12px', borderRadius: radiusMkt.sm,
-              border: `1px solid ${colors.border.mkt}`,
-              backgroundColor: colors.bg.mktSurface,
-              color: colors.text.dim, fontSize: '13.5px',
-              marginBottom: '22px',
-            }}>
-              <Search size={14} style={{ flexShrink: 0 }} />
-              <span style={{ flex: 1 }}>Search docs</span>
-              <kbd style={{
-                fontFamily: fontFamily.mono, fontSize: '11px',
-                padding: '2px 6px', borderRadius: '5px',
-                border: `1px solid ${colors.border.mkt2}`, color: colors.text.dim,
-              }}>⌘K</kbd>
-            </div>
+            {/* Live search box — filters articles as you type */}
+            <DocsSearchBox />
 
             {/* Nav groups */}
             <div className="docs-nav-wrap">

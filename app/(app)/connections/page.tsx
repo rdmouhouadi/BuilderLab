@@ -1,5 +1,6 @@
 // app/connections/page.tsx
-// Server Component — fetch les demandes de connexion
+// Connection requests management — shows incoming and outgoing join requests.
+// Server Component — fetches data on the server before rendering.
 import { createClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import ConnectionsClient from '@/components/ConnectionsClient'
@@ -9,12 +10,12 @@ import { Analytics } from "@vercel/analytics/next"
 export default async function ConnectionsPage() {
   const supabase = await createClient()
 
-  // Vérifier que l'utilisateur est connecté
+  // Redirect to login if the user is not authenticated
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // On récupère toutes les demandes reçues sur les projets
-  // de l'utilisateur connecté
+  // Fetch all join requests received on projects owned by the current user.
+  // The `!inner` join ensures we only get connections for this user's projects.
   const { data: received } = await supabase
     .from('connections')
     .select(`
@@ -22,12 +23,10 @@ export default async function ConnectionsPage() {
       projects!inner(id, title, owner_id),
       profiles!connections_sender_id_fkey(id, name, country, avg_rating)
     `)
-    // !inner filtre uniquement les connexions
-    // sur les projets appartenant à l'utilisateur connecté
     .eq('projects.owner_id', user.id)
     .order('created_at', { ascending: false })
 
-  // On récupère les demandes envoyées par l'utilisateur
+  // Fetch all join requests sent by the current user
   const { data: sent } = await supabase
     .from('connections')
     .select(`

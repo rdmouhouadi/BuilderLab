@@ -1,6 +1,6 @@
 // app/profile/[id]/page.tsx
-// Page profil publique — visible par tous
-// Affiche les infos d'un builder sans possibilité d'édition
+// Public profile page — anyone can view this, no editing allowed.
+// Shows a builder's info, skills, and projects.
 import { createClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import { Project } from '@/types'
@@ -18,17 +18,17 @@ export default async function PublicProfilePage({ params }: Props) {
   const { id } = await params
   const supabase = await createClient()
 
-  // On récupère le profil public
+  // Fetch the public profile row for this user ID
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', id)
     .single()
 
-  // Profil introuvable → retour au feed
+  // Profile not found — redirect to feed
   if (error || !profile) redirect('/')
 
-  // Projets postés par ce builder
+  // Fetch projects posted by this builder
   const { data: ownedProjects } = await supabase
     .from('projects')
     .select('*, project_skills(skill_needed)')
@@ -36,12 +36,11 @@ export default async function PublicProfilePage({ params }: Props) {
     .order('created_at', { ascending: false })
     .returns<Project[]>()
 
-  // Nom complet
+  // Compute display name and avatar initials from the profile data
   const fullName = [profile.first_name, profile.last_name]
     .filter(Boolean)
     .join(' ') || profile.name || 'Anonymous'
 
-  // Initiales
   const initials = [profile.first_name?.[0], profile.last_name?.[0]]
     .filter(Boolean)
     .join('')
@@ -53,14 +52,14 @@ export default async function PublicProfilePage({ params }: Props) {
 
         <BackButton />
 
-        {/* Header du profil */}
+        {/* Profile header card */}
         <div
           className="rounded-2xl p-8 mb-6"
           style={{ backgroundColor: '#161B28', border: '1px solid #1E2840' }}
         >
           <div className="flex items-start justify-between mb-6">
 
-            {/* Avatar + infos */}
+            {/* Avatar and basic info */}
             <div className="flex items-center gap-5">
               <div
                 className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0"
@@ -90,7 +89,7 @@ export default async function PublicProfilePage({ params }: Props) {
                   )}
                 </div>
 
-                {/* Contact préféré */}
+                {/* Preferred contact channel link */}
                 {profile.preferred_contact_type &&
                   CONTACT_TYPES[profile.preferred_contact_type] && (
                   <Link
@@ -141,7 +140,7 @@ export default async function PublicProfilePage({ params }: Props) {
           </div>
         </div>
 
-        {/* Projets postés */}
+        {/* Projects posted by this builder */}
         <h2 className="text-base font-semibold mb-4" style={{ color: '#94A3B8' }}>
           Projects
           <span

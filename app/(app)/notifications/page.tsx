@@ -1,6 +1,6 @@
 // app/notifications/page.tsx
-// Page complète des notifications
-// Server Component — fetch toutes les notifications côté serveur
+// Full notifications history page.
+// Server Component — fetches all notifications on the server.
 import { createClient } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import NotificationsClient from '@/components/NotificationsClient'
@@ -13,14 +13,14 @@ export default async function NotificationsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // On fetch toutes les notifications — pas de limite
+  // Fetch all notifications for this user (no limit — this is the full history page)
   const { data: notifications } = await supabase
     .from('notifications')
     .select('*')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
-  // On marque toutes comme lues à l'ouverture de la page
+  // Mark all unread notifications as read when the user opens this page
   await supabase
     .from('notifications')
     .update({ read: true })

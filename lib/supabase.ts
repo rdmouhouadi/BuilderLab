@@ -1,16 +1,15 @@
 // lib/supabase.ts
-// Client Supabase pour les Server Components Next.js
-// On utilise createServerClient (pas createBrowserClient)
-// parce que ce code s'exécute côté serveur
+// Server-side Supabase client for use in Server Components and API routes.
+// Uses createServerClient (not createBrowserClient) because this code runs on the server.
 
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function createClient() {
-  // await cookies() récupère les cookies de la requête HTTP en cours
+  // Read the cookies from the current HTTP request (needed for auth session)
   const cookieStore = await cookies()
 
-  // createServerClient n'est PAS async — on le retourne directement
+  // createServerClient is synchronous — return it directly
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -20,14 +19,13 @@ export async function createClient() {
           return cookieStore.getAll()
         },
         setAll(cookiesToSet) {
-          // try/catch nécessaire car dans certains contextes
-          // les cookies sont en lecture seule
+          // try/catch required because cookies are read-only in some server contexts
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             )
           } catch {
-            // Ignoré silencieusement dans les Server Components
+            // Silently ignored inside pure Server Components
           }
         },
       },

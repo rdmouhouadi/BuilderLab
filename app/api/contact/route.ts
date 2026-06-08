@@ -1,7 +1,10 @@
+// app/api/contact/route.ts
+// Handles contact form submissions from the marketing site.
+// Sends the user's message as an email to the owner via Resend.
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 
-const CONTACT_EMAIL = 'richiedieuveil@gmail.com'
+const CONTACT_EMAIL = 'rd.mouhouadi@gmail.com'
 
 const SUBJECT_LABELS: Record<string, string> = {
   suggestion: 'Suggestion',

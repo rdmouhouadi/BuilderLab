@@ -1,8 +1,7 @@
 'use client'
 
-// Sign-in page — shown when an existing user clicks "Sign in" in the navbar.
-// Uses next/dynamic with ssr:false to avoid a server/client HTML mismatch,
-// because the Supabase Auth UI component reads browser-only state on mount.
+// Sign-up page — shown when a new user clicks "Sign up" in the navbar.
+// Uses the same Supabase Auth UI as the login page but starts in sign_up view.
 import dynamic from 'next/dynamic'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
@@ -13,44 +12,42 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Analytics } from "@vercel/analytics/next"
 
-// Load the Auth component only in the browser to prevent SSR hydration errors
+// Load Auth component only on the client side to avoid SSR hydration mismatch
 const Auth = dynamic(
   () => import('@supabase/auth-ui-react').then(mod => mod.Auth),
   { ssr: false }
 )
 
-export default function LoginPage() {
-  // Tracks whether this component has been mounted on the client side
+export default function SignupPage() {
+  // Track whether the component has mounted on the client
   const [mounted, setMounted] = useState(false)
 
-  // Browser-side Supabase client — required for auth interactions
+  // Browser-side Supabase client — needed for auth
   const supabase = createBrowserSupabaseClient()
 
-  // Next.js client-side router
+  // Next.js router for client-side navigation
   const router = useRouter()
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Listen for auth state changes; redirect to feed as soon as the user signs in
+  // Listen for auth state changes and redirect to feed after sign-up
   useEffect(() => {
     if (!mounted) return
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === 'SIGNED_IN' && session) {
-          // Force a full page reload so server components also refresh with the new session
+          // Force a full page reload so server components also see the new session
           window.location.href = '/feed'
         }
       }
     )
 
-    // Clean up the listener when the component unmounts
     return () => subscription.unsubscribe()
   }, [mounted, supabase])
 
-  // Don't render anything until the client has mounted (avoids hydration mismatch)
   if (!mounted) return null
 
   return (
@@ -72,16 +69,14 @@ export default function LoginPage() {
               <BuilderLabLogo markSize={32} />
             </div>
             <p style={{ fontSize: '14px', color: colors.text.muted2 }}>
-              Log in to collaborate on projects
+              Create your BuilderLab account
             </p>
           </div>
 
-          {/* Supabase Auth UI pre-set to the sign-in form.
-              It handles form state, validation, errors, and password reset automatically. */}
+          {/* Supabase Auth UI pre-set to the sign-up form */}
           <Auth
             supabaseClient={supabase}
             appearance={{
-              // ThemeSupa is the official Supabase theme; we override its color variables
               theme: ThemeSupa,
               variables: {
                 default: {
@@ -96,9 +91,8 @@ export default function LoginPage() {
                 }
               }
             }}
-            // Start on the sign-in form
-            view="sign_in"
-            // After login, Supabase redirects here; /auth/callback exchanges the code for a session
+            // Start on the sign-up form instead of sign-in
+            view="sign_up"
             redirectTo={`${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`}
             providers={[]}
             localization={{
