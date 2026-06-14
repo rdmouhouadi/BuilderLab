@@ -143,14 +143,17 @@ Per `docs/sql/db_migration_DEV_to_Prod_procedure.md`, BuilderLab has separate **
 
 ## 7. Rollout plan
 
-### Phase 1 — Harness + high-value slice (now)
-1. Install and configure Vitest, React Testing Library, and Playwright.
+### Phase 1 — Harness + high-value slice ✅ done
+1. Install and configure Vitest, React Testing Library, and Playwright. — `vitest.config.mts`, `vitest.setup.ts`, `playwright.config.ts`
 2. Add `npm run test` (Vitest), `npm run test:watch`, and `npm run test:e2e` (Playwright) scripts.
 3. Write the first tests for the highest-risk/most-recently-changed areas:
-   - `app/api/contact/route.ts` (validation, DB insert, email send — just built, no coverage yet)
-   - `app/api/notify/interest/route.ts`, `app/api/notify/accepted/route.ts`
-   - `components/Navbar.tsx` / `MktNavbar.tsx` (auth-aware rendering — easy to silently break)
-   - One Playwright smoke flow: contact form submission end-to-end
+   - `app/api/contact/route.ts` (validation, DB insert, email send) — `app/api/contact/__tests__/route.test.ts`
+   - `app/api/notify/interest/route.ts`, `app/api/notify/accepted/route.ts` — `app/api/notify/{interest,accepted}/__tests__/route.test.ts`
+   - `components/marketing/MktNavbar.tsx` (auth-aware rendering) — `components/marketing/__tests__/MktNavbar.test.tsx`
+   - `lib/timeLabel.ts` — `lib/__tests__/timeLabel.test.ts`
+   - One Playwright smoke flow: contact form submission end-to-end — `e2e/contact-form.spec.ts`
+
+25 Vitest tests + 1 Playwright spec, all passing.
 
 ### Phase 2 — Backfill as touched (ongoing)
 For every subsequent PR, regardless of size:
