@@ -1,8 +1,9 @@
 // app/api/contact/route.ts
 // Handles contact form submissions from the marketing site.
-// Sends the user's message as an email to the owner via Resend.
+// Saves the submission to the database and sends it as an email to the owner via Resend.
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 const CONTACT_EMAIL = 'rd.mouhouadi@gmail.com'
 
@@ -18,6 +19,14 @@ export async function POST(req: NextRequest) {
 
   if (!name || !email || !message) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  }
+
+  const { error: dbError } = await supabaseAdmin
+    .from('contact_messages')
+    .insert({ name, email, subject, role: role ?? null, message })
+
+  if (dbError) {
+    console.error('Failed to save contact message', dbError)
   }
 
   const subjectLabel = SUBJECT_LABELS[subject] ?? subject

@@ -23,6 +23,7 @@
    - [3.12 project_followers](#312-project_followers)
    - [3.13 project_comments](#313-project_comments)
    - [3.14 tasks](#314-tasks)
+   - [3.15 contact_messages](#315-contact_messages)
 4. [Row Level Security Policies](#4-row-level-security-policies)
 5. [Triggers & Functions](#5-triggers--functions)
 6. [Key Design Decisions](#6-key-design-decisions)
@@ -32,7 +33,7 @@
 ## 1. Overview
 
 ```
-Total tables    : 14
+Total tables    : 15
 RLS enabled     : Yes (all tables)
 Triggers        : 4
 Functions       : 3
