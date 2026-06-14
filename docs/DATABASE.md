@@ -65,6 +65,8 @@ profiles
     │           ├── 1:N → project_comments
     │           └── 1:N → tasks
     └── 1:N → notifications
+
+contact_messages (standalone — no FK relations, marketing site contact form)
 ```
 
 ---
@@ -355,11 +357,33 @@ create table tasks (
 - When a task moves to `blocked` or `done`, an entry is automatically inserted into `project_updates` (Build Log)
 - `milestone_id` is optional — tasks can be linked to a milestone for better organization
 
+### 3.15 contact_messages *(added in V0.6.0)*
+
+```sql
+create table contact_messages (
+  id         uuid default gen_random_uuid() primary key,
+  name       text not null,
+  email      text not null,
+  subject    text not null,
+  role       text,
+  message    text not null,
+  status     text default 'new'
+             check (status in ('new', 'read', 'resolved')),
+  created_at timestamptz default now() not null
+);
+```
+
+**Notes:**
+- Stores submissions from the marketing site's `/contact` form (suggestions, bug reports, "join the journey" requests)
+- Written by `app/api/contact/route.ts` via `supabaseAdmin`, in addition to the existing Resend email notification
+- Not referenced by any other table — standalone log of raw submissions
+- `status` lets entries be triaged manually (`new` → `read` → `resolved`) directly via the Supabase Table Editor
+
 ---
 
 ## 4. Row Level Security Policies
 
-RLS is **enabled on all 14 tables**.
+RLS is **enabled on all 15 tables**.
 
 ### profiles
 | Policy | Operation | Rule |
@@ -448,6 +472,11 @@ RLS is **enabled on all 14 tables**.
 | Owner or manager can create tasks | INSERT | `auth.uid() = created_by AND (is owner OR is_hiveos_manager)` |
 | Owner or manager can update tasks | UPDATE | `is owner OR is_hiveos_manager OR assignee_id = auth.uid()` |
 | Owner or manager can delete tasks | DELETE | `is owner OR is_hiveos_manager` |
+
+### contact_messages *(added in V0.6.0)*
+| Policy | Operation | Rule |
+|---|---|---|
+| *(none)* | — | RLS enabled, no policies — default-deny for `anon`/`authenticated`. Only `service_role` (via `supabaseAdmin`) can read/write. |
 
 ---
 
@@ -566,4 +595,4 @@ Stored directly on the membership row rather than a separate audit table. Keeps 
 
 ---
 
-*Last updated: BuilderLab v0.5.0*
+*Last updated: BuilderLab v0.6.0*
