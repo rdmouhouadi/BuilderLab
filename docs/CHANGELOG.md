@@ -9,6 +9,14 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] — V0.6.0
 
+### Added — 2026-06-14
+
+#### Contact message persistence (`app/api/contact/route.ts`)
+- Contact form submissions are now saved to a new `contact_messages` table (in addition to the existing Resend email notification)
+- New migration: `supabase/migrations/20260614000000_contact_messages.sql` — stores `name`, `email`, `subject`, `role`, `message`, `status` (`new`/`read`/`resolved`), `created_at`
+- RLS enabled with no policies — only `supabaseAdmin` (service role) can read/write; entries are triaged via the Supabase Table Editor
+- See [docs/DATABASE.md §3.15](DATABASE.md#315-contact_messages)
+
 ### Fixed — 2026-06-08
 
 #### Docs search (`components/marketing/DocsSearchBox.tsx`)
@@ -24,14 +32,6 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 #### Contact email
 - Form submissions now route to `rd.mouhouadi@gmail.com` (was `richiedieuveil@gmail.com`)
-
-### Added — 2026-06-14
-
-#### Contact message persistence (`app/api/contact/route.ts`)
-- Contact form submissions are now saved to a new `contact_messages` table (in addition to the existing Resend email notification)
-- New migration: `supabase/migrations/20260614000000_contact_messages.sql` — stores `name`, `email`, `subject`, `role`, `message`, `status` (`new`/`read`/`resolved`), `created_at`
-- RLS enabled with no policies — only `supabaseAdmin` (service role) can read/write; entries are triaged via the Supabase Table Editor
-- See [docs/DATABASE.md §3.15](DATABASE.md#315-contact_messages)
 
 ### Added — 2026-06-08
 
