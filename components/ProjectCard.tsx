@@ -452,7 +452,7 @@ export default function ProjectCard({ project, currentUserId }: Props) {
     <>
       <Link 
         href={`/projects/${project.id}`} 
-        onClick={() => sessionStorage.setItem('projectDetailFrom', '/')}
+        onClick={() => sessionStorage.setItem('projectDetailFrom', '/feed')}
         style={{ display: 'block', height: '100%', textDecoration: 'none' }}
       >
         <div

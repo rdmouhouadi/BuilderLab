@@ -21,7 +21,7 @@ function getInitialLabel(): string {
 
   // Read the referrer stored by the feed/profile/hivecheck pages
   const from = sessionStorage.getItem('projectDetailFrom')
-  if (from === '/') return '← Back to projects'
+  if (from === '/feed') return '← Back to projects'
   if (from?.startsWith('/profile'))   return '← Back to profile'
   if (from?.startsWith('/hivecheck')) return '← Back to HiveCheck'
   if (from?.startsWith('/archive'))   return '← Back to archive'
