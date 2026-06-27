@@ -71,7 +71,7 @@ export default async function ProfilePage() {
       <ProfileClient
         profile={profile}
         ownedProjects={(ownedProjects as Project[]) ?? []}
-        joinedProjects={joinedProjects as any[]}
+        joinedProjects={joinedProjects as Project[]}
         followedProjects={followedProjectsList}
         email={user.email ?? ''}
       />

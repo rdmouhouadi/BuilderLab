@@ -4,26 +4,35 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { colors, radius, fontSize } from '@/lib/design-tokens'
 
 type Props = {
   fallback?: string // Default URL if no history — defaults to '/'
 }
 
+// Computes the back button label once, at state initialization,
+// instead of starting with a default value and correcting it
+// afterward inside a useEffect (which used to trigger an extra render).
+function getInitialLabel(): string {
+  // sessionStorage doesn't exist server-side — keep the fallback
+  // during SSR; the correct value is read on the first client render.
+  if (typeof window === 'undefined') return '← Back'
+
+  // Read the referrer stored by the feed/profile/hivecheck pages
+  const from = sessionStorage.getItem('projectDetailFrom')
+  if (from === '/') return '← Back to projects'
+  if (from?.startsWith('/profile'))   return '← Back to profile'
+  if (from?.startsWith('/hivecheck')) return '← Back to HiveCheck'
+  if (from?.startsWith('/archive'))   return '← Back to archive'
+  return '← Back'
+}
+
 export default function BackButton({ fallback = '/' }: Props) {
   const router = useRouter()
-  const [label, setLabel] = useState('← Back')
 
-  useEffect(() => {
-    // Read the referrer stored by the feed/profile/hivecheck pages
-    const from = sessionStorage.getItem('projectDetailFrom')
-    if (from === '/') setLabel('← Back to projects')
-    else if (from?.startsWith('/profile')) setLabel('← Back to profile')
-    else if (from?.startsWith('/hivecheck')) setLabel('← Back to HiveCheck')
-    else if (from?.startsWith('/archive')) setLabel('← Back to archive')
-    else setLabel('← Back')
-  }, [])
+  // Label is computed once via getInitialLabel() — no effect needed
+  const [label] = useState(getInitialLabel)
 
   function handleBack() {
     const from = sessionStorage.getItem('projectDetailFrom')

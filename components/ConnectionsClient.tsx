@@ -187,7 +187,7 @@ export default function ConnectionsClient({ received, sent }: Props) {
                 No pending requests
               </p>
               <p style={{ fontSize: fontSize.sm, color: colors.text.muted, marginTop: '4px' }}>
-                When someone wants to join your project, it'll appear here.
+                When someone wants to join your project, it&apos;ll appear here.
               </p>
             </div>
           ) : (
@@ -288,7 +288,7 @@ export default function ConnectionsClient({ received, sent }: Props) {
                     border: `1px solid ${colors.border.mkt}`,
                     marginBottom: '14px',
                   }}>
-                    "{conn.message}"
+                    &quot;{conn.message}&quot;
                   </p>
                 )}
 

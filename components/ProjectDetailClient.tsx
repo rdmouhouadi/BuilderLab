@@ -79,7 +79,7 @@ type Props = {
 // Helpers
 // ─────────────────────────────────────────
 
-function getFullName(profile: Member['profiles']) {
+function getFullName(profile: Member['profiles'] | Project['profiles']) {
   if (!profile) return 'Anonymous'
   const full = [profile.first_name, profile.last_name].filter(Boolean).join(' ')
   return full || profile.name || 'Anonymous'
@@ -87,10 +87,10 @@ function getFullName(profile: Member['profiles']) {
 
 function getInitials(profile: Member['profiles'] | Project['profiles']) {
   if (!profile) return '?'
-  const first = (profile as any).first_name?.[0]
-  const last  = (profile as any).last_name?.[0]
+  const first = profile.first_name?.[0]
+  const last  = profile.last_name?.[0]
   if (first || last) return [first, last].filter(Boolean).join('').toUpperCase()
-  return (profile as any).name?.[0]?.toUpperCase() ?? '?'
+  return profile.name?.[0]?.toUpperCase() ?? '?'
 }
 
 const cardStyle = {
@@ -577,7 +577,7 @@ export default function ProjectDetailClient({
                       onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
                       onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
                     >
-                      {getFullName(project.profiles as any)}
+                      {getFullName(project.profiles)}
                     </Link>
                     <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
                       {project.profiles?.country ?? ''} · ⭐{' '}
@@ -730,7 +730,7 @@ export default function ProjectDetailClient({
                                 border: `0.5px solid ${colors.border.default}`,
                                 marginLeft: '36px',
                               }}>
-                                "{connectionMessage}"
+                                &quot;{connectionMessage}&quot;
                               </p>
                             )}
                           </div>
@@ -742,7 +742,7 @@ export default function ProjectDetailClient({
               ) : (
                 <div style={{ ...cardStyle, textAlign: 'center' }}>
                   <p style={{ fontSize: fontSize.xs, color: colors.text.muted, marginBottom: '4px' }}>🔒 Team is private</p>
-                  <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>Follow to see who's building this.</p>
+                  <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>Follow to see who&apos;s building this.</p>
                 </div>
               )}
 
@@ -823,13 +823,13 @@ export default function ProjectDetailClient({
                 <div style={cardStyle}>
                   <h2 style={sectionTitle}>Privacy</h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {[
+                    {([
                       { key: 'show_milestones', label: 'Milestones' },
                       { key: 'show_build_log',  label: 'Build Log' },
                       { key: 'show_chat',       label: 'Team Chat' },
                       { key: 'show_team',       label: 'Team members' },
-                    ].map(({ key, label }) => {
-                      const isPublic = (project as any)[key]
+                    ] as const).map(({ key, label }) => {
+                      const isPublic = project[key]
                       return (
                         <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <span style={{ fontSize: fontSize.xs, color: colors.text.secondary }}>{label}</span>
@@ -1007,7 +1007,7 @@ export default function ProjectDetailClient({
                     color: colors.accent.indigoText,
                     border: `0.5px solid ${colors.accent.indigoBorder}`,
                   }}>
-                    ✓ You're on this team
+                    ✓ You&apos;re on this team
                   </div>
 
                   {/* Leave button */}

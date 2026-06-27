@@ -100,7 +100,7 @@ export default function NotificationsClient({ notifications }: Props) {
         >
           <p className="text-2xl mb-3">🔔</p>
           <p className="text-sm" style={{ color: '#475569' }}>
-            You're all caught up!
+            You&apos;re all caught up!
           </p>
         </div>
       ) : (

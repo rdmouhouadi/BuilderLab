@@ -80,7 +80,7 @@ export default function InterestModal({
           </h2>
           <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
             Sending a request to join{' '}
-            <span style={{ color: colors.accent.tealText }}>"{projectTitle}"</span>
+            <span style={{ color: colors.accent.tealText }}>&quot;{projectTitle}&quot;</span>
           </p>
         </div>
 

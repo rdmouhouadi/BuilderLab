@@ -709,7 +709,7 @@ function BuildInPublic() {
               fontSize: '14px',
               fontFamily: fontFamily.mono,
             }}>
-              // the BuilderLab philosophy
+              {'// the BuilderLab philosophy'}
             </p>
           </ScrollReveal>
 
