@@ -50,15 +50,10 @@ next-env.d.ts
 .env.local
 .env.production.local
 
-ROADMAP.md
-PRIVATE_README.md
-
-#Private docs
-docs/PRODUCT_STRATEGY.md
-docs/BUSINESS_MODEL.md
-docs/MOAT_ARCHITECTURE.md
-docs/dev-prod_promotion_workflow.md
-*docs/Product_Specs
-
-# Release notes
-docs/Release note v0.4.0.md
+# Internal docs — everything in docs/ is private by default.
+# Only these four files are tracked publicly:
+docs/*
+!docs/ARCHITECTURE.md
+!docs/CHANGELOG.md
+!docs/DATABASE.md
+!docs/Testing_strategy.md

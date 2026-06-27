@@ -5,27 +5,10 @@ import Link from 'next/link'
 import { Project } from '@/types'
 import { CONTACT_TYPES } from '@/lib/constants'
 import { colors, radius, fontSize } from '@/lib/design-tokens'
-import { cardStyle, sectionTitle } from '../shared'
+import { cardStyle, sectionTitle, getFullName, getInitials } from '../shared'
 
 type Props = {
   profile: Project['profiles']
-}
-
-// Builds the full display name from first/last name, falling back
-// to a single "name" field, and finally "Anonymous" if nothing exists.
-function getFullName(profile: Project['profiles']) {
-  if (!profile) return 'Anonymous'
-  const full = [profile.first_name, profile.last_name].filter(Boolean).join(' ')
-  return full || profile.name || 'Anonymous'
-}
-
-// Builds initials for the avatar circle, e.g. "Richie Mouhouadi" → "RM"
-function getInitials(profile: Project['profiles']) {
-  if (!profile) return '?'
-  const first = profile.first_name?.[0]
-  const last  = profile.last_name?.[0]
-  if (first || last) return [first, last].filter(Boolean).join('').toUpperCase()
-  return profile.name?.[0]?.toUpperCase() ?? '?'
 }
 
 export default function OwnerCard({ profile }: Props) {

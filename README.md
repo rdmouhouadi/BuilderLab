@@ -3,7 +3,7 @@
 > *"For anyone who learns by building."*
 
 [![License: Source Available](https://img.shields.io/badge/License-Source%20Available-orange.svg)]()
-[![Version](https://img.shields.io/badge/version-0.5.0-teal.svg)]()
+[![Version](https://img.shields.io/badge/version-0.6.0-teal.svg)]()
 [![Built with Next.js](https://img.shields.io/badge/Built%20with-Next.js%2016-black.svg)](https://nextjs.org)
 [![Powered by Supabase](https://img.shields.io/badge/Powered%20by-Supabase-green.svg)](https://supabase.com)
 
@@ -77,7 +77,7 @@ Seeing how another builder received tough feedback and improved their project is
 │                                                     │
 │  ┌─────────────┐  ┌──────────┐  ┌───────────────┐   │
 │  │  PostgreSQL │  │   Auth   │  │  Row Level    │   │
-│  │  13 tables  │  │  (JWT)   │  │  Security     │   │
+│  │  14 tables  │  │  (JWT)   │  │  Security     │   │
 │  └─────────────┘  └──────────┘  └───────────────┘   │
 └─────────────────────────────────────────────────────┘
                       │
@@ -93,10 +93,11 @@ Seeing how another builder received tough feedback and improved their project is
 - **Client Components only when needed** — interactive UI (forms, filters, modals)
 - **Supabase RLS** — security enforced at the database level
 - **Centralized design tokens** — all colors, spacing, typography defined once in `lib/design-tokens.ts`
+- **Component decomposition** — large orchestrator components (project detail page, landing page) are kept under ~350 lines by extracting focused sub-components that receive props rather than owning their own state
 
 ---
 
-## Current Status — v0.6.0 (in progress)
+## Current Status — v0.6.0
 
 ### App
 | Feature | Status |
@@ -132,6 +133,7 @@ Seeing how another builder received tough feedback and improved their project is
 | Animated navbar with Framer Motion sliding capsule | ✅ Live |
 | Smooth page transitions | ✅ Live |
 | HiveOS Task Management | ✅ Live |
+| Leave / remove member, with mandatory reason | ✅ Live |
 
 ### Marketing site
 | Feature | Status |
@@ -142,11 +144,18 @@ Seeing how another builder received tough feedback and improved their project is
 | Docs `/docs/[slug]` — 10 articles, sidebar, prev/next routing | ✅ Built |
 | Docs live search — client-side full-text search with ⌘K shortcut | ✅ Built |
 | Contact `/contact` — subject chips, conditional role field, success state | ✅ Built |
-| Contact form API `POST /api/contact` → Resend | ✅ Built |
+| Contact form API `POST /api/contact` → Resend + persisted to `contact_messages` | ✅ Built |
 | Auth-aware marketing navbar — Projects + avatar when logged in | ✅ Built |
 | Separate Sign in (`/login`) and Sign up (`/signup`) pages | ✅ Built |
 | Footer (4-col, responsive) | ✅ Built |
 | Scroll-reveal animations (`prefers-reduced-motion` safe) | ✅ Built |
+
+### Engineering
+| Item | Status |
+|---|---|
+| Test harness — Vitest + React Testing Library + Playwright | ✅ Live (25 unit/integration tests + 1 E2E flow) |
+| CI — lint + test on every push/PR to `dev` and `main` | ✅ Live |
+| ESLint — zero errors | ✅ Live |
 
 ---
 
@@ -245,6 +254,8 @@ npm run test:watch  # Vitest — watch mode for TDD
 npm run test:e2e    # Playwright — E2E flows (requires dev server + DEV Supabase env)
 ```
 
+A GitHub Actions workflow (`.github/workflows/ci.yml`) runs `npm run lint` and `npm run test` on every push and pull request targeting `dev` or `main`. No secrets are required — Supabase and Resend are fully mocked at this layer.
+
 ---
 
 ## Project Structure
@@ -252,13 +263,17 @@ npm run test:e2e    # Playwright — E2E flows (requires dev server + DEV Supaba
 ```
 builderlab/
 │
+├── .github/
+│   └── workflows/
+│       └── ci.yml                       # lint + test on push/PR to dev and main
+│
 ├── app/
 │   ├── layout.tsx                       # Root shell — html/body/fonts/globals.css
 │   ├── globals.css                      # Tailwind v4 + CSS variables
 │   │
 │   ├── (marketing)/                     # Marketing site — no app Navbar
 │   │   ├── layout.tsx                   # Sora font + MktNavbar + Footer + ambients
-│   │   ├── page.tsx                     # / — Landing page
+│   │   ├── page.tsx                     # / — Landing page (assembles section components)
 │   │   ├── vision/page.tsx              # /vision
 │   │   ├── docs/[[...slug]]/page.tsx    # /docs — /docs/[article-slug]
 │   │   └── contact/page.tsx             # /contact (Client Component)
@@ -279,23 +294,42 @@ builderlab/
 │   │
 │   ├── auth/callback/route.ts           # Supabase auth callback
 │   └── api/
-│       ├── contact/route.ts             # POST — contact form → Resend
+│       ├── contact/route.ts             # POST — contact form → Resend + contact_messages
 │       └── notify/
 │           ├── interest/route.ts        # POST — email: new interest
 │           └── accepted/route.ts        # POST — email: request accepted
 │
 ├── components/
 │   ├── marketing/
+│   │   ├── home/                        # Landing page sections (one file each)
+│   │   │   ├── shared.tsx               # Wrap, BtnPrimary, BtnSoft, SectionHead
+│   │   │   ├── Hero.tsx                 # Hero + WindowChrome
+│   │   │   ├── Strip.tsx
+│   │   │   ├── Problem.tsx
+│   │   │   ├── HowItWorks.tsx
+│   │   │   ├── Ecosystem.tsx
+│   │   │   └── BuildInPublic.tsx
 │   │   ├── MktNavbar.tsx                # Auth-aware marketing nav
 │   │   ├── PrimaryCtaButton.tsx         # "Start / Continue building" CTA
 │   │   ├── DocsSearchBox.tsx            # Live docs search with ⌘K
 │   │   ├── Footer.tsx                   # 4-column footer
 │   │   ├── ScrollReveal.tsx             # IntersectionObserver fade-in
 │   │   └── Eyebrow.tsx                  # Teal pill label with dot
+│   │
+│   ├── ProjectDetail/                    # Project detail page sub-components
+│   │   ├── shared.tsx                   # Card styles, Member/Connection types, name helpers
+│   │   ├── ProjectMilestonesCard.tsx    # Milestones + Build Log + Team Chat
+│   │   └── sidebar/
+│   │       ├── OwnerCard.tsx
+│   │       ├── TeamCard.tsx
+│   │       ├── DetailsCard.tsx
+│   │       ├── PrivacyCard.tsx
+│   │       └── ProjectActions.tsx       # Mark completed, delete, rating, follow, HiveOS button
+│   │
 │   ├── Navbar.tsx                       # App navbar with notifications bell
 │   ├── Feed.tsx
 │   ├── ProjectCard.tsx
-│   ├── ProjectDetailClient.tsx
+│   ├── ProjectDetailClient.tsx          # Orchestrator — state + Supabase mutations only
 │   ├── ProjectUpdates.tsx               # Build Log
 │   ├── ProjectChat.tsx                  # Group chat
 │   ├── ProjectComments.tsx              # Community feedback
@@ -303,6 +337,7 @@ builderlab/
 │   ├── ConnectionsClient.tsx
 │   ├── NotificationsClient.tsx
 │   ├── HiveCheckClient.tsx
+│   ├── HiveOSPanel.tsx
 │   ├── InterestModal.tsx
 │   ├── LeaveProjectModal.tsx
 │   ├── CompletionModal.tsx
@@ -326,15 +361,14 @@ builderlab/
 │
 ├── e2e/                                  # Playwright E2E specs (*.spec.ts)
 ├── vitest.config.mts
+├── vitest.setup.ts
 ├── playwright.config.ts
 │
-└── docs/
-    ├── ARCHITECTURE.md
-    ├── DATABASE.md
-    ├── CHANGELOG.md
-    ├── Testing_strategy.md
-    └── Product_Specs/
-        └── design_handoff_builderlab_site/  # Marketing site design reference
+└── docs/                                 # Private by default — see .gitignore
+    ├── ARCHITECTURE.md                  # Tracked
+    ├── DATABASE.md                      # Tracked
+    ├── CHANGELOG.md                     # Tracked
+    └── Testing_strategy.md              # Tracked
 ```
 
 ---

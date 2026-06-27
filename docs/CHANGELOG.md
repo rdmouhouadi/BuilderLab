@@ -9,6 +9,53 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] — V0.7.0
 
+### Added — 2026-06-28
+
+#### Continuous Integration
+- New `.github/workflows/ci.yml` — runs `npm run lint` and `npm run test` on every push and pull request targeting `dev` or `main`
+- No secrets required — all 25 Vitest tests are fully mocked (Supabase + Resend), per `docs/Testing_strategy.md`
+
+### Fixed — 2026-06-28
+
+#### ESLint zero-error baseline (54 → 0 errors)
+- Removed unnecessary `any` casts where `Profile`/`Project` types already covered the fields (`HiveCheckClient`, `ProjectDetailClient`, `ProfileClient`, `ConnectionsClient`, `profile/page.tsx`)
+- Typed `catch` blocks as `unknown` instead of `any` (`post/page.tsx`, `RatingModal`)
+- Typed Privacy toggle keys with an `as const` tuple instead of an `any` cast on `project`
+- Moved `Chevron` components to module scope (`Feed.tsx`) so they're not recreated on every render
+- Memoized the `activitySignal` calculation with `useMemo` (`ProjectCard`) instead of calling `Date.now()` impurely during render
+- Memoized the Supabase client with `useMemo` (`ProjectCard`) to satisfy `exhaustive-deps` without introducing render loops
+- Removed redundant `mounted` state + effect in the login/signup pages — unnecessary indirection around the auth state listener
+- Computed the `BackButton` label via a `useState` initializer instead of `useEffect` + `setState`
+- Derived `DocsSearchBox` results/open state from `query` via `useMemo` instead of syncing them through an effect; reset `activeIdx` using React's documented render-time state adjustment pattern
+- Escaped unescaped quotes/apostrophes in JSX text (13 occurrences)
+- Wrapped decorative `// the BuilderLab philosophy` text in `{''}` so it isn't parsed as a misplaced JSX comment
+- Added `docs/**` to ESLint ignores — design handoff assets are not part of the application build
+
+#### BackButton pointing to the wrong page after the marketing/app route split
+- `ProjectDetailClient` now passes `fallback="/feed"` explicitly instead of relying on the default `/`, which now resolves to the marketing landing page
+- `BackButton` compares the stored referrer against `/feed` instead of `/`
+- `ProjectCard` stores `projectDetailFrom` as `/feed` instead of `/` when navigating into a project
+
+### Changed — 2026-06-28
+
+#### Component decomposition
+- **`app/(marketing)/page.tsx`** split from ~720 lines into 8 files:
+  - `components/marketing/home/shared.tsx` — `Wrap`, `BtnPrimary`, `BtnSoft`, `SectionHead`
+  - `components/marketing/home/Hero.tsx`, `Strip.tsx`, `Problem.tsx`, `HowItWorks.tsx`, `Ecosystem.tsx`, `BuildInPublic.tsx`, `FinalCTA.tsx`
+  - `page.tsx` now only assembles the sections and wraps them in `PageTransition` for a smooth fade-in on load, matching the rest of the app. `ScrollReveal` per-section behavior unchanged.
+- **`components/ProjectDetailClient.tsx`** split from ~1050 lines into 7 files:
+  - `components/ProjectDetail/shared.tsx` — shared card styles, `Member`/`Connection`/`AcceptedConnection` types, `getFullName`/`getInitials` helpers
+  - `components/ProjectDetail/ProjectMilestonesCard.tsx` — milestones, Build Log, Team Chat
+  - `components/ProjectDetail/sidebar/OwnerCard.tsx`, `TeamCard.tsx`, `DetailsCard.tsx`, `PrivacyCard.tsx`, `ProjectActions.tsx`
+  - `ProjectDetailClient.tsx` now only owns state and Supabase mutations, delegating all rendering to the sub-components — reduced to ~330 lines
+
+#### `.gitignore`
+- Internal documentation policy changed from an explicit blocklist (listing every private file by name) to an allowlist: `docs/*` is ignored by default, with four files explicitly tracked — `ARCHITECTURE.md`, `CHANGELOG.md`, `DATABASE.md`, `Testing_strategy.md`. This avoids revealing the names of internal/private docs (`ROADMAP.md`, `Product_Specs/`, strategy notes) through the `.gitignore` file itself.
+
+---
+
+## [0.6.0] — 2026-06-14
+
 ### Added — 2026-06-14
 
 #### Test harness (Vitest + React Testing Library + Playwright)
@@ -22,12 +69,6 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - `lib/__tests__/timeLabel.test.ts`
   - `e2e/contact-form.spec.ts` — contact form submission end-to-end
 - See [docs/Testing_strategy.md](Testing_strategy.md) for the full strategy, tooling rationale, and rollout plan
-
----
-
-## [0.6.0] — 2026-06-14
-
-### Added — 2026-06-14
 
 #### Contact message persistence (`app/api/contact/route.ts`)
 - Contact form submissions are now saved to a new `contact_messages` table (in addition to the existing Resend email notification)
