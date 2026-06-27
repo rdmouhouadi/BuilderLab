@@ -7,6 +7,24 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased] — V0.7.0
+
+### Added — 2026-06-14
+
+#### Test harness (Vitest + React Testing Library + Playwright)
+- New devDependencies: `vitest`, `@vitejs/plugin-react`, `vite-tsconfig-paths`, `jsdom`, `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/dom`, `@playwright/test`
+- New scripts: `npm run test` (Vitest, single run), `npm run test:watch` (Vitest watch mode), `npm run test:e2e` (Playwright)
+- New config: `vitest.config.mts`, `vitest.setup.ts`, `playwright.config.ts`
+- Phase 1 test slice (25 Vitest tests + 1 Playwright smoke flow):
+  - `app/api/contact/__tests__/route.test.ts` — validation, DB insert into `contact_messages`, Resend email
+  - `app/api/notify/interest/__tests__/route.test.ts`, `app/api/notify/accepted/__tests__/route.test.ts`
+  - `components/marketing/__tests__/MktNavbar.test.tsx` — auth-aware rendering
+  - `lib/__tests__/timeLabel.test.ts`
+  - `e2e/contact-form.spec.ts` — contact form submission end-to-end
+- See [docs/Testing_strategy.md](Testing_strategy.md) for the full strategy, tooling rationale, and rollout plan
+
+---
+
 ## [0.6.0] — 2026-06-14
 
 ### Added — 2026-06-14

@@ -9,7 +9,6 @@ import PageTransition from '@/components/PageTransition'
 import { BuilderLabLogo } from '@/components/BuilderLabLogo'
 import { colors } from '@/lib/design-tokens'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Analytics } from "@vercel/analytics/next"
 
 // Load Auth component only on the client side to avoid SSR hydration mismatch
@@ -19,22 +18,12 @@ const Auth = dynamic(
 )
 
 export default function SignupPage() {
-  // Track whether the component has mounted on the client
-  const [mounted, setMounted] = useState(false)
 
   // Browser-side Supabase client — needed for auth
   const supabase = createBrowserSupabaseClient()
 
-  // Next.js router for client-side navigation
-  const router = useRouter()
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
   // Listen for auth state changes and redirect to feed after sign-up
   useEffect(() => {
-    if (!mounted) return
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -46,9 +35,7 @@ export default function SignupPage() {
     )
 
     return () => subscription.unsubscribe()
-  }, [mounted, supabase])
-
-  if (!mounted) return null
+  }, [supabase])
 
   return (
     <PageTransition>

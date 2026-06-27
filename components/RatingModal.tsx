@@ -108,8 +108,8 @@ export default function RatingModal({ projectId, members, currentUserId, onCompl
 
       onComplete()
 
-    } catch (err: any) {
-      setError(err.message ?? 'Something went wrong.')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong.')
     } finally {
       setSubmitting(false)
     }

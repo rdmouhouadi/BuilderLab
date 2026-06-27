@@ -24,6 +24,16 @@ type Props = {
 // Constants
 // ─────────────────────────────────────────
 
+// Chevron icon
+function Chevron() {
+  return (
+    <svg style={{ width: '10px', height: '10px', flexShrink: 0 }}
+      fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+    )
+}
+
 const SKILL_OPTIONS    = ['All Skills',    ...SKILLS]
 const LEVEL_OPTIONS    = ['All Levels',    ...LEVELS]
 const DURATION_OPTIONS = ['Any Duration',  ...DURATIONS]
@@ -99,16 +109,6 @@ function FeedFilters({
       border: 'none',
       transition: 'background 0.1s',
     }
-  }
-
-  // Chevron icon
-  function Chevron() {
-    return (
-      <svg style={{ width: '10px', height: '10px', flexShrink: 0 }}
-        fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
-    )
   }
 
   return (

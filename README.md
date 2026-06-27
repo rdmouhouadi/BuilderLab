@@ -235,6 +235,18 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
+## Testing
+
+BuilderLab follows test-driven development. See [docs/Testing_strategy.md](docs/Testing_strategy.md) for the full strategy, tooling rationale, and rollout plan.
+
+```bash
+npm run test        # Vitest — unit, component, and API tests (single run)
+npm run test:watch  # Vitest — watch mode for TDD
+npm run test:e2e    # Playwright — E2E flows (requires dev server + DEV Supabase env)
+```
+
+---
+
 ## Project Structure
 
 ```
@@ -312,10 +324,15 @@ builderlab/
 ├── proxy.ts                             # Route protection (middleware)
 ├── public/images/                       # Hero screenshots for landing page
 │
+├── e2e/                                  # Playwright E2E specs (*.spec.ts)
+├── vitest.config.mts
+├── playwright.config.ts
+│
 └── docs/
     ├── ARCHITECTURE.md
     ├── DATABASE.md
     ├── CHANGELOG.md
+    ├── Testing_strategy.md
     └── Product_Specs/
         └── design_handoff_builderlab_site/  # Marketing site design reference
 ```
@@ -344,6 +361,7 @@ Feedback, discussions, bug reports, and carefully scoped contributions are welco
 | `chore:` | Maintenance |
 | `docs:` | Documentation |
 | `refactor:` | Code restructuring |
+| `test:` | Adding or updating tests |
 
 ---
 

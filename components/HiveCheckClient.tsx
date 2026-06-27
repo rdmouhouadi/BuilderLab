@@ -34,17 +34,17 @@ const tagStyle = {
 
 function getOwnerName(profile: Project['profiles']) {
   if (!profile) return 'Anonymous'
-  const full = [(profile as any).first_name, (profile as any).last_name]
+  const full = [profile.first_name, profile.last_name]
     .filter(Boolean).join(' ')
-  return full || (profile as any).name || 'Anonymous'
+  return full || profile.name || 'Anonymous'
 }
 
 function getInitials(profile: Project['profiles']) {
   if (!profile) return '?'
-  const first = (profile as any).first_name?.[0]
-  const last  = (profile as any).last_name?.[0]
+  const first = profile.first_name?.[0]
+  const last  = profile.last_name?.[0]
   if (first || last) return [first, last].filter(Boolean).join('').toUpperCase()
-  return (profile as any).name?.[0]?.toUpperCase() ?? '?'
+  return profile.name?.[0]?.toUpperCase() ?? '?'
 }
 
 // ─────────────────────────────────────────
@@ -218,9 +218,9 @@ export default function HiveCheckClient({ projects }: Props) {
                     <p style={{ fontSize: fontSize.sm, fontWeight: 500, color: colors.text.secondary }}>
                       {getOwnerName(project.profiles)}
                     </p>
-                    {(project.profiles as any)?.country && (
+                    {project.profiles?.country && (
                       <p style={{ fontSize: fontSize.xs, color: colors.text.muted }}>
-                        {(project.profiles as any).country}
+                        {project.profiles.country}
                       </p>
                     )}
                   </div>

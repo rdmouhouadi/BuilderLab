@@ -148,10 +148,11 @@ export default function PostProjectPage() {
 
       router.push('/')
 
-    } catch (err: any) {
-      if (err.message?.includes('projects_level_check')) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : ''
+      if (message.includes('projects_level_check')) {
         setError('Please select a valid level.')
-      } else if (err.message?.includes('duplicate')) {
+      } else if (message.includes('duplicate')) {
         setError('A project with this title already exists.')
       } else {
         setError('Something went wrong. Please check your inputs and try again.')
@@ -181,7 +182,7 @@ export default function PostProjectPage() {
             Post a project
           </h1>
           <p style={{ fontSize: fontSize.sm, color: colors.text.muted }}>
-            Describe your project and the skills you're looking for.
+            Describe your project and the skills you&apos;re looking for.
           </p>
         </div>
 

@@ -4,7 +4,7 @@
 // The InterestModal is rendered outside the Link to prevent click conflicts.
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import { Project } from '@/types'
@@ -335,7 +335,7 @@ function CardFooter({
 
 export default function ProjectCard({ project, currentUserId }: Props) {
   const router = useRouter()
-  const supabase = createBrowserSupabaseClient()
+  const supabase = useMemo(() => createBrowserSupabaseClient(), [])
 
   const [interestStatus, setInterestStatus] = useState<InterestStatus>('idle')
   const [showModal, setShowModal] = useState(false)
@@ -358,7 +358,7 @@ export default function ProjectCard({ project, currentUserId }: Props) {
       .then(({ data }) => {
         if (data) setUserContact({ type: data.preferred_contact_type, value: data.preferred_contact_value })
       })
-  }, [currentUserId])
+  }, [currentUserId, supabase])
 
   // Check if the user is already following this project
   useEffect(() => {
@@ -370,10 +370,10 @@ export default function ProjectCard({ project, currentUserId }: Props) {
       .eq('user_id', currentUserId)
       .single()
       .then(({ data }) => { if (data) setIsFollowing(true) })
-  }, [currentUserId])
+  }, [currentUserId, project.id, supabase])
 
-  // Compute activity signal from latest project update
-  function getActivitySignal(): string | null {
+  // useMemo that Compute activity signal from latest project update once, at page loading
+  const activitySignal = useMemo((): string | null => {
     const updates = project.project_updates
     if (!updates?.length) return null
 
@@ -388,7 +388,7 @@ export default function ProjectCard({ project, currentUserId }: Props) {
     if (diffDays < 7)  return `${diffDays}d ago`
     if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`
     return null
-  }
+  }, [project.project_updates])
 
   // Open interest modal — redirect to login if not authenticated
   function handleInterest() {
@@ -474,7 +474,7 @@ export default function ProjectCard({ project, currentUserId }: Props) {
           <CardAuthor
             name={project.profiles?.name}
             country={project.profiles?.country}
-            activitySignal={getActivitySignal()}
+            activitySignal={activitySignal}
           />
 
           {/* Title */}

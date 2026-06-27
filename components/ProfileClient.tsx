@@ -114,9 +114,9 @@ function ProjectRow({ project, showOwner = false }: {
         </span>
       </div>
 
-      {showOwner && (project.profiles as any)?.name && (
+      {showOwner && project.profiles?.name && (
         <p style={{ fontSize: fontSize.xs, color: colors.text.muted, marginBottom: '4px' }}>
-          by {(project.profiles as any).name}
+          by {project.profiles.name}
         </p>
       )}
 

@@ -70,7 +70,7 @@ export default function CompletionModal({ projectTitle, onConfirm, onCancel, loa
           marginBottom: '20px',
           lineHeight: 1.6,
         }}>
-          <span style={{ color: colors.accent.tealText }}>"{projectTitle}"</span>{' '}
+          <span style={{ color: colors.accent.tealText }}>&quot;{projectTitle}&quot;</span>{' '}
           is complete. Congratulations to your whole team.
         </p>
 
@@ -116,7 +116,7 @@ export default function CompletionModal({ projectTitle, onConfirm, onCancel, loa
             )}
           </div>
           <span style={{ fontSize: fontSize.xs, color: colors.text.muted, lineHeight: 1.5 }}>
-            Keep this project private — don't publish it in the Archive.
+            Keep this project private — don&apos;t publish it in the Archive.
           </span>
         </div>
 
