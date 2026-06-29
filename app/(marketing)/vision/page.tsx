@@ -368,7 +368,7 @@ export default function VisionPage() {
                 Join the earliest builders on BuilderLab. Your feedback shapes the platform.
               </p>
               <div style={{ display: 'flex', gap: '12px', marginTop: '32px', justifyContent: 'center', flexWrap: 'wrap' as const }}>
-                <BtnPrimary href="/login">Start building free</BtnPrimary>
+                <BtnPrimary href="/login">Start building </BtnPrimary>
                 <BtnSoft href="/contact">Join the journey</BtnSoft>
               </div>
             </div>
