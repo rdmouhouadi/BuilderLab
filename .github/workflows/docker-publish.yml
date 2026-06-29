@@ -17,7 +17,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}  # e.g. yourusername/builderlab
 
 jobs:
   build-and-push:
@@ -29,9 +28,10 @@ jobs:
       packages: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Lowercase the image name
+        id: image
         run: echo "name=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
         
       - name: Log in to GitHub Container Registry
