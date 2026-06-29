@@ -156,6 +156,8 @@ Seeing how another builder received tough feedback and improved their project is
 | Test harness — Vitest + React Testing Library + Playwright | ✅ Live (25 unit/integration tests + 1 E2E flow) |
 | CI — lint + test on every push/PR to `dev` and `main` | ✅ Live |
 | ESLint — zero errors | ✅ Live |
+| Docker dev environment (`docker-compose up`) | ✅ Live |
+| Production image build + GHCR publish on version tags | ✅ Live |
 
 ---
 
@@ -183,26 +185,23 @@ Public feedback threads mean anyone can read the reviews a project received — 
 
 ## Quickstart
 
+There are two ways to run BuilderLab locally: directly with `npm`, or inside Docker. Both connect to the same Supabase DEV cloud project — neither runs a local Postgres instance.
+
 ### Prerequisites
-- Node.js 18+
 - A [Supabase](https://supabase.com) account
 - A [Resend](https://resend.com) account (for email notifications)
-- A [Vercel](https://vercel.com) account (for deployment)
+- A [Vercel](https://vercel.com) account (for deployment) — not needed for the Docker path
+- **Option A:** Node.js 22+
+- **Option B:** Docker + Docker Compose
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/builderlab.git
+git clone https://github.com/rdmouhouadi/builderlab.git
 cd builderlab
 ```
 
-### 2. Install dependencies
-
-```bash
-npm install
-```
-
-### 3. Set up Supabase
+### 2. Set up Supabase
 
 Create a new project on [supabase.com](https://supabase.com), then run the SQL scripts in `/docs/sql/` in this order:
 
@@ -213,7 +212,7 @@ Create a new project on [supabase.com](https://supabase.com), then run the SQL s
 4. seed.sql          — optional test data
 ```
 
-### 4. Configure environment variables
+### 3. Configure environment variables
 
 Create a `.env.local` file at the root:
 
@@ -225,7 +224,7 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 RESEND_API_KEY=re_your-resend-key
 ```
 
-### 5. Configure Supabase Auth
+### 4. Configure Supabase Auth
 
 In **Supabase → Authentication → URL Configuration**:
 
@@ -234,13 +233,102 @@ Site URL: http://localhost:3000
 Redirect URLs: http://localhost:3000/auth/callback
 ```
 
-### 6. Run the development server
+### 5. Run the app
+
+**Option A — npm**
 
 ```bash
+npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+**Option B — Docker**
+
+```bash
+docker compose up --build
+```
+
+First run builds the image (a couple of minutes); subsequent runs are fast thanks to Docker's layer cache. Source code is mounted as a volume, so changes hot-reload exactly like `npm run dev` — there is no rebuild step for day-to-day development.
+
+Either way, open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+### Environment variables — build-time vs. runtime
+
+This distinction matters once you move beyond local development, particularly when building the Docker production image.
+
+| Variable | When it's read | Where it lives |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | **Build time** — inlined into the JS bundle | `.env.local` (local) / Docker `--build-arg` (prod image) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **Build time** — inlined into the JS bundle | `.env.local` (local) / Docker `--build-arg` (prod image) |
+| `NEXT_PUBLIC_SITE_URL` | **Build time** — inlined into the JS bundle | `.env.local` (local) / Docker `--build-arg` (prod image) |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Runtime only** — read server-side on each request | `.env.local` (local) / `--env-file` or `docker-compose`'s `env_file` (prod) |
+| `RESEND_API_KEY` | **Runtime only** — read server-side on each request | `.env.local` (local) / `--env-file` or `docker-compose`'s `env_file` (prod) |
+
+Any variable prefixed `NEXT_PUBLIC_` is a Next.js convention meaning "safe to expose to the browser" — and as a consequence, Next.js bakes its value directly into the compiled JavaScript at `next build` time. It cannot be changed afterward without rebuilding. This is a framework constraint, not a BuilderLab-specific choice.
+
+This is why the production Docker image is **rebuilt per environment** rather than configured at container startup — see [Building the production image](#building-the-production-image) below.
+
+---
+
+## Building the production image
+
+The `Dockerfile`'s `runner` stage produces a minimal, self-contained image suitable for self-hosting outside of Vercel. It uses Next.js's [standalone output](https://nextjs.org/docs/app/api-reference/config/next-config-js/output) so the final image only ships the compiled server and its runtime dependencies — no source code, no dev tooling, no full `node_modules`.
+
+### Build locally
+
+```bash
+docker build \
+  --build-arg NEXT_PUBLIC_SUPABASE_URL=https://your-prod-project.supabase.co \
+  --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY=your-prod-anon-key \
+  --build-arg NEXT_PUBLIC_SITE_URL=https://your-domain.com \
+  -t builderlab:prod .
+```
+
+### Run it
+
+Server-only secrets are passed at `docker run`, not baked into the image:
+
+```bash
+docker run -p 3000:3000 --env-file .env.production.local builderlab:prod
+```
+
+Where `.env.production.local` contains:
+```bash
+SUPABASE_SERVICE_ROLE_KEY=your-prod-service-role-key
+RESEND_API_KEY=re_your-resend-key
+```
+
+### Automated builds via CI
+
+`.github/workflows/docker-publish.yml` builds and pushes this image to **GitHub Container Registry (GHCR)** automatically whenever a version tag is pushed:
+
+```bash
+git tag v0.7.0
+git push origin v0.7.0
+```
+
+The resulting image is published at:
+```
+ghcr.io/rdmouhouadi/builderlab:0.7.0
+ghcr.io/rdmouhouadi/builderlab:latest
+```
+
+This requires three repository secrets to be set under **Settings → Secrets and variables → Actions** before the workflow can build successfully — `PROD_NEXT_PUBLIC_SUPABASE_URL`, `PROD_NEXT_PUBLIC_SUPABASE_ANON_KEY`, `PROD_NEXT_PUBLIC_SITE_URL` — using values from the **production** Supabase project, since this image is the one intended for actual deployment.
+
+### Self-hosting
+
+On a server with Docker installed:
+
+```bash
+docker pull ghcr.io/rdmouhouadi/builderlab:0.7.0
+docker run -d -p 3000:3000 --env-file .env.production.local ghcr.io/rdmouhouadi/builderlab:0.7.0
+```
+
+A reverse proxy (Caddy, Nginx, or Traefik) is still needed in front of the container to handle HTTPS and a custom domain — Docker alone does not provide this.
+
+By default, GHCR packages are private even on a public repository. To allow `docker pull` without authentication on the self-hosting server, either make the package public from its GitHub settings page, or run `docker login ghcr.io` on the server first.
 
 ---
 
@@ -265,7 +353,12 @@ builderlab/
 │
 ├── .github/
 │   └── workflows/
-│       └── ci.yml                       # lint + test on push/PR to dev and main
+│       ├── ci.yml                       # lint + test on push/PR to dev and main
+│       └── docker-publish.yml           # build + push prod image to GHCR on version tags
+│
+├── Dockerfile                            # multi-stage: deps, dev, builder, runner
+├── docker-compose.yml                    # local dev — connects to Supabase DEV cloud
+├── .dockerignore
 │
 ├── app/
 │   ├── layout.tsx                       # Root shell — html/body/fonts/globals.css
