@@ -1,0 +1,56 @@
+# .github/workflows/docker-publish.yml
+# Builds the production Docker image and pushes it to GitHub
+# Container Registry (GHCR) whenever a version tag is pushed.
+#
+# ex Trigger: git tag v0.7.0 && git push origin v0.7.0
+#
+# NEXT_PUBLIC_* values are baked into the image at build time —
+# they must be set as repository secrets (Settings → Secrets and
+# variables → Actions) before this workflow can build successfully.
+
+name: Publish Docker image
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}  # e.g. yourusername/builderlab
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    # Required so this workflow is allowed to push to GHCR
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.PROD_NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.PROD_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+            NEXT_PUBLIC_SITE_URL=${{ secrets.PROD_NEXT_PUBLIC_SITE_URL }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
