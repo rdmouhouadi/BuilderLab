@@ -1,0 +1,33 @@
+# docker-compose.yml
+# Local development environment for BuilderLab.
+# Runs the Next.js app in a container, connected to the existing
+# Supabase DEV cloud project (not a local Supabase instance).
+#
+# Usage:
+#   docker compose up        — start the dev server with hot reload
+#   docker compose down      — stop and remove the container
+#   docker compose up --build — rebuild the image (after package.json changes)
+
+services:
+  app:
+    build:
+      context: .
+      target: dev          # Uses the "dev" stage from the Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.local          # Reuses the existing Supabase DEV credentials
+    volumes:
+      # Mount the source code so changes are reflected without rebuilding
+      - .:/app
+      # Anonymous volume for node_modules — prevents the host's
+      # node_modules (if any) from overriding the one installed
+      # inside the container during the build
+      - /app/node_modules
+      # Same for .next — avoids permission/cache conflicts between
+      # host and container builds
+      - /app/.next
+    # Next.js's file watcher needs this on some host filesystems
+    # (especially Windows/WSL2) to detect changes inside a volume
+    environment:
+      - WATCHPACK_POLLING=true
