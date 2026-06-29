@@ -20,6 +20,12 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `NEXT_PUBLIC_*` values are inlined into the JS bundle at build time (a Next.js constraint, not a design choice) — the production image is rebuilt per environment from repository secrets (`PROD_NEXT_PUBLIC_*`) rather than attempting runtime injection, per Next.js's own recommendation. Server-only secrets (`SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`) are never build args — they're only ever read at runtime via `--env-file` / `docker-compose`'s `env_file`, so they never end up baked into an image
 - See the updated [Quickstart](#quickstart) in `README.md` for both the local `npm` and Docker setup paths, and a full breakdown of which environment variables are build-time vs. runtime
 
+### Fixed — 2026-06-29
+
+#### `lib/supabase-admin.ts` — eager client creation broke the Docker build
+- `supabaseAdmin` was created eagerly at module scope, reading `SUPABASE_SERVICE_ROLE_KEY` immediately on import. `next build` imports every API route to collect its metadata, and since this secret is intentionally runtime-only (never a Docker build-arg), the value was `undefined` at that point, causing `Failed to collect page data for /api/notify/accepted` and failing the build entirely
+- The client is now created lazily on first real use, wrapped in a `Proxy` so existing call sites (`supabaseAdmin.from(...)`) keep working unchanged — only the underlying `createClient()` call is deferred from import time to runtime
+
 ### Added — 2026-06-28
 
 #### Continuous Integration

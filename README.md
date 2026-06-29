@@ -250,6 +250,8 @@ docker compose up --build
 
 First run builds the image (a couple of minutes); subsequent runs are fast thanks to Docker's layer cache. Source code is mounted as a volume, so changes hot-reload exactly like `npm run dev` — there is no rebuild step for day-to-day development.
 
+> **Note for Windows users:** if your repo lives on the Windows filesystem (`C:\Users\...`) rather than inside WSL2, file-watching performance through the Docker volume mount can be noticeably slower than native `npm run dev` — every file read/write crosses the Windows ↔ WSL2 ↔ container boundary. For day-to-day development on Windows, `npm run dev` (Option A) is recommended; Docker remains available for anyone who wants a fully reproducible environment without installing Node locally, or for CI/testing purposes.
+
 Either way, open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
