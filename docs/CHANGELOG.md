@@ -9,6 +9,23 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased] — V0.7.0
 
+### Added — 2026-06-29
+
+#### Docker — dev environment and production image pipeline
+- New multi-stage `Dockerfile` with four stages: `deps` (installs dependencies once, cached), `dev` (runs `next dev` with hot reload for local development), `builder` (runs `next build` for production), `runner` (minimal final image, only ships the Next.js standalone output — no source code, no dev dependencies)
+- `next.config.ts` — added `output: 'standalone'`, required by the `runner` stage to produce a self-contained server bundle
+- New `docker-compose.yml` — runs the app in the `dev` stage, source code mounted as a volume for hot reload, connects to the existing Supabase DEV cloud project via `.env.local` (no local Postgres/Supabase instance — kept simple since DEV/PROD cloud projects already exist and are migration-tracked)
+- New `.dockerignore` — keeps the build context small and prevents `node_modules`, `.git`, `.env*`, and `docs/` from being copied into images
+- New `.github/workflows/docker-publish.yml` — builds the production image and pushes it to GitHub Container Registry (GHCR) whenever a version tag (`v*.*.*`) is pushed; tags the image with both the version number and `latest`
+- `NEXT_PUBLIC_*` values are inlined into the JS bundle at build time (a Next.js constraint, not a design choice) — the production image is rebuilt per environment from repository secrets (`PROD_NEXT_PUBLIC_*`) rather than attempting runtime injection, per Next.js's own recommendation. Server-only secrets (`SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`) are never build args — they're only ever read at runtime via `--env-file` / `docker-compose`'s `env_file`, so they never end up baked into an image
+- See the updated [Quickstart](#quickstart) in `README.md` for both the local `npm` and Docker setup paths, and a full breakdown of which environment variables are build-time vs. runtime
+
+### Fixed — 2026-06-29
+
+#### `lib/supabase-admin.ts` — eager client creation broke the Docker build
+- `supabaseAdmin` was created eagerly at module scope, reading `SUPABASE_SERVICE_ROLE_KEY` immediately on import. `next build` imports every API route to collect its metadata, and since this secret is intentionally runtime-only (never a Docker build-arg), the value was `undefined` at that point, causing `Failed to collect page data for /api/notify/accepted` and failing the build entirely
+- The client is now created lazily on first real use, wrapped in a `Proxy` so existing call sites (`supabaseAdmin.from(...)`) keep working unchanged — only the underlying `createClient()` call is deferred from import time to runtime
+
 ### Added — 2026-06-28
 
 #### Continuous Integration

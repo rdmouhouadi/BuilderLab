@@ -128,7 +128,7 @@ export default function Footer() {
             border: `1px solid ${colors.border.accent}`,
             borderRadius: radiusMkt.xl,
           }}>
-            v0.5 — early access
+            v0.6 — early access
           </span>
         </div>
       </div>

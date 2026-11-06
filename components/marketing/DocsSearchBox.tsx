@@ -150,8 +150,8 @@ export default function DocsSearchBox() {
             fontFamily: fontFamily.body,
           }}
         />
-        {/* Show a clear button while typing, otherwise show the keyboard shortcut hint */}
-        {query ? (
+        {/* Show a clear button while typing */}
+        {query && (
           <button
             onClick={() => { setQuery(''); setForceClosed(true) }}
             style={{
@@ -162,15 +162,6 @@ export default function DocsSearchBox() {
           >
             <X size={13} />
           </button>
-        ) : (
-          <kbd style={{
-            fontFamily: fontFamily.mono,
-            fontSize: '11px',
-            padding: '2px 6px',
-            borderRadius: '5px',
-            border: `1px solid ${colors.border.mkt2}`,
-            color: colors.text.dim,
-          }}>⌘K</kbd>
         )}
       </div>
 
